@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>한국 초등 러닝맵 뷰어</title>
+    <meta
+      name="description"
+      content="2022 개정 초등 교육과정 학습 온톨로지의 교과·클러스터·주제·선수 관계를 탐색하는 정적 뷰어"
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f5dd4'/%3E%3Cg fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M9 9h5M9 16h5M9 23h5'/%3E%3Cpath d='M14 9c6 0 3 7 9 7M14 23c6 0 3-7 9-7'/%3E%3C/g%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-title">
+        <h1>한국 초등 러닝맵</h1>
+        <p class="badges">
+          <span class="badge" id="badge-taxonomy">데이터 로딩 중</span>
+          <span class="badge" id="badge-ontology"></span>
+        </p>
+      </div>
+
+      <div class="search" role="search">
+        <input
+          id="search-input"
+          type="search"
+          autocomplete="off"
+          placeholder="주제·성취기준 코드 검색 (예: 분수, [4수01-01])"
+          aria-label="주제 검색"
+          aria-controls="search-results"
+        />
+        <ul id="search-results" class="search-results" role="listbox" hidden></ul>
+      </div>
+
+      <div class="mode-toggle" role="group" aria-label="보기 모드">
+        <button type="button" data-mode="easy" class="is-active">쉬운 보기</button>
+        <button type="button" data-mode="analysis">분석 보기</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <nav class="sidebar" aria-label="교과 및 학년군 선택">
+        <button type="button" id="overview-button" class="overview-button">전체 지도</button>
+
+        <h2>학년군</h2>
+        <div id="grade-filters" class="chips"></div>
+
+        <h2>교과</h2>
+        <ul id="subject-list" class="subject-list"></ul>
+
+        <div class="legend">
+          <h2>범례</h2>
+          <p><span class="legend-line legend-hard"></span> 필수 선수 (hard)</p>
+          <p><span class="legend-line legend-soft"></span> 권장 선수 (soft)</p>
+          <p class="legend-note">화살표는 “먼저 다루는 주제 → 이어지는 주제” 방향입니다.</p>
+          <p class="legend-note">선수 관계는 이 릴리스 모델의 추천 구조이며, 보편적 학습 순서를 주장하지 않습니다.</p>
+        </div>
+      </nav>
+
+      <main class="stage" id="stage" tabindex="-1">
+        <div class="breadcrumb" id="breadcrumb"></div>
+        <div class="stage-body" id="stage-body">
+          <p class="loading">러닝맵 데이터를 불러오는 중입니다…</p>
+        </div>
+      </main>
+
+      <aside class="detail" id="detail" aria-live="polite">
+        <p class="detail-empty">주제나 클러스터를 선택하면 상세 정보가 여기에 표시됩니다.</p>
+      </aside>
+    </div>
+
+    <footer class="footer">
+      <p>
+        공식 성취기준 <strong>원문은 표시하지 않습니다</strong>. 이 화면은 코드·출처 위치와 저장소가 작성한
+        요약·증거·평가 질문만 보여줍니다.
+      </p>
+      <p>
+        출처와 권리 상태는 <a id="link-provenance" href="#">PROVENANCE.md</a>,
+        <a id="link-notice" href="#">NOTICE.md</a>를 참고하세요. 이 모델은 개별 학습자를 진단하지 않습니다.
+      </p>
+    </footer>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

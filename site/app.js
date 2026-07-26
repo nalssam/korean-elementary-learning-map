@@ -1,0 +1,1149 @@
+/**
+ * 한국 초등 러닝맵 뷰어 — 의존성 없는 정적 앱.
+ *
+ * 데이터는 scripts/build-site-data.mjs 가 data/kr/ 에서 생성한 site/data/ 만 읽는다.
+ * 외부 호스트 요청은 하지 않는다.
+ */
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const BAND_ORDER = ['1-2', '3-4', '5-6', '3-6', '1-6'];
+const BASE_BANDS = ['1-2', '3-4', '5-6'];
+const BAND_SPAN = { '1-2': ['1-2'], '3-4': ['3-4'], '5-6': ['5-6'], '3-6': ['3-4', '5-6'], '1-6': BASE_BANDS };
+
+const SUBJECT_COLORS = [
+  '#3f6fd8',
+  '#c9553d',
+  '#2f8f6d',
+  '#8a5cc4',
+  '#c08a1e',
+  '#3b8ab5',
+  '#b8496f',
+  '#5c7d2a',
+  '#a0632c',
+  '#6f6bbd',
+  '#2f8f8f',
+];
+
+const CLUSTER_TYPE_LABELS = {
+  'grade-unit': '학년군 단원',
+  'grade-domain': '학년군 영역',
+  'subject-cluster': '교과 묶음',
+  'domain-continuum': '영역 연속체',
+  'vertical-domain-progression': '수직 진행',
+  'grade-band-overview': '학년군 전체',
+};
+
+const TOPIC_TYPE_LABELS = {
+  CONCEPTUAL: '개념',
+  PROCEDURAL: '절차',
+  REPRESENTATIONAL: '표현',
+  LANGUAGE: '언어',
+  META: '메타',
+};
+
+const state = {
+  index: null,
+  mode: 'easy',
+  view: 'overview',
+  subject: null,
+  clusterId: null,
+  topicId: null,
+  activeBands: new Set(BASE_BANDS),
+  pathDepth: 3,
+  details: new Map(),
+  pendingDetail: 0,
+};
+
+const maps = {
+  topicById: new Map(),
+  clusterById: new Map(),
+  subjectByName: new Map(),
+  colorBySubject: new Map(),
+  prerequisitesOf: new Map(),
+  unlocksOf: new Map(),
+};
+
+const dom = {
+  stage: document.getElementById('stage'),
+  stageBody: document.getElementById('stage-body'),
+  breadcrumb: document.getElementById('breadcrumb'),
+  detail: document.getElementById('detail'),
+  subjectList: document.getElementById('subject-list'),
+  gradeFilters: document.getElementById('grade-filters'),
+  searchInput: document.getElementById('search-input'),
+  searchResults: document.getElementById('search-results'),
+  overviewButton: document.getElementById('overview-button'),
+};
+
+/* ------------------------------------------------------------------ helpers */
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined && text !== null) node.textContent = text;
+  return node;
+}
+
+function compareBands(left, right) {
+  const delta = BAND_ORDER.indexOf(left) - BAND_ORDER.indexOf(right);
+  return delta !== 0 ? delta : left.localeCompare(right);
+}
+
+function bandIsActive(band) {
+  return (BAND_SPAN[band] ?? [band]).some((part) => state.activeBands.has(part));
+}
+
+function subjectColor(subject) {
+  return maps.colorBySubject.get(subject) ?? 'var(--line-strong)';
+}
+
+function workstreamOf(subject) {
+  return maps.subjectByName.get(subject)?.workstream ?? null;
+}
+
+/** 클러스터 이름은 "과학 3-4 지구와 바다" 처럼 교과·학년군이 앞에 붙는다. 격자 안에서는 뒷부분만 쓴다. */
+function shortClusterLabel(cluster) {
+  let label = cluster.name;
+  if (label.startsWith(`${cluster.subject} `)) label = label.slice(cluster.subject.length + 1);
+  if (label.startsWith(`${cluster.gradeBand} `)) label = label.slice(cluster.gradeBand.length + 1);
+  return label.length > 0 ? label : cluster.name;
+}
+
+function pairKey(topicId, prerequisiteId) {
+  return `${prerequisiteId} ${topicId}`;
+}
+
+/* -------------------------------------------------------------------- data */
+
+async function loadIndex() {
+  const response = await fetch('data/index.json');
+  if (!response.ok) throw new Error(`index.json 응답 오류 (${response.status})`);
+  return response.json();
+}
+
+async function loadSubjectDetail(subject) {
+  const workstream = workstreamOf(subject);
+  if (!workstream) return null;
+  if (state.details.has(workstream)) return state.details.get(workstream);
+
+  const pending = fetch(`data/subjects/${workstream}.json`)
+    .then((response) => {
+      if (!response.ok) throw new Error(`${workstream}.json 응답 오류 (${response.status})`);
+      return response.json();
+    })
+    .then((payload) => {
+      const detail = {
+        topics: new Map(payload.topics.map((topic) => [topic.id, topic])),
+        standards: new Map(payload.standards.map((standard) => [standard.key, standard])),
+        edges: new Map(payload.edges.map((edge) => [pairKey(edge.topicId, edge.prerequisiteId), edge])),
+      };
+      state.details.set(workstream, detail);
+      return detail;
+    });
+
+  state.details.set(workstream, pending);
+  return pending;
+}
+
+function buildMaps(index) {
+  maps.topicById = new Map(index.topics.map((topic) => [topic.id, topic]));
+  maps.clusterById = new Map(index.clusters.map((cluster) => [cluster.id, cluster]));
+  maps.subjectByName = new Map(index.subjects.map((subject) => [subject.subject, subject]));
+  maps.colorBySubject = new Map(
+    index.subjects.map((subject, position) => [subject.subject, SUBJECT_COLORS[position % SUBJECT_COLORS.length]]),
+  );
+
+  for (const edge of index.edges) {
+    if (!maps.prerequisitesOf.has(edge.topicId)) maps.prerequisitesOf.set(edge.topicId, []);
+    if (!maps.unlocksOf.has(edge.prerequisiteId)) maps.unlocksOf.set(edge.prerequisiteId, []);
+    maps.prerequisitesOf.get(edge.topicId).push(edge);
+    maps.unlocksOf.get(edge.prerequisiteId).push(edge);
+  }
+}
+
+/* ------------------------------------------------------------------ routing */
+
+function readHash() {
+  const raw = decodeURIComponent(window.location.hash.replace(/^#\/?/, ''));
+  const [kind, ...rest] = raw.split('/');
+  const value = rest.join('/');
+  if (kind === 's' && maps.subjectByName.has(value)) return { view: 'subject', subject: value };
+  if (kind === 'c' && maps.clusterById.has(value)) return { view: 'cluster', clusterId: value };
+  if (kind === 't' && maps.topicById.has(value)) return { view: 'path', topicId: value };
+  return { view: 'overview' };
+}
+
+function writeHash() {
+  const next =
+    state.view === 'subject'
+      ? `#/s/${encodeURIComponent(state.subject)}`
+      : state.view === 'cluster'
+        ? `#/c/${encodeURIComponent(state.clusterId)}`
+        : state.view === 'path'
+          ? `#/t/${encodeURIComponent(state.topicId)}`
+          : '#/';
+  if (window.location.hash !== next) {
+    window.history.replaceState(null, '', next);
+  }
+}
+
+function applyRoute(route) {
+  state.view = route.view;
+  if (route.view === 'subject') {
+    state.subject = route.subject;
+    state.clusterId = null;
+  } else if (route.view === 'cluster') {
+    state.clusterId = route.clusterId;
+    state.subject = maps.clusterById.get(route.clusterId).subject;
+  } else if (route.view === 'path') {
+    state.topicId = route.topicId;
+    const topic = maps.topicById.get(route.topicId);
+    state.subject = topic.subject;
+    state.clusterId = topic.clusterId;
+  } else {
+    state.subject = null;
+    state.clusterId = null;
+  }
+}
+
+function goto(patch, { keepTopic = false } = {}) {
+  Object.assign(state, patch);
+  if (!keepTopic && patch.view && patch.view !== 'path') state.topicId = null;
+  writeHash();
+  render();
+}
+
+function selectTopic(topicId, { view } = {}) {
+  const topic = maps.topicById.get(topicId);
+  if (!topic) return;
+  state.topicId = topicId;
+  state.subject = topic.subject;
+  if (view) {
+    state.view = view;
+    if (view === 'cluster') state.clusterId = topic.clusterId;
+  } else if (state.view === 'overview' || state.view === 'subject') {
+    state.view = 'cluster';
+    state.clusterId = topic.clusterId;
+  }
+  writeHash();
+  render();
+}
+
+/* ------------------------------------------------------------------- graph */
+
+/** 접힌 배치에서는 진행 방향이 눈에 보여야 하므로 간선 끝에 화살표를 붙인다. */
+function arrowMarkers() {
+  const defs = document.createElementNS(SVG_NS, 'defs');
+  for (const [id, color] of [
+    ['arrow-hard', 'var(--hard)'],
+    ['arrow-soft', 'var(--soft)'],
+    ['arrow-related', 'var(--accent)'],
+  ]) {
+    const marker = document.createElementNS(SVG_NS, 'marker');
+    marker.setAttribute('id', id);
+    marker.setAttribute('viewBox', '0 0 8 8');
+    marker.setAttribute('refX', '7');
+    marker.setAttribute('refY', '4');
+    marker.setAttribute('markerWidth', '6');
+    marker.setAttribute('markerHeight', '6');
+    marker.setAttribute('orient', 'auto-start-reverse');
+    const head = document.createElementNS(SVG_NS, 'path');
+    head.setAttribute('d', 'M 0 1 L 7 4 L 0 7 z');
+    head.setAttribute('fill', color);
+    marker.append(head);
+    defs.append(marker);
+  }
+  return defs;
+}
+
+/**
+ * 두 노드를 잇는 곡선. 뱀 모양으로 접힌 배치에서는 진행 방향이 행마다 바뀌므로
+ * 가로 방향(좌→우, 우→좌)과 세로 이동을 나누어 붙일 가장자리를 고른다.
+ */
+function edgePath(from, to) {
+  const dx = to.x - from.x;
+
+  if (Math.abs(dx) < from.width) {
+    const startX = from.x + from.width / 2;
+    const startY = from.y + from.height;
+    const endX = to.x + to.width / 2;
+    const endY = to.y;
+    const bend = Math.max(18, Math.abs(endY - startY) / 2);
+    return `M ${startX} ${startY} C ${startX} ${startY + bend}, ${endX} ${endY - bend}, ${endX} ${endY}`;
+  }
+
+  const rightward = dx > 0;
+  const startX = rightward ? from.x + from.width : from.x;
+  const startY = from.y + from.height / 2;
+  const endX = rightward ? to.x : to.x + to.width;
+  const endY = to.y + to.height / 2;
+  const bend = (rightward ? 1 : -1) * Math.max(24, Math.abs(endX - startX) / 2);
+  return `M ${startX} ${startY} C ${startX + bend} ${startY}, ${endX - bend} ${endY}, ${endX} ${endY}`;
+}
+
+/**
+ * 절대 좌표 노드 + 그 뒤에 그려지는 SVG 간선.
+ * nodes: { id, x, y, width, height, element }
+ * edges: { from, to, strength, className }
+ */
+function drawGraph(nodes, edges, { padding = 12 } = {}) {
+  const width = Math.max(...nodes.map((node) => node.x + node.width), 0) + padding;
+  const height = Math.max(...nodes.map((node) => node.y + node.height), 0) + padding;
+
+  const graph = el('div', 'graph');
+  graph.style.width = `${width}px`;
+  graph.style.height = `${height}px`;
+
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('width', String(width));
+  svg.setAttribute('height', String(height));
+  svg.append(arrowMarkers());
+  graph.append(svg);
+
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  for (const edge of edges) {
+    const from = byId.get(edge.from);
+    const to = byId.get(edge.to);
+    if (!from || !to) continue;
+
+    const path = document.createElementNS(SVG_NS, 'path');
+    path.setAttribute('d', edgePath(from, to));
+    path.setAttribute(
+      'class',
+      `edge ${edge.strength === 'hard' ? 'is-hard' : 'is-soft'}${edge.className ? ` ${edge.className}` : ''}`,
+    );
+    const marker =
+      edge.className === 'is-related' ? 'arrow-related' : edge.strength === 'hard' ? 'arrow-hard' : 'arrow-soft';
+    path.setAttribute('marker-end', `url(#${marker})`);
+    svg.append(path);
+  }
+
+  for (const node of nodes) {
+    node.element.style.left = `${node.x}px`;
+    node.element.style.top = `${node.y}px`;
+    node.element.style.width = `${node.width}px`;
+    node.element.style.height = `${node.height}px`;
+    graph.append(node.element);
+  }
+
+  return graph;
+}
+
+/** 최장 경로 계층화 + barycenter 정렬. 노드 수가 작은 부분 그래프에만 쓴다. */
+function layerNodes(ids, edges) {
+  const idSet = new Set(ids);
+  const incoming = new Map(ids.map((id) => [id, []]));
+  const outgoing = new Map(ids.map((id) => [id, []]));
+  for (const edge of edges) {
+    if (!idSet.has(edge.topicId) || !idSet.has(edge.prerequisiteId)) continue;
+    incoming.get(edge.topicId).push(edge.prerequisiteId);
+    outgoing.get(edge.prerequisiteId).push(edge.topicId);
+  }
+
+  const layer = new Map(ids.map((id) => [id, 0]));
+  const indegree = new Map(ids.map((id) => [id, incoming.get(id).length]));
+  const queue = ids.filter((id) => indegree.get(id) === 0);
+  const ordered = [];
+  while (queue.length > 0) {
+    const id = queue.shift();
+    ordered.push(id);
+    for (const next of outgoing.get(id)) {
+      layer.set(next, Math.max(layer.get(next), layer.get(id) + 1));
+      indegree.set(next, indegree.get(next) - 1);
+      if (indegree.get(next) === 0) queue.push(next);
+    }
+  }
+  // 데이터는 DAG 지만, 방어적으로 남은 노드는 마지막 계층에 둔다.
+  for (const id of ids) if (!ordered.includes(id)) layer.set(id, Math.max(0, ...layer.values()));
+
+  const columns = [];
+  for (const id of [...ids].sort()) {
+    const depth = layer.get(id);
+    if (!columns[depth]) columns[depth] = [];
+    columns[depth].push(id);
+  }
+
+  const position = new Map();
+  columns.forEach((column) => column.forEach((id, row) => position.set(id, row)));
+  for (let sweep = 0; sweep < 2; sweep += 1) {
+    for (let depth = 1; depth < columns.length; depth += 1) {
+      columns[depth].sort((left, right) => barycenter(left) - barycenter(right) || left.localeCompare(right));
+      columns[depth].forEach((id, row) => position.set(id, row));
+    }
+  }
+
+  function barycenter(id) {
+    const parents = incoming.get(id);
+    if (parents.length === 0) return position.get(id) ?? 0;
+    return parents.reduce((sum, parent) => sum + (position.get(parent) ?? 0), 0) / parents.length;
+  }
+
+  return columns.map((column) => column ?? []);
+}
+
+function topicNodeElement(topic, { onSelect }) {
+  const node = el('button', 'node node-topic');
+  node.type = 'button';
+  node.style.borderLeftColor = subjectColor(topic.subject);
+  node.append(el('span', 'node-title', topic.title));
+
+  const meta = el('span', 'node-meta');
+  if (topic.standardCode) meta.append(el('span', 'tag-code', topic.standardCode));
+  const typeLabel = TOPIC_TYPE_LABELS[topic.type];
+  if (typeLabel) meta.append(el('span', null, typeLabel));
+  node.append(meta);
+
+  node.addEventListener('click', () => onSelect(topic.id));
+  if (topic.id === state.topicId) node.classList.add('is-selected');
+  return node;
+}
+
+/* ------------------------------------------------------------------- views */
+
+function visibleClusters(subject) {
+  return state.index.clusters
+    .filter((cluster) => cluster.subject === subject && bandIsActive(cluster.gradeBand))
+    .sort((left, right) => compareBands(left.gradeBand, right.gradeBand) || left.id.localeCompare(right.id));
+}
+
+function renderOverview() {
+  const body = dom.stageBody;
+  body.replaceChildren();
+  body.append(el('h2', 'stage-title', '전체 지도'));
+  body.append(
+    el(
+      'p',
+      'stage-lede',
+      `${state.index.counts.topics.toLocaleString('ko-KR')}개 세부 주제를 ${state.index.subjects.length}개 교과 × 학년군으로 배치했습니다. ` +
+        '칸 안의 타일 하나가 학습 클러스터이고 옆의 숫자는 주제 수입니다. ' +
+        '테두리만 있는 타일은 여러 학년군에 걸친 묶음이라 해당하는 칸마다 함께 나타납니다.',
+    ),
+  );
+
+  const bands = BASE_BANDS.filter((band) => state.activeBands.has(band));
+  const grid = el('div', 'overview-grid');
+  grid.style.setProperty('--band-count', String(bands.length));
+
+  grid.append(el('div', 'overview-head', '교과'));
+  for (const band of bands) grid.append(el('div', 'overview-head', `${band}학년군`));
+
+  for (const subject of state.index.subjects) {
+    const head = el('button', 'overview-row-head');
+    head.type = 'button';
+    const swatch = el('span', 'subject-swatch');
+    swatch.style.background = subjectColor(subject.subject);
+    head.append(swatch, el('span', 'subject-name', subject.subject));
+    head.append(el('span', 'subject-count', String(subject.topicCount)));
+    head.addEventListener('click', () => goto({ view: 'subject', subject: subject.subject }));
+    grid.append(head);
+
+    for (const band of bands) {
+      const cell = el('div', 'overview-cell');
+      const clusters = state.index.clusters.filter(
+        (cluster) => cluster.subject === subject.subject && (BAND_SPAN[cluster.gradeBand] ?? []).includes(band),
+      );
+      if (clusters.length === 0) {
+        cell.classList.add('is-empty');
+        cell.append(el('span', 'subject-count', '해당 학년군 없음'));
+      }
+      for (const cluster of clusters) {
+        const spans = (BAND_SPAN[cluster.gradeBand] ?? []).length > 1;
+        const tile = el('button', spans ? 'cluster-tile is-spanning' : 'cluster-tile');
+        tile.type = 'button';
+        if (spans) tile.style.color = subjectColor(subject.subject);
+        else tile.style.background = subjectColor(subject.subject);
+        tile.style.borderColor = subjectColor(subject.subject);
+        tile.append(el('span', 'tile-label', shortClusterLabel(cluster)));
+        tile.append(el('span', 'tile-count', String(cluster.topicCount)));
+        tile.title = `${cluster.name} · 주제 ${cluster.topicCount}개`;
+        tile.setAttribute('aria-label', tile.title);
+        tile.addEventListener('click', () => goto({ view: 'cluster', clusterId: cluster.id }));
+        cell.append(tile);
+      }
+      grid.append(cell);
+    }
+  }
+
+  body.append(grid);
+}
+
+function renderSubject() {
+  const body = dom.stageBody;
+  body.replaceChildren();
+  const subject = maps.subjectByName.get(state.subject);
+  const clusters = visibleClusters(state.subject);
+
+  body.append(el('h2', 'stage-title', `${state.subject} 지도`));
+  body.append(
+    el(
+      'p',
+      'stage-lede',
+      `주제 ${subject.topicCount}개 · 클러스터 ${subject.clusterCount}개 · 성취기준 ${subject.standardCount}개. ` +
+        '카드를 누르면 클러스터 안의 선수 관계를 볼 수 있고, 카드 사이 선은 클러스터를 가로지르는 선수 관계입니다.',
+    ),
+  );
+
+  if (clusters.length === 0) {
+    body.append(el('p', 'stage-note', '선택한 학년군에 해당하는 클러스터가 없습니다.'));
+    return;
+  }
+
+  const bands = [...new Set(clusters.map((cluster) => cluster.gradeBand))].sort(compareBands);
+  const width = 220;
+  const height = 112;
+  const columnGap = 70;
+  const rowGap = 14;
+  const top = 26;
+
+  const rowIndex = new Map(bands.map((band) => [band, 0]));
+  const nodes = clusters.map((cluster) => {
+    const column = bands.indexOf(cluster.gradeBand);
+    const row = rowIndex.get(cluster.gradeBand);
+    rowIndex.set(cluster.gradeBand, row + 1);
+
+    const card = el('button', 'node node-cluster');
+    card.type = 'button';
+    card.style.borderLeftColor = subjectColor(cluster.subject);
+    card.append(el('span', 'node-title', cluster.name));
+    // 쉬운 보기에서는 클러스터마다 표현이 거의 같은 학부모 요약 대신 실제 주제 이름을 미리 보여준다.
+    const preview =
+      state.mode === 'easy'
+        ? cluster.topics
+            .slice(0, 3)
+            .map((topicId) => maps.topicById.get(topicId)?.title)
+            .filter(Boolean)
+            .join(' · ')
+        : cluster.summary;
+    card.append(el('span', 'node-summary', preview));
+    const meta = el('span', 'node-meta');
+    meta.append(el('span', null, `주제 ${cluster.topicCount}개`));
+    card.append(meta);
+    card.addEventListener('click', () => goto({ view: 'cluster', clusterId: cluster.id }));
+
+    return {
+      id: cluster.id,
+      x: column * (width + columnGap),
+      y: top + row * (height + rowGap),
+      width,
+      height,
+      element: card,
+    };
+  });
+
+  const clusterIds = new Set(clusters.map((cluster) => cluster.id));
+  const aggregated = new Map();
+  for (const edge of state.index.edges) {
+    const from = maps.topicById.get(edge.prerequisiteId);
+    const to = maps.topicById.get(edge.topicId);
+    if (!from || !to || from.clusterId === to.clusterId) continue;
+    if (!clusterIds.has(from.clusterId) || !clusterIds.has(to.clusterId)) continue;
+    const key = `${from.clusterId} ${to.clusterId}`;
+    const existing = aggregated.get(key);
+    if (existing) {
+      if (edge.strength === 'hard') existing.strength = 'hard';
+    } else {
+      aggregated.set(key, { from: from.clusterId, to: to.clusterId, strength: edge.strength });
+    }
+  }
+
+  const graph = drawGraph(nodes, [...aggregated.values()]);
+  bands.forEach((band, column) => {
+    const label = el('span', 'column-label', `${band}학년군`);
+    label.style.left = `${column * (width + columnGap)}px`;
+    label.style.top = '0px';
+    graph.append(label);
+  });
+  body.append(graph);
+}
+
+function renderCluster() {
+  const body = dom.stageBody;
+  body.replaceChildren();
+  const cluster = maps.clusterById.get(state.clusterId);
+  const ids = cluster.topics.filter((id) => maps.topicById.has(id));
+  const edges = state.index.edges.filter(
+    (edge) => ids.includes(edge.topicId) && ids.includes(edge.prerequisiteId),
+  );
+
+  body.append(el('h2', 'stage-title', cluster.name));
+  body.append(
+    el('p', 'stage-lede', state.mode === 'easy' ? cluster.parentSummary : cluster.summary),
+  );
+
+  const columns = layerNodes(ids, edges);
+  const width = 214;
+  const height = 66;
+  const columnGap = 62;
+  const rowGap = 10;
+
+  const related = new Set();
+  if (state.topicId && ids.includes(state.topicId)) {
+    for (const edge of maps.prerequisitesOf.get(state.topicId) ?? []) related.add(edge.prerequisiteId);
+    for (const edge of maps.unlocksOf.get(state.topicId) ?? []) related.add(edge.topicId);
+    related.add(state.topicId);
+  }
+
+  // 선수 관계는 대부분 긴 사슬이라 계층을 그대로 펼치면 한 줄이 화면을 크게 벗어난다.
+  // 일정 개수마다 접되 방향을 번갈아(뱀 모양) 두어 접히는 지점의 간선이 짧게 유지되도록 한다.
+  const perRow = 5;
+  const bandGap = 26;
+  const bandTop = [0];
+  for (let band = 0; (band + 1) * perRow < columns.length; band += 1) {
+    const tallest = Math.max(
+      ...columns.slice(band * perRow, (band + 1) * perRow).map((column) => column.length),
+    );
+    bandTop.push(bandTop[band] + tallest * (height + rowGap) + bandGap);
+  }
+
+  const nodes = [];
+  columns.forEach((column, columnIndex) => {
+    const band = Math.floor(columnIndex / perRow);
+    const withinBand = columnIndex % perRow;
+    const slot = band % 2 === 0 ? withinBand : Math.min(perRow, columns.length - band * perRow) - 1 - withinBand;
+    column.forEach((id, row) => {
+      const topic = maps.topicById.get(id);
+      const element = topicNodeElement(topic, { onSelect: (next) => selectTopic(next, { view: 'cluster' }) });
+      if (related.size > 0 && !related.has(id)) element.classList.add('is-dimmed');
+      nodes.push({
+        id,
+        x: slot * (width + columnGap),
+        y: bandTop[band] + row * (height + rowGap),
+        width,
+        height,
+        element,
+      });
+    });
+  });
+
+  const graphEdges = edges.map((edge) => ({
+    from: edge.prerequisiteId,
+    to: edge.topicId,
+    strength: edge.strength,
+    className:
+      state.topicId && (edge.topicId === state.topicId || edge.prerequisiteId === state.topicId)
+        ? 'is-related'
+        : '',
+  }));
+
+  body.append(drawGraph(nodes, graphEdges));
+
+  const outside = state.index.edges.filter(
+    (edge) =>
+      (ids.includes(edge.topicId) && !ids.includes(edge.prerequisiteId)) ||
+      (ids.includes(edge.prerequisiteId) && !ids.includes(edge.topicId)),
+  );
+  if (outside.length > 0) {
+    body.append(
+      el('p', 'stage-note', `이 클러스터는 다른 클러스터와 ${outside.length}개의 선수 관계로 이어집니다.`),
+    );
+  }
+}
+
+function collectPath(topicId, depth, direction) {
+  const edgesOf = direction === 'up' ? maps.prerequisitesOf : maps.unlocksOf;
+  const other = direction === 'up' ? (edge) => edge.prerequisiteId : (edge) => edge.topicId;
+  const levels = [];
+  let frontier = [topicId];
+  const seen = new Set([topicId]);
+
+  for (let step = 0; step < depth; step += 1) {
+    const next = [];
+    const stepEdges = [];
+    for (const id of frontier) {
+      for (const edge of edgesOf.get(id) ?? []) {
+        stepEdges.push(edge);
+        const neighbour = other(edge);
+        if (seen.has(neighbour)) continue;
+        seen.add(neighbour);
+        next.push(neighbour);
+      }
+    }
+    if (next.length === 0) {
+      levels.push({ ids: [], edges: stepEdges });
+      break;
+    }
+    levels.push({ ids: next, edges: stepEdges });
+    frontier = next;
+  }
+
+  return levels;
+}
+
+function renderPath() {
+  const body = dom.stageBody;
+  body.replaceChildren();
+  const topic = maps.topicById.get(state.topicId);
+
+  body.append(el('h2', 'stage-title', '학습 경로'));
+  body.append(
+    el(
+      'p',
+      'stage-lede',
+      `“${topic.title}”을(를) 기준으로 앞쪽에는 먼저 다루기를 권하는 주제가, 뒤쪽에는 이 주제 뒤에 이어지는 주제가 놓입니다.`,
+    ),
+  );
+
+  const controls = el('div', 'path-controls');
+  const label = el('span', 'subject-count', `표시 단계: ±${state.pathDepth}`);
+  const less = el('button', null, '단계 줄이기');
+  less.type = 'button';
+  less.disabled = state.pathDepth <= 1;
+  less.addEventListener('click', () => {
+    state.pathDepth = Math.max(1, state.pathDepth - 1);
+    render();
+  });
+  const more = el('button', null, '더 보기');
+  more.type = 'button';
+  more.disabled = state.pathDepth >= 8;
+  more.addEventListener('click', () => {
+    state.pathDepth = Math.min(8, state.pathDepth + 1);
+    render();
+  });
+  const toCluster = el('button', null, '클러스터 지도로');
+  toCluster.type = 'button';
+  toCluster.addEventListener('click', () => goto({ view: 'cluster', clusterId: topic.clusterId }, { keepTopic: true }));
+  controls.append(label, less, more, toCluster);
+  body.append(controls);
+
+  const up = collectPath(state.topicId, state.pathDepth, 'up');
+  const down = collectPath(state.topicId, state.pathDepth, 'down');
+
+  const columns = [
+    ...up
+      .map((level) => level.ids)
+      .filter((ids) => ids.length > 0)
+      .reverse(),
+    [state.topicId],
+    ...down.map((level) => level.ids).filter((ids) => ids.length > 0),
+  ];
+
+  const width = 208;
+  const height = 74;
+  const columnGap = 58;
+  const rowGap = 10;
+  const top = 26;
+  const tallest = Math.max(...columns.map((ids) => ids.length));
+
+  const nodes = [];
+  columns.forEach((ids, columnIndex) => {
+    const offset = ((tallest - ids.length) * (height + rowGap)) / 2;
+    ids.forEach((id, row) => {
+      const element = topicNodeElement(maps.topicById.get(id), {
+        onSelect: (next) => selectTopic(next, { view: 'path' }),
+      });
+      nodes.push({
+        id,
+        x: columnIndex * (width + columnGap),
+        y: top + offset + row * (height + rowGap),
+        width,
+        height,
+        element,
+      });
+    });
+  });
+
+  const placed = new Set(nodes.map((node) => node.id));
+  const graphEdges = [...up.flatMap((level) => level.edges), ...down.flatMap((level) => level.edges)]
+    .filter((edge) => placed.has(edge.topicId) && placed.has(edge.prerequisiteId))
+    .map((edge) => ({ from: edge.prerequisiteId, to: edge.topicId, strength: edge.strength }));
+
+  const graph = drawGraph(nodes, graphEdges);
+  const upCount = up.filter((level) => level.ids.length > 0).length;
+  columns.forEach((ids, columnIndex) => {
+    const step = columnIndex - upCount;
+    const text = step === 0 ? '선택한 주제' : step < 0 ? `${-step}단계 앞` : `${step}단계 뒤`;
+    const marker = el('span', 'column-label', `${text} (${ids.length})`);
+    marker.style.left = `${columnIndex * (width + columnGap)}px`;
+    marker.style.top = '0px';
+    graph.append(marker);
+  });
+  body.append(graph);
+}
+
+/* ------------------------------------------------------------------ detail */
+
+/** 간선의 `reason` 은 경량 인덱스에 없고 교과 상세 파일에만 있으므로 그쪽에서 찾아 붙인다. */
+function detailLinkList(edges, direction, edgeDetails) {
+  const list = el('ul', 'link-list');
+  for (const edge of edges) {
+    const otherId = direction === 'up' ? edge.prerequisiteId : edge.topicId;
+    const other = maps.topicById.get(otherId);
+    if (!other) continue;
+    const item = el('li');
+    const button = el('button', null, `${edge.strength === 'hard' ? '필수' : '권장'} · ${other.title}`);
+    button.type = 'button';
+    button.addEventListener('click', () => selectTopic(otherId));
+    item.append(button);
+    const reason = edgeDetails?.get(pairKey(edge.topicId, edge.prerequisiteId))?.reason;
+    if (reason) item.append(el('span', 'edge-reason analysis-only', reason));
+    list.append(item);
+  }
+  return list;
+}
+
+function sourceTable(rows) {
+  const table = el('table', 'source-table');
+  for (const [key, value] of rows) {
+    if (value === undefined || value === null || value === '') continue;
+    const row = el('tr');
+    row.append(el('th', null, key));
+    row.append(el('td', null, Array.isArray(value) ? value.join(', ') : String(value)));
+    table.append(row);
+  }
+  return table;
+}
+
+function renderClusterDetail(cluster) {
+  const panel = dom.detail;
+  panel.replaceChildren();
+  panel.append(el('h2', null, cluster.name));
+
+  const tags = el('div', 'tag-row');
+  tags.append(el('span', 'tag', cluster.subject));
+  tags.append(el('span', 'tag', `${cluster.gradeBand}학년군`));
+  if (cluster.domain) tags.append(el('span', 'tag', cluster.domain));
+  tags.append(el('span', 'tag', `주제 ${cluster.topicCount}개`));
+  if (CLUSTER_TYPE_LABELS[cluster.clusterType]) {
+    tags.append(el('span', 'tag', CLUSTER_TYPE_LABELS[cluster.clusterType]));
+  }
+  panel.append(tags);
+
+  panel.append(el('h3', null, '이 묶음은'));
+  panel.append(el('p', null, state.mode === 'easy' ? cluster.parentSummary : cluster.summary));
+
+  panel.append(el('h3', null, '포함 주제'));
+  const list = el('ul', 'link-list');
+  for (const topicId of cluster.topics) {
+    const topic = maps.topicById.get(topicId);
+    if (!topic) continue;
+    const item = el('li');
+    const button = el('button', null, topic.title);
+    button.type = 'button';
+    button.addEventListener('click', () => selectTopic(topicId, { view: 'cluster' }));
+    item.append(button);
+    list.append(item);
+  }
+  panel.append(list);
+
+  const analysis = el('div', 'analysis-only');
+  analysis.append(el('h3', null, '식별자'));
+  analysis.append(sourceTable([['클러스터 id', cluster.id], ['워크스트림', `${cluster.workstream}.json`]]));
+  panel.append(analysis);
+}
+
+function renderTopicDetail(topic, payload) {
+  const panel = dom.detail;
+  const detail = payload?.topics.get(topic.id);
+  panel.replaceChildren();
+  panel.append(el('h2', null, topic.title));
+
+  const tags = el('div', 'tag-row');
+  tags.append(el('span', 'tag', topic.subject));
+  tags.append(el('span', 'tag', `${topic.gradeBand}학년군`));
+  if (topic.domain) tags.append(el('span', 'tag', topic.domain));
+  if (TOPIC_TYPE_LABELS[topic.type]) tags.append(el('span', 'tag', TOPIC_TYPE_LABELS[topic.type]));
+  if (topic.standardCode) tags.append(el('span', 'tag tag-code', topic.standardCode));
+  panel.append(tags);
+
+  if (!detail) {
+    panel.append(el('p', 'detail-empty', '상세 정보를 불러오는 중입니다…'));
+    return;
+  }
+
+  if (detail.summary) {
+    panel.append(el('h3', null, '한 줄 요약'));
+    panel.append(el('p', null, detail.summary));
+  }
+  if (detail.description) {
+    panel.append(el('h3', null, '설명'));
+    panel.append(el('p', null, detail.description));
+  }
+  if (Array.isArray(detail.evidence) && detail.evidence.length > 0) {
+    panel.append(el('h3', null, '이렇게 하면 배운 것입니다'));
+    const list = el('ul');
+    for (const item of detail.evidence) list.append(el('li', null, item));
+    panel.append(list);
+  }
+  if (detail.assessmentPrompt) {
+    panel.append(el('h3', null, '확인 질문'));
+    panel.append(el('p', null, detail.assessmentPrompt));
+  }
+
+  const prerequisites = maps.prerequisitesOf.get(topic.id) ?? [];
+  const unlocks = maps.unlocksOf.get(topic.id) ?? [];
+  if (prerequisites.length > 0) {
+    panel.append(el('h3', null, `먼저 다루기를 권하는 주제 (${prerequisites.length})`));
+    panel.append(detailLinkList(prerequisites, 'up', payload.edges));
+  }
+  if (unlocks.length > 0) {
+    panel.append(el('h3', null, `이어지는 주제 (${unlocks.length})`));
+    panel.append(detailLinkList(unlocks, 'down', payload.edges));
+  }
+
+  // 클러스터는 주제를 분할하지 않는다. 수학·도덕 주제는 여러 묶음에 동시에 속한다.
+  const memberships = (topic.clusterIds ?? [topic.clusterId]).map((id) => maps.clusterById.get(id)).filter(Boolean);
+  if (memberships.length > 0) {
+    panel.append(el('h3', null, memberships.length > 1 ? `소속 클러스터 (${memberships.length})` : '소속 클러스터'));
+    const list = el('ul', 'link-list');
+    for (const cluster of memberships) {
+      const item = el('li');
+      const button = el('button', null, cluster.name);
+      button.type = 'button';
+      button.addEventListener('click', () => goto({ view: 'cluster', clusterId: cluster.id }, { keepTopic: true }));
+      item.append(button);
+      list.append(item);
+    }
+    panel.append(list);
+  }
+
+  const analysis = el('div', 'analysis-only');
+  analysis.append(el('h3', null, '성취기준 · 출처'));
+  const locator = detail.sourceLocator;
+  analysis.append(
+    sourceTable([
+      ['주제 id', detail.id],
+      ['성취기준', detail.standards],
+      ['출처 자료', detail.sourceRefs],
+      ['출처 위치', typeof locator === 'string' ? locator : locator?.section],
+      ['PDF 쪽', typeof locator === 'object' ? locator?.pdfPage : undefined],
+      ['첨부 번호', typeof locator === 'object' ? locator?.attachmentNo : undefined],
+      ['원문 sha256', typeof locator === 'object' ? locator?.sha256 : undefined],
+      ['검증 상태', detail.verificationStatus],
+    ]),
+  );
+  if (detail.generationBasis) {
+    analysis.append(el('h3', null, '생성 근거'));
+    analysis.append(el('p', null, detail.generationBasis));
+  }
+  analysis.append(
+    el('p', 'legend-note', '공식 성취기준 원문은 저장소와 이 화면 어디에도 포함되어 있지 않습니다.'),
+  );
+  panel.append(analysis);
+
+  const actions = el('div', 'detail-actions');
+  const pathButton = el('button', null, '학습 경로 보기');
+  pathButton.type = 'button';
+  pathButton.addEventListener('click', () => goto({ view: 'path' }, { keepTopic: true }));
+  actions.append(pathButton);
+  panel.append(actions);
+}
+
+async function renderDetail() {
+  if (state.topicId) {
+    const topic = maps.topicById.get(state.topicId);
+    const workstream = workstreamOf(topic.subject);
+    const cached = state.details.get(workstream);
+    const loaded = cached instanceof Promise ? null : cached;
+    renderTopicDetail(topic, loaded);
+    if (!loaded) {
+      const ticket = (state.pendingDetail += 1);
+      const payload = await loadSubjectDetail(topic.subject);
+      if (ticket === state.pendingDetail && state.topicId === topic.id) {
+        renderTopicDetail(topic, payload);
+      }
+    }
+    return;
+  }
+
+  if (state.view === 'cluster' && state.clusterId) {
+    renderClusterDetail(maps.clusterById.get(state.clusterId));
+    return;
+  }
+
+  dom.detail.replaceChildren(
+    el('p', 'detail-empty', '주제나 클러스터를 선택하면 상세 정보가 여기에 표시됩니다.'),
+  );
+}
+
+/* ------------------------------------------------------------- chrome + app */
+
+function renderBreadcrumb() {
+  const crumbs = dom.breadcrumb;
+  crumbs.replaceChildren();
+
+  const push = (text, handler) => {
+    if (crumbs.childElementCount > 0) crumbs.append(el('span', null, '›'));
+    if (!handler) {
+      crumbs.append(el('span', 'crumb-current', text));
+      return;
+    }
+    const button = el('button', null, text);
+    button.type = 'button';
+    button.addEventListener('click', handler);
+    crumbs.append(button);
+  };
+
+  push('전체 지도', state.view === 'overview' ? null : () => goto({ view: 'overview' }));
+  if (state.subject) {
+    push(state.subject, state.view === 'subject' ? null : () => goto({ view: 'subject', subject: state.subject }));
+  }
+  if (state.view === 'cluster' || (state.view === 'path' && state.clusterId)) {
+    const cluster = maps.clusterById.get(state.clusterId);
+    if (cluster) {
+      push(
+        cluster.name,
+        state.view === 'cluster' ? null : () => goto({ view: 'cluster', clusterId: cluster.id }, { keepTopic: true }),
+      );
+    }
+  }
+  if (state.view === 'path') push('학습 경로');
+}
+
+function renderSidebar() {
+  dom.subjectList.replaceChildren();
+  for (const subject of state.index.subjects) {
+    const item = el('li');
+    const button = el('button');
+    button.type = 'button';
+    if (subject.subject === state.subject) button.classList.add('is-active');
+    const swatch = el('span', 'subject-swatch');
+    swatch.style.background = subjectColor(subject.subject);
+    button.append(swatch, el('span', 'subject-name', subject.subject));
+    button.append(el('span', 'subject-count', String(subject.topicCount)));
+    button.addEventListener('click', () => goto({ view: 'subject', subject: subject.subject }));
+    item.append(button);
+    dom.subjectList.append(item);
+  }
+}
+
+function renderGradeFilters() {
+  dom.gradeFilters.replaceChildren();
+  for (const band of BASE_BANDS) {
+    const button = el('button', state.activeBands.has(band) ? 'is-active' : null, `${band}학년군`);
+    button.type = 'button';
+    button.setAttribute('aria-pressed', String(state.activeBands.has(band)));
+    button.addEventListener('click', () => {
+      if (state.activeBands.has(band)) {
+        if (state.activeBands.size > 1) state.activeBands.delete(band);
+      } else {
+        state.activeBands.add(band);
+      }
+      render();
+    });
+    dom.gradeFilters.append(button);
+  }
+}
+
+function render() {
+  renderGradeFilters();
+  renderSidebar();
+  renderBreadcrumb();
+
+  if (state.view === 'subject' && state.subject) renderSubject();
+  else if (state.view === 'cluster' && state.clusterId) renderCluster();
+  else if (state.view === 'path' && state.topicId) renderPath();
+  else renderOverview();
+
+  renderDetail();
+}
+
+function renderSearchResults(query) {
+  const results = dom.searchResults;
+  results.replaceChildren();
+  const trimmed = query.trim().toLowerCase();
+  if (trimmed.length === 0) {
+    results.hidden = true;
+    return;
+  }
+
+  const matches = state.index.topics
+    .filter(
+      (topic) =>
+        topic.title.toLowerCase().includes(trimmed) ||
+        (topic.standardCode ?? '').toLowerCase().includes(trimmed) ||
+        (topic.domain ?? '').toLowerCase().includes(trimmed),
+    )
+    .slice(0, 25);
+
+  if (matches.length === 0) {
+    results.append(el('li', 'search-empty', '일치하는 주제가 없습니다.'));
+  }
+  for (const topic of matches) {
+    const item = el('li');
+    item.setAttribute('role', 'option');
+    const button = el('button');
+    button.type = 'button';
+    button.append(el('span', null, topic.title));
+    button.append(
+      el(
+        'span',
+        'result-meta',
+        `${topic.subject} · ${topic.gradeBand}학년군${topic.standardCode ? ` · ${topic.standardCode}` : ''}`,
+      ),
+    );
+    button.addEventListener('click', () => {
+      results.hidden = true;
+      dom.searchInput.value = '';
+      selectTopic(topic.id, { view: 'path' });
+      dom.stage.focus();
+    });
+    item.append(button);
+    results.append(item);
+  }
+  results.hidden = false;
+}
+
+function setMode(mode) {
+  state.mode = mode;
+  document.body.dataset.mode = mode;
+  for (const button of document.querySelectorAll('.mode-toggle button')) {
+    button.classList.toggle('is-active', button.dataset.mode === mode);
+    button.setAttribute('aria-pressed', String(button.dataset.mode === mode));
+  }
+  if (state.index) render();
+}
+
+function wireChrome() {
+  dom.overviewButton.addEventListener('click', () => goto({ view: 'overview' }));
+
+  for (const button of document.querySelectorAll('.mode-toggle button')) {
+    button.addEventListener('click', () => setMode(button.dataset.mode));
+  }
+
+  dom.searchInput.addEventListener('input', (event) => renderSearchResults(event.target.value));
+  dom.searchInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      dom.searchInput.value = '';
+      dom.searchResults.hidden = true;
+    }
+  });
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.search')) dom.searchResults.hidden = true;
+  });
+
+  window.addEventListener('hashchange', () => {
+    applyRoute(readHash());
+    render();
+  });
+}
+
+async function start() {
+  setMode('easy');
+  wireChrome();
+
+  try {
+    state.index = await loadIndex();
+  } catch (error) {
+    dom.stageBody.replaceChildren(
+      el(
+        'p',
+        'stage-note',
+        `데이터를 불러오지 못했습니다: ${error.message}. site/ 를 정적 서버로 열었는지 확인하세요.`,
+      ),
+    );
+    return;
+  }
+
+  buildMaps(state.index);
+
+  document.getElementById('badge-taxonomy').textContent = `데이터 ${state.index.taxonomyVersion}`;
+  document.getElementById('badge-ontology').textContent = `온톨로지 ${state.index.ontologyVersion}`;
+  const repository = state.index.repositoryUrl;
+  document.getElementById('link-provenance').href = `${repository}/blob/main/PROVENANCE.md`;
+  document.getElementById('link-notice').href = `${repository}/blob/main/NOTICE.md`;
+
+  applyRoute(readHash());
+  render();
+}
+
+start();

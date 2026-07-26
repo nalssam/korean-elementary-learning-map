@@ -34,6 +34,10 @@ jobs:
           npm run check:ontology:artifacts
           npm run build:ontology:release
           npm run check:ontology:release
+      - name: Deterministic viewer data artifacts
+        run: |
+          npm run build:site
+          npm run check:site:artifacts
       - name: Package audit
         run: npm audit
       - name: Generated artifact diff cleanliness

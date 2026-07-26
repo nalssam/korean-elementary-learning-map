@@ -71,6 +71,29 @@ P3 릴리스는 다음을 제공합니다.
 
 출처·매핑 방법은 [`PROVENANCE.md`](PROVENANCE.md), [`docs/kr-curriculum-mapping-method.md`](docs/kr-curriculum-mapping-method.md), [`docs/kr-full-depth-integration-report.md`](docs/kr-full-depth-integration-report.md)를 참고하세요.
 
+## 러닝맵 뷰어
+
+[`site/`](site/)는 이 데이터를 브라우저에서 탐색하는 정적 화면입니다. 런타임 의존성과 번들러가 없고, 외부 CDN·폰트·스크립트를 부르지 않으며, 자신의 `site/data/`만 읽습니다. `main`에 반영되면 [`.github/workflows/pages.yml`](.github/workflows/pages.yml)이 GitHub Pages로 배포합니다.
+
+```bash
+npm run build:site          # data/kr/ -> site/data/ 생성 (결정적)
+npm run check:site:artifacts # 커밋된 site/data/ 가 최신인지 확인
+npx serve site               # 또는: cd site && python3 -m http.server
+```
+
+`file://`로 열면 브라우저가 `fetch`를 막으므로 정적 서버로 열어야 합니다.
+
+| 뷰 | 내용 |
+| --- | --- |
+| 전체 지도 | 11개 교과 × 학년군 격자. 타일 하나가 클러스터이며, 테두리만 있는 타일은 여러 학년군에 걸친 묶음입니다. |
+| 교과 지도 | 학년군 열로 배치한 클러스터 카드와, 클러스터를 가로지르는 선수 관계 |
+| 클러스터 상세 | 클러스터 내부 선수 관계 DAG. 실선은 필수(hard), 파선은 권장(soft) |
+| 학습 경로 | 선택한 주제의 선행·후행 주제를 단계별로 확장 |
+
+**쉬운 보기 ↔ 분석 보기** 토글로 표시 깊이를 바꿉니다. 분석 보기에서만 성취기준 코드, 출처 위치(자료 id·PDF 쪽·SHA-256), 검증 상태, 생성 근거, 선수 관계의 강도와 근거가 드러납니다.
+
+뷰어 데이터는 `data/kr/`의 파생물이며 원본을 바꾸지 않습니다. 저장소가 공식 성취기준 원문을 담지 않는 것과 마찬가지로, **뷰어도 원문을 표시하지 않고** 코드와 출처 위치, 저장소가 작성한 요약·증거·평가 질문만 보여줍니다.
+
 ## 사용 예
 
 ```js
@@ -143,6 +166,8 @@ npm run check:links
 ```
 
 KR 별칭(`build:kr`, `test:kr`, `validate:kr`, `check:kr:content`, `check:kr:links`)도 유지됩니다.
+
+뷰어 데이터(`site/data/`)는 정식 릴리스 게이트가 아니지만 같은 결정성 규칙을 따릅니다. CI는 `npm run build:site`와 `npm run check:site:artifacts`를 실행한 뒤 생성물 diff 청결 검사에 함께 태웁니다.
 
 ## 데이터 해석 시 주의
 
