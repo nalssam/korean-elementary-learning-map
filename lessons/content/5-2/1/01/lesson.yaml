@@ -14,6 +14,25 @@ id: 5-2/1/01
 title: 이 큰 돌, 누가 어떻게?
 tagline: 단원의 첫 시간입니다. 고인돌과 옛 물건 두 점을 보며, 본 것과 짐작한 것을 가르고 짐작에 까닭을 붙이는 방법을 먼저 익힙니다.
 status: draft
+reviews:
+  - kind: fact
+    by: ai:사실대조
+    date: 2026-11-20
+    result: pass
+    seal: fa9635d59bc4
+    note: 사실 대조표를 끝까지 읽음. 가리킨 사실 없음 31곳 가운데 사실을 말하는 문장은 교사 메모와 오개념에 있고, 모두 적힌 사실(f1, f2, f4, f7, f8, f10, f12, f16~f19, f22~f24)이 받침. 출처에 없다고 적은 두 곳은 두 검증자가 출처를 열어 확인함
+  - kind: voice
+    by: ai:다듬기
+    date: 2026-11-20
+    result: pass
+    seal: fa9635d59bc4
+    note: 글쓰기 기준으로 명세의 모든 글과 그 글이 놓인 화면·인쇄물을 읽음. 고칠 것 없음, 낮은 지적 일곱 가지는 PR 에 적음
+  - kind: print
+    by: ai:화면인쇄
+    date: 2026-11-20
+    result: pass
+    seal: fa9635d59bc4
+    note: PDF 7쪽, 수업 화면 22장(1920·1024), PPTX(LibreOffice), 안내·퀴즈·웹 활동(390·360)을 보고 잼. PowerPoint 와 한쇼에서는 열어 보지 못함
 
 objectives:
   - 사진이나 물건을 보고 눈으로 본 것과 짐작한 것을 가려 말한다.
@@ -86,6 +105,15 @@ facts:
         url: https://encykorea.aks.ac.kr/Article/E0003901
         quote: 지상에 드러나 있는 덮개돌 밑에 받침돌로 널돌이나 자연석을 고이거나, 주검을 안치한 매장 시설이 있는 청동기시대의 대표적인 무덤이자 기념물.
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 53550e9a3306
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 53550e9a3306
   - id: f2
     claim: 고인돌은 무덤방에서 사람뼈와 껴묻거리가 나와 무덤으로 알려져 왔고, 크고 홀로 서 있어 기념물로 보는 고인돌도 있다.
     sources:
@@ -109,6 +137,15 @@ facts:
         url: https://encykorea.aks.ac.kr/Article/E0003901
         quote: 일찍부터 고인돌은 널(棺) 형태의 장방형 무덤방에서 사람뼈와 껴묻거리가 발견되어 무덤으로 알려져 왔다.
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 0bdccd0b9287
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 0bdccd0b9287
   - id: f3
     claim: 고인돌에서 받침돌 위, 가장 위에 올려진 큰 돌을 덮개돌이라고 부른다.
     sources:
@@ -122,6 +159,15 @@ facts:
         url: https://dka.nrich.go.kr/wiki/index.php/600-0162
         quote: 덮개돌(上石)은 고인돌의 가장 큰 특징이며, 한자로 윗돌 의미의 상석(上石)이라 한다.
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 56af727e7bfa
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 56af727e7bfa
   - id: f4
     claim: 우리나라에서 확인된 고인돌은 3만 기가 넘고, 한국민족문화대백과사전은 한반도 전체에 4만여 기가 있다고 추산한다.
     sources:
@@ -135,6 +181,15 @@ facts:
         url: https://encykorea.aks.ac.kr/Article/E0003901
         quote: 우리나라 고인돌은 한반도 전 지역에서 발견되며, 약 4만여 기가 분포한 것으로 추산되고 있다.
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: a6477d1d222a
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: a6477d1d222a
   - id: f5
     claim: 고인돌이 여러 기씩 무리 지어 있는 것을 보고 핏줄로 이어진 집단의 공동 무덤으로 보는 견해도 있다.
     sources:
@@ -143,6 +198,15 @@ facts:
         url: https://encykorea.aks.ac.kr/Article/E0003901
         quote: 또한, 대부분의 고인돌이 무리를 이루고 수 기씩 줄지어 있는 점에서 혈연 집단의 공동 무덤으로 보기도 한다.
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 491288d22efa
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 491288d22efa
   - id: f6
     claim: 국립중앙박물관 전시 설명은 농경이 발달하며 생긴 갈등을 조정할 우두머리가 필요해졌고, 권위와 권력을 갖게 된 우두머리를 기억하려고 사람들이 고인돌 같은 큰 기념물을 만들었다고 본다.
     sources:
@@ -151,6 +215,15 @@ facts:
         url: https://www.museum.go.kr/MUSEUM/contents/M0201030300.do?showHallId=760&showroomCode=DM0004
         quote: 농경의 발달은 공동체 안팎으로 여러 갈등을 유발했고, 이를 조정하는 우두머리가 필요했다. 우두머리의 역할은 점점 더 중요해져 권위와 권력을 갖게 되었다. 사람들은 그들을 기억하기 위해 고인돌과 같은 큰 기념물을 만들었다.
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 703044d8dfb7
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 703044d8dfb7
   - id: f7
     claim: 덮개돌을 올린 방법으로 흙을 비탈지게 쌓아 그 위로 끌어 올린 뒤 흙을 걷어 냈다는 짐작이 있고, 두 사전은 이 방법을 받침돌이 없거나 낮은 고인돌에 짝지어 설명한다.
     sources:
@@ -164,6 +237,15 @@ facts:
         url: https://dka.nrich.go.kr/wiki/index.php/600-0162
         quote: 운반되어 온 덮개돌을 올리는 방법은 받침돌이 낮은 바둑판식이나 덮개식 고인돌의 경우 흙을 경사지게 돋우고 끌어 올린 후 흙을 제거하였다고 추정된다.
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 825cb7d46084
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 825cb7d46084
   - id: f22
     claim: 고창 세계유산 고인돌박물관은 받침돌을 세운 뒤 흙을 경사지게 쌓고, 그 위로 덮개돌을 끌어 올린 다음 흙을 걷어 냈다고 짐작해 고인돌을 만든 차례를 설명한다.
     sources:
@@ -177,6 +259,15 @@ facts:
         url: https://www.gochang.go.kr/gcdolmen/index.gochang?menuCd=DOM_000001206003000000
         quote: 운반되어 온 덮개돌은 경사지게 쌓은 흙 위로 끌어올린 후 흙을 제거하였다고 추정됩니다.
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: f4b59ed62243
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: f4b59ed62243
   - id: f19
     claim: 흙을 쌓아 끌어 올렸다는 짐작은 덮개돌과 받침돌 사이에 눌려 있는 흙 같은 흔적에서 나온다.
     sources:
@@ -185,6 +276,15 @@ facts:
         url: https://encykorea.aks.ac.kr/Article/E0003901
         quote: 이 방법은 한쪽으로 기울어진 무덤방 벽석과 밀려나 있는 받침돌, 덮개돌과 받침돌 사이에 압착된 흙으로 짐작할 수 있다.
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: d18ad8ea5eb5
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: d18ad8ea5eb5
   - id: f16
     claim: 받침돌이 높은 탁자식 고인돌은 통나무를 井자 모양으로 겹쳐 쌓아 덮개돌을 들어 올렸다는 짐작이 있다.
     sources:
@@ -203,6 +303,15 @@ facts:
         url: https://dka.nrich.go.kr/wiki/index.php/600-0162
         quote: 탁자식이나 받침돌이 높은 바둑판식 고인돌의 경우 인도네시아 숨바섬 사례처럼 통나무를 정井자 모양으로 쌓은 후에 무덤방 위로 끌어 옮기는 방법이다.
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 913d27e55a74
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 913d27e55a74
   - id: f17
     claim: 옛 그림과 기록, 인도네시아 숨바 섬의 고인돌 축조 사례 등으로 덮개돌을 옮긴 방법을 복원하면, 바닥에 통나무 굴림목을 깔고 덮개돌을 밧줄로 묶어 여러 사람이 끄는 모습이다.
     sources:
@@ -216,6 +325,15 @@ facts:
         url: https://encykorea.aks.ac.kr/Article/E0003901
         quote: 하지만 이집트의 석상을 운반하는 부조상이나 1607년에 제작된 일본 슨푸성〔駿府城〕 축성도, 1796년 『화성성역의궤(華城城役儀軌)』의 구판(駒板), 인도네시아 숨바(Sumba) 섬의 고인돌 축조 사례 등을 통해 운반하는 방법을 복원할 수 있다.
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: f4fa1fbe69b4
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: f4fa1fbe69b4
   - id: f23
     claim: 한국민족문화대백과사전은 덮개돌을 무덤방 위에 올린 방법을 세 가지로 추정하며, 그 가운데 하나로 통나무를 무덤방 위까지 레일처럼 비스듬히 걸쳐 덮개돌을 끌어 올리는 방법을 들고 인도네시아 숨바 섬에서 쓰인 사례라고 적는다.
     sources:
@@ -229,6 +347,15 @@ facts:
         url: https://encykorea.aks.ac.kr/Article/E0003901
         quote: 운반되어 온 덮개돌을 무덤방 위에 올리는 방법은 세 가지로 추정된다.
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: e46b09f3ff15
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: e46b09f3ff15
   - id: f18
     claim: 논밭 정리와 길 내기 같은 개발 과정에서 많은 고인돌이 중장비로 옮겨지거나 부서졌다.
     sources:
@@ -237,6 +364,15 @@ facts:
         url: https://www.museum.go.kr/MUSEUM/contents/M0701040000.do?schM=view&catCustomType=post&catId=93&arcId=2872
         quote: 경지정리와 도로건설 등 근대화 과정에서 수많은 고인돌이 중장비에 의해 옮겨지거나, 심지어 산산이 부서지고 없어지는 비운을 겪기도 한다.
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 67fc0008b687
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 67fc0008b687
   - id: f21
     claim: 강화 부근리 고인돌은 땅에서 높이가 2.6m이고, 덮개돌은 길이 7.1m, 너비 5.5m이다.
     sources:
@@ -245,6 +381,15 @@ facts:
         url: https://encykorea.aks.ac.kr/Article/E0001531
         quote: 지상에서의 높이 2.6m, 덮개돌의 크기는 길이 7.1m, 너비 5.5m이며
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 448ebec36e5e
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 448ebec36e5e
   - id: f8
     claim: 국립중앙박물관의 빗살무늬토기(신수22891)는 서울 암사동 집터 유적에서 나왔고, 겉면을 세 부분으로 나누어 부분마다 다른 무늬로 꾸몄다.
     sources:
@@ -253,6 +398,15 @@ facts:
         url: https://www.museum.go.kr/MUSEUM/contents/M0502000000.do?schM=view&searchId=search&relicId=4328
         quote: 이 토기는 서울시 암사동 집터유적에서 출토된 것으로 겉면을 삼등분하고 각각 다른 무늬로 장식하였다.
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: cd6cd963df44
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: cd6cd963df44
   - id: f9
     claim: 국립중앙박물관은 이 토기 아래쪽에 뚫린 구멍이 깨진 토기를 임시로 고쳐 쓴 흔적이라고 짐작한다 (소장품 설명은 구멍을 두 개라고 쓴다).
     sources:
@@ -261,6 +415,15 @@ facts:
         url: https://www.museum.go.kr/MUSEUM/contents/M0502000000.do?schM=view&searchId=search&relicId=4328
         quote: 토기 아래쪽에 뚫린 두 개의 구멍은 깨진 토기를 임시로 수리하여 사용했던 흔적으로 추정된다.
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: cc283a761eb4
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: cc283a761eb4
   - id: f10
     claim: 국립중앙박물관은 주먹도끼가 대개 양면이 대칭을 이룬 타원형이나 삼각형이고, 가장자리에 날이 있으며 끝이 뾰족하다고 설명한다.
     sources:
@@ -269,6 +432,15 @@ facts:
         url: https://www.museum.go.kr/MUSEUM/contents/M0502000000.do?schM=view&searchId=search&relicId=2486
         quote: 양면이 대칭을 이룬 타원형이거나 삼각형을 하고 있으며, 단면은 볼록렌즈처럼 두툼하다. 가장자리 전체에 날카로운 날이 마련되어 있고, ‘도끼’라는 명칭과는 달리 끝부분이 뾰족하며
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 215275828d74
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 215275828d74
   - id: f11
     claim: 국립중앙박물관은 주먹도끼가 여러 가지 일에 쓰인 도구였다고 설명하고, 주된 쓰임은 큰 동물을 잡아 가르는 일이었을 것으로 추정한다.
     sources:
@@ -277,6 +449,15 @@ facts:
         url: https://www.museum.go.kr/MUSEUM/contents/M0502000000.do?schM=view&searchId=search&relicId=2486
         quote: 실제로는 여러 가지 기능을 수행한 ‘다기능연모’였다. 주된 용도는 대형동물의 도살 및 해체용으로 추정되고 있다.
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: d6c3d87710ce
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: d6c3d87710ce
   - id: f12
     claim: 국립중앙박물관의 주먹도끼(신수19143)는 경기도 파주에서 나왔고 길이가 17.8cm이다.
     sources:
@@ -290,6 +471,15 @@ facts:
         url: https://www.museum.go.kr/MUSEUM/contents/M0502000000.do?schM=view&searchId=search&relicId=2486
         quote: 길이 17.8cm, 너비 10.2cm, 두께 6.4cm
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 017602bba85d
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 017602bba85d
   - id: f13
     claim: 표준국어대사전은 유적을 ‘남아 있는 자취’로 풀고, 건축물, 싸움터, 역사적인 사건이 벌어졌던 곳, 패총, 고분 따위를 예로 든다.
     sources:
@@ -298,6 +488,15 @@ facts:
         url: https://stdict.korean.go.kr/search/searchResult.do?searchKeyword=%EC%9C%A0%EC%A0%81
         quote: 남아 있는 자취. 건축물이나 싸움터 또는 역사적인 사건이 벌어졌던 곳이나 패총, 고분 따위를 이른다.
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 7dd97afe204a
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 7dd97afe204a
   - id: f20
     claim: 조개더미(패총)는 옛사람이 먹고 버린 조개껍데기가 쌓인 무더기이고, 사전은 패총을 유적의 예로 든다.
     sources:
@@ -316,6 +515,15 @@ facts:
         url: https://stdict.korean.go.kr/search/searchResult.do?searchKeyword=%EC%9C%A0%EC%A0%81
         quote: 역사적인 사건이 벌어졌던 곳이나 패총, 고분 따위를 이른다.
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 6d8604f58a1c
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 6d8604f58a1c
   - id: f14
     claim: 유물은 앞선 시대 사람들이 뒷사람에게 남긴 물건이다.
     sources:
@@ -324,6 +532,15 @@ facts:
         url: https://stdict.korean.go.kr/search/searchResult.do?searchKeyword=%EC%9C%A0%EB%AC%BC
         quote: 「1」 선대의 인류가 후대에 남긴 물건.
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 0d2749467aae
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 0d2749467aae
   - id: f15
     claim: 추론은 미루어 생각하는 일이고, 여기서 ‘미루다’는 이미 알려진 것으로 다른 것을 비추어 헤아린다는 뜻이다.
     sources:
@@ -337,6 +554,15 @@ facts:
         url: https://stdict.korean.go.kr/search/searchView.do?wordNo=428858&searchKeywordTo=3
         quote: 이미 알려진 것으로써 다른 것을 비추어 헤아리다.
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 8c33520d60d8
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 8c33520d60d8
   - id: f24
     claim: 이 차시에서 보는 세 가지는 서로 다른 시대의 것으로, 강화 부근리 고인돌은 청동기시대, 암사동 빗살무늬토기는 신석기시대, 파주 주먹도끼는 구석기시대의 것이다.
     sources:
@@ -355,6 +581,15 @@ facts:
         url: https://www.museum.go.kr/MUSEUM/contents/M0502000000.do?schM=view&searchId=search&relicId=2486
         quote: 국적/시대 한국 - 구석기
         accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 6a86e4d323d5
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 6a86e4d323d5
 
 media:
   - id: dolmen-bugeun
