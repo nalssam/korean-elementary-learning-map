@@ -1,7 +1,7 @@
 // 페이퍼크래프트 인쇄 페이지를 빌드하고 Chromium 으로 열어, 7절의 넘침 조건과 실제 크기를 잰다.
 // 시험용 명세(tests/contract/fixtures/content)의 복사본에서 두 묶음의 페이퍼크래프트를 ready 로 바꾼다:
-//   5-2/1/01    — 명세 초안과 같은 길이 (만드는 순서 4, 차례 카드 4, 해 보기 1, 생각해 보기 1)
-//   5-2/1/02-03 — 형식이 받는 끝까지 긴 것 (만드는 순서 8, 차례 카드 8, 해 보기 2, 생각해 보기 3)
+//   5-2/1/01    — 검수 담당이 정한 R11 의 글 (만드는 순서 6, 차례 카드 4, 해 보기 4, 생각해 보기 1)
+//   5-2/1/02-03 — 형식이 받는 끝까지 긴 것 (만드는 순서 8개 모두 두 줄, 차례 카드 8, 해 보기 4, 생각해 보기 2)
 // 만든 것은 .cache/tests/papercraft-<pid>/ 아래에 두고 끝나면 지운다. Chromium 이 없으면 건너뛴다 (16절).
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import * as c from '#lib/content.ts';
 import { buildSite, noChromium, tempContent } from '../contract/helpers.ts';
+import { type3Fonts } from '../print/fonts.ts';
 import { cardProblems, serve, sheetProblems } from './helpers.ts';
 
 const skip = await noChromium();
@@ -17,31 +18,51 @@ after(() => fs.rmSync(OUT, { recursive: true, force: true }));
 
 const SHORT = {
   state: 'ready', title: '종이 고인돌 세우기', module: 'dolmen-table', pages: 3,
-  print: { per: 'group', paper: 'A4 두꺼운 종이', materials: ['가위', '풀'], note: '실제 크기(100%)로 인쇄합니다.' },
-  steps: ['실선을 따라 조각을 오립니다.', '점선을 따라 접습니다.', '받침돌 둘을 바닥판의 자리에 세워 붙입니다.', '덮개돌을 받침돌 위에 얹습니다.'],
-  texts: ['받침돌을 세웁니다.', '받침돌 높이까지 흙을 쌓아 비탈을 만듭니다.', '통나무를 깔고 덮개돌을 끌어 올립니다.', '흙을 걷어 내면 고인돌이 드러납니다.'],
-  try_it: ['차례 카드를 섞은 뒤 알맞은 차례로 놓아 봅시다.'],
-  reflect: ['이 돌을 옮기려면 몇 사람이 있어야 했을까요?'],
+  print: { per: 'group', paper: 'A4 180g 이상 두꺼운 종이 (1·2쪽)', materials: ['가위', '풀', '자', '볼펜'], note: '실제 크기(100%)로 인쇄합니다.' },
+  steps: [
+    '자르는 선을 따라 조각과 차례 카드를 오립니다.',
+    '자를 대고 볼펜으로 접는 선을 꾹 눌러 금을 긋습니다.',
+    '그림이 찍힌 쪽이 바깥으로 오게 접는 선을 접습니다.',
+    '빗금 친 풀칠 칸에 풀을 바르고 같은 글자끼리 붙여 덮개돌, 받침돌 두 개, 흙 비탈을 만듭니다.',
+    '통나무 세 개는 둥글게 말아 같은 글자끼리 붙입니다.',
+    '조각은 바닥판에 붙이지 않습니다. 수업 때 바닥판에 찍힌 자리에 올려놓습니다.',
+  ],
+  texts: ['받침돌을 세웁니다.', '흙과 돌을 쌓아 비탈을 만듭니다.', '통나무를 깔고 덮개돌을 끌어 올립니다.', '흙을 걷어 냅니다.'],
+  try_it: [
+    '바닥판의 받침돌 자리에 받침돌 두 개를 세우고 덮개돌을 얹어 봅시다.',
+    '차례 카드 네 장을 섞은 뒤 모둠이 생각한 차례로 놓아 봅시다.',
+    '카드를 놓은 차례대로 조각을 움직여 봅시다. 받침돌이 쓰러지지 않게 한 사람이 잡아 줍시다.',
+    '그 차례로 놓은 까닭을 한 문장으로 말해 봅시다.',
+  ],
+  reflect: ['고인돌을 세우는 모습을 지켜본 사람이 지금 있을까요? 없다면 우리는 무엇을 보고 짐작했나요?'],
 };
 const LONG = {
   ...SHORT,
   print: { per: 'student', paper: 'A4 180g 이상 두꺼운 종이', materials: ['가위', '풀', '자', '다 쓴 볼펜'] },
+  // 만드는 순서는 형식이 받는 끝(8개)까지, 그 가운데 넷은 13pt 로 두 줄이 되는 길이. 이보다 길면 빌드가 줄이라고 알리며 멈춘다.
   steps: [
-    '실선을 따라 조각을 모두 오립니다. 탭을 오려 내지 않도록 빗금 둘레를 천천히 오립니다.',
-    '자와 다 쓴 볼펜으로 점선을 한 번씩 눌러 둡니다.',
-    '점선을 따라 모두 접습니다.',
-    '받침돌은 네 면을 둘러 판돌을 만들고 같은 글자끼리 붙입니다.',
-    '덮개돌은 네 옆면을 접어 내리고 같은 글자끼리 붙입니다.',
-    '바닥판의 자리에 받침돌 둘을 세워 붙입니다.',
-    '통나무는 둥글게 말아 붙이고, 흙 비탈은 발을 밖으로 접어 발 자리에 붙입니다.',
-    '덮개돌을 받침돌 위에 얹습니다. 붙이지 않고 얹기만 합니다.',
+    '자르는 선을 따라 조각을 모두 오립니다. 탭을 오려 내지 않도록 빗금 둘레를 천천히 따라 오리고, 차례 카드도 오립니다.',
+    '자를 대고 다 쓴 볼펜으로 접는 선을 꾹 눌러 금을 긋습니다.',
+    '그림이 찍힌 쪽이 바깥으로 오게 접는 선을 모두 접습니다.',
+    '받침돌은 네 면을 둘러 판돌을 만들고, 빗금 친 풀칠 칸에 풀을 발라 같은 글자끼리 붙입니다. 두 개를 똑같이 만듭니다.',
+    '덮개돌은 네 옆면을 접어 내리고 같은 글자끼리 붙인 뒤, 밑면을 접어 올려 닫는 탭을 밑면 안쪽에 붙입니다.',
+    '흙 비탈은 높은 쪽 면 양옆의 탭을 옆면 안쪽에 붙입니다. 바닥판에 세워 보아 흔들리지 않는지 확인합니다.',
+    '통나무 세 개는 둥글게 말아 같은 글자끼리 붙입니다.',
+    '조각은 바닥판에 붙이지 않습니다. 수업 때 바닥판에 찍힌 자리에 올려놓습니다.',
   ],
   texts: [...SHORT.texts, '돌을 캐어 다듬습니다.', '통나무 위로 돌을 굴려 옮깁니다.', '여럿이 줄을 당깁니다.', '마을 사람들이 모입니다.'],
-  try_it: ['차례 카드를 섞은 뒤 알맞은 차례로 놓아 봅시다.', '흙 비탈 위에 통나무를 놓고 덮개돌이 어디로 올라갔을지 짚어 봅시다.'],
-  reflect: ['이 돌을 옮기려면 몇 사람이 있어야 했을까요?', '흙은 마지막에 왜 걷어 냈을까요?', '이렇게 큰 무덤을 만든 까닭은 무엇일까요?'],
+  try_it: [
+    ...SHORT.try_it.slice(0, 3),
+    '그 차례로 놓은 까닭을 한 문장으로 말해 보고, 다른 모둠의 차례와 견주어 어디가 다른지 찾아 봅시다.',
+  ],
+  reflect: ['고인돌을 세우는 모습을 지켜본 사람이 지금 있을까요? 없다면 우리는 무엇을 보고 짐작했나요?', '흙은 마지막에 왜 걷어 냈을까요?'],
 };
 
-const squash = (s: string) => s.replace(/\s+/g, '');
+const squash = (s: string) => s.replace(/[\s\u2060]+/g, '');
+/** 페이지가 따옴표 뒤 조사를 묶는 데 쓰는 U+2060 을 걷어 낸 글 (R18) */
+const plain = (s: string | null) => (s ?? '').replace(/\u2060/g, '');
+/** 9pt, 8pt (PDF 단위 pt) */
+const PT9 = 9, PT8 = 8;
 
 test('페이퍼크래프트 인쇄 페이지: 넘침 조건을 채우고, 전개도가 실제 크기로 찍히며, 만드는 법 쪽이 명세의 글로 채워진다', { skip }, async () => {
   const { chromium } = await import('playwright');
@@ -78,6 +99,13 @@ test('페이퍼크래프트 인쇄 페이지: 넘침 조건을 채우고, 전개
           steps: [...guide.querySelectorAll('.pc-steps li')].map((li) => li.textContent),
           tries: [...guide.querySelectorAll('.pc-try li')].map((li) => li.textContent),
           reflects: [...guide.querySelectorAll('.pc-reflect li p')].map((p) => p.textContent),
+          // 그림 안의 글이 인쇄되는 크기 (pt). 그림은 칸에 맞춰 줄어드므로 화면의 변환 행렬로 잰다.
+          figPt: (() => {
+            const svg = guide.querySelector('.pc-preview-art svg') as SVGSVGElement | null;
+            if (!svg) return [];
+            const k = svg.getScreenCTM()!.a;
+            return [...svg.querySelectorAll('text')].map((t) => (Number(t.getAttribute('font-size')) * k * 72) / 96);
+          })(),
           lines: guide.querySelectorAll('.pc-line').length,
           lineGap: mm(guide.querySelector('.pc-line')!.getBoundingClientRect().height),
           preview: mm(guide.querySelector('.pc-preview-art svg')?.getBoundingClientRect().height ?? 0),
@@ -87,11 +115,13 @@ test('페이퍼크래프트 인쇄 페이지: 넘침 조건을 채우고, 전개
       // 전개도 SVG 는 본문 190 × 249mm 를 1:1 로 채운다
       assert.equal(seen.svgs.length, 2);
       for (const [w, h] of seen.svgs) assert.ok(Math.abs(w - 190) < 0.1 && Math.abs(h - 249) < 0.1, `${id}: 전개도가 ${w} × ${h}mm 입니다`);
-      assert.deepEqual(seen.steps, spec.steps);
-      assert.deepEqual(seen.tries, spec.try_it);
-      assert.deepEqual(seen.reflects, spec.reflect);
+      assert.deepEqual(seen.steps.map(plain), spec.steps);
+      assert.deepEqual(seen.tries.map(plain), spec.try_it);
+      assert.deepEqual(seen.reflects.map(plain), spec.reflect);
+      assert.ok(seen.figPt.length >= 10, `${id}: 그림의 이름표가 없습니다`);
+      assert.ok(Math.min(...seen.figPt) >= PT9 - 0.01, `${id}: 그림의 글이 ${Math.min(...seen.figPt).toFixed(2)}pt 로 찍힙니다 (9pt 이상)`);
       assert.ok(seen.lines >= spec.reflect.length && Math.abs(seen.lineGap - 10) < 0.1, `${id}: 쓰는 줄은 10mm 간격입니다`);
-      assert.ok(seen.preview >= 25, `${id}: 완성 모습 그림이 ${seen.preview}mm 로 너무 작습니다`);
+      assert.ok(seen.preview >= 40, `${id}: 만드는 법의 그림이 ${seen.preview}mm 로 너무 작습니다`);
       assert.ok(seen.heads[2].includes(spec.title) && seen.heads[2].includes('만드는 법'));
 
       // PDF: 쪽수, A4 세로, 5cm 자의 길이, 명세의 글
@@ -104,8 +134,23 @@ test('페이퍼크래프트 인쇄 페이지: 넘침 조건을 채우고, 전개
         const p = await doc.getPage(n);
         const [, , w, h] = p.view.map((v) => (v / 72) * 25.4);
         assert.ok(Math.abs(w - 210) <= 1 && Math.abs(h - 297) <= 1, `${id} ${n}쪽: A4 세로여야 합니다 (${w} × ${h}mm)`);
-        all += squash((await p.getTextContent()).items.map((it) => ('str' in it ? it.str : '')).join(''));
+        const items = (await p.getTextContent()).items.filter((it) => 'str' in it && it.str.trim());
+        all += squash(items.map((it) => ('str' in it ? it.str : '')).join(''));
+        // 글자 크기: 전개도(1·2쪽)는 8pt 이상, 만드는 법(3쪽)은 9pt 이상.
+        // 머리(위 30mm)와 바닥글(아래 17mm)은 인쇄 틀(인쇄 담당)의 것이라 본문만 잰다.
+        const floor = n < doc.numPages ? PT8 : PT9;
+        for (const it of items) {
+          if (!('str' in it)) continue;
+          const fromTop = h - (it.transform[5] / 72) * 25.4;
+          if (fromTop < 30 || fromTop > h - 17) continue;
+          const pt = Math.hypot(it.transform[2], it.transform[3]);
+          assert.ok(pt >= floor - 0.05, `${id} ${n}쪽: "${it.str}" 가 ${pt.toFixed(2)}pt 입니다 (${floor}pt 이상)`);
+        }
       }
+      // Type 3 글꼴이 없다 (7절 '글꼴', R19). 글자에 테두리(stroke)를 두르면 생긴다.
+      const file = path.join(OUT, `${id.replaceAll('/', '-')}.pdf`);
+      fs.writeFileSync(file, pdf);
+      assert.deepEqual(type3Fonts(file), [], `${id}: papercraft.pdf 에 Type 3 글꼴이 있습니다`);
       for (const s of [...spec.steps, ...spec.try_it, ...spec.reflect, '5cm', '자르는선', '덮개돌']) assert.ok(all.includes(squash(s)), `${id}: PDF 에 "${s}" 가 없습니다`);
       for (const s of spec.texts) for (const word of s.split(' ')) assert.ok(all.includes(squash(word)), `${id}: PDF 에 차례 카드의 "${word}" 가 없습니다`);
       await task.destroy();

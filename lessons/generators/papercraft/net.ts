@@ -268,6 +268,12 @@ export function text(x: number, y: number, s: string, o: TextOpts = {}): string 
   return `<rect x="${fmt(x0)}" y="${fmt(y - h / 2)}" width="${fmt(w)}" height="${fmt(h)}" rx="${fmt(size * 0.25)}" fill="#ffffff"${turn}/>` + t;
 }
 
+/** 도안에 찍는 글의 가장 작은 크기 (mm). 8pt 다. 이보다 작은 글은 A4 에서 아이가 읽기 어렵다. */
+export const MIN_TEXT = 2.83;
+/** 조립 표시의 글자 크기와 동그라미 반지름 (mm). 붙일 자리의 글자도 MIN_TEXT 를 넘는다. */
+export const MARK_SIZE = { tab: 3.2, target: 2.9 } as const;
+export const MARK_R = { tab: 2.5, target: 2.2 } as const;
+
 /**
  * 조립 표시: 동그라미 안의 글자. 탭과, 그 탭을 붙이는 자리에 같은 글자를 찍는다.
  * 탭은 붙이면 안쪽으로 숨으므로 진하게 찍는다. 붙일 자리('target')는 완성하면 겉으로 보이는 면이라 작고 옅게 찍는다.
@@ -275,8 +281,8 @@ export function text(x: number, y: number, s: string, o: TextOpts = {}): string 
 export function mark(x: number, y: number, s: string, role: 'tab' | 'target' = 'tab'): string {
   const target = role === 'target';
   const color = target ? RULE : INK;
-  return `<g data-mark="${xmlText(s)}" data-mark-role="${role}"><circle cx="${fmt(x)}" cy="${fmt(y)}" r="${target ? 1.8 : 2.3}" fill="#ffffff" stroke="${color}" stroke-width="${target ? 0.25 : 0.3}"/>`
-    + text(x, y, s, { size: target ? 2.3 : 2.9, weight: 700, fill: color }) + '</g>';
+  return `<g data-mark="${xmlText(s)}" data-mark-role="${role}"><circle cx="${fmt(x)}" cy="${fmt(y)}" r="${target ? MARK_R.target : MARK_R.tab}" fill="#ffffff" stroke="${color}" stroke-width="${target ? 0.25 : 0.3}"/>`
+    + text(x, y, s, { size: target ? MARK_SIZE.target : MARK_SIZE.tab, weight: 700, fill: color }) + '</g>';
 }
 
 /** 놓는 자리를 찍는 점선 (점만 찍히게 길이 0 의 둥근 끝을 쓴다) */
