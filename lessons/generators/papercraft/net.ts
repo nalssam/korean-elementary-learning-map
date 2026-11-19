@@ -216,12 +216,36 @@ function greedy(words: string[], width: number, size: number): string[] {
   return lines;
 }
 
+/** 앞 낱말에 붙어 다니는 자리 이름 (비탈 위로, 받침돌 사이에). 조사가 붙거나 문장부호로 끝나도 된다. */
+const PLACE_WORD = /^(위|아래|앞|뒤|안|밖|옆|속|사이|가운데|둘레|쪽)(로|에|에서|을|를|의|와|과|까지|부터)?[.,?!]?$/;
+
 /**
- * 낱말 단위로 줄을 나눈다. 낱말 가운데를 끊지 않는다.
- * 줄 수가 같은 한에서 폭을 줄여 가며 줄 길이를 고르게 맞춘다 (마지막 줄에 한두 글자만 남지 않게).
+ * 줄을 나눌 때 한 덩어리로 다룰 낱말 묶음 (도안의 글은 한 줄이 짧아 덩어리가 잘리면 읽기 어렵다).
+ *  - 자리 이름은 앞 낱말과 묶는다: "비탈 위로"
+ *  - 세 낱말 이상인 글은 마지막 두 낱말(서술어와 그 앞말)을 묶는다: "비탈을 만듭니다.", "걷어 냅니다.", "끌어 올립니다."
+ *    마지막 줄에 서술어 하나만 남지 않는다. 두 낱말뿐인 글은 묶지 않는다 (한 줄에 들지 않으면 둘로 나뉘어야 한다).
  */
-export function wrap(text: string, width: number, size: number): string[] {
+export function phrases(text: string): string[] {
   const words = text.trim().split(/\s+/);
+  const out: string[] = [];
+  for (const w of words) {
+    if (out.length && PLACE_WORD.test(w)) out[out.length - 1] += ` ${w}`;
+    else out.push(w);
+  }
+  if (words.length >= 3 && out.length >= 2) {
+    const last = out.pop()!;
+    out[out.length - 1] += ` ${last}`;
+  }
+  return out;
+}
+
+/**
+ * 덩어리(낱말 또는 phrases() 의 묶음) 단위로 줄을 나눈다. 낱말 가운데를 끊지 않는다.
+ * 줄 수가 같은 한에서 폭을 줄여 가며 줄 길이를 고르게 맞춘다 (마지막 줄에 한두 글자만 남지 않게).
+ * keep 이 false 이면 묶지 않고 낱말마다 나눈다.
+ */
+export function wrap(text: string, width: number, size: number, keep = true): string[] {
+  const words = keep ? phrases(text) : text.trim().split(/\s+/);
   const lines = greedy(words, width, size);
   if (lines.length < 2) return lines;
   let lo = Math.max(...words.map((w) => textWidth(w, size))), hi = width;
@@ -234,15 +258,20 @@ export function wrap(text: string, width: number, size: number): string[] {
 
 export interface Fitted { size: number; lines: string[]; lineHeight: number }
 
-/** 폭 width, 높이 height 의 칸에 들어가는 가장 큰 글자 크기를 sizes 에서 고른다. 어느 것도 안 되면 가장 작은 것. */
+/**
+ * 폭 width, 높이 height 의 칸에 들어가는 가장 큰 글자 크기를 sizes 에서 고른다.
+ * 먼저 낱말 묶음(phrases)을 지키며 찾고, 어느 크기에서도 들지 않을 때만 묶음을 풀어 다시 찾는다. 그래도 안 되면 가장 작은 것.
+ */
 export function fit(text: string, width: number, height: number, sizes: number[], leading = 1.32): Fitted {
-  for (const size of sizes) {
-    const lines = wrap(text, width, size);
-    const ok = lines.every((l) => textWidth(l, size) <= width) && lines.length * size * leading <= height;
-    if (ok) return { size, lines, lineHeight: size * leading };
+  for (const keep of [true, false]) {
+    for (const size of sizes) {
+      const lines = wrap(text, width, size, keep);
+      const ok = lines.every((l) => textWidth(l, size) <= width) && lines.length * size * leading <= height;
+      if (ok) return { size, lines, lineHeight: size * leading };
+    }
   }
   const size = sizes[sizes.length - 1];
-  return { size, lines: wrap(text, width, size), lineHeight: size * leading };
+  return { size, lines: wrap(text, width, size, false), lineHeight: size * leading };
 }
 
 export interface TextOpts {

@@ -14,7 +14,7 @@ import '#src/styles/print.css';
 import sheetCss from './sheet.css?url';
 import { footerNotice, isPublic, lessonRoute } from '#lib/content.ts';
 import type { PrintJob } from '#lib/content.ts';
-import { printLine } from '#lib/site.ts';
+import { DUPLEX_FLIP, printLine } from '#lib/site.ts';
 import type { Lesson } from '#schema/lesson.ts';
 import { href } from '#src/lib/url.ts';
 import { sheetKicker } from './layout.ts';
@@ -59,7 +59,7 @@ const fontFaces = printFontFaces((file) => href(`/${PRINT_FONT_DIR}/${file}`));
           <dl>
             {print.materials.length > 0 && <div><dt>준비물</dt><dd>{print.materials.join(', ')}</dd></div>}
             {print.note && <div><dt>알아 둘 것</dt><dd>{print.note}</dd></div>}
-            {job.kind === 'cards' && <div><dt>양면 맞추기</dt><dd>인쇄 창에서 '긴 변으로 뒤집기'를 고르면 앞면과 뒷면이 맞습니다.</dd></div>}
+            {job.kind === 'cards' && <div><dt>양면 맞추기</dt><dd>인쇄 창의 양면 인쇄에서 ‘{DUPLEX_FLIP[print.orientation]} 넘김’을 고르면 앞면과 뒷면이 맞습니다.</dd></div>}
           </dl>
         )}
       </div>

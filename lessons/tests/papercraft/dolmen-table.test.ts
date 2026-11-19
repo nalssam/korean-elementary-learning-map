@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { xmlText } from '#lib/content.ts';
 import mod, * as dolmen from '../../generators/papercraft/modules/dolmen-table.ts';
-import { analyse, bbox, len, MARK_R, BODY_H, BODY_W, DRAW_BOTTOM, FOOT_ROOM, LEGEND_H, MIN_TEXT, RULE, SVG_OPEN, textWidth, type Piece, type Plan, type Pt, type Seg } from '../../generators/papercraft/net.ts';
+import { analyse, bbox, len, MARK_R, BODY_H, BODY_W, DRAW_BOTTOM, FOOT_ROOM, LEGEND_H, MIN_TEXT, phrases, RULE, SVG_OPEN, textWidth, type Piece, type Plan, type Pt, type Seg } from '../../generators/papercraft/net.ts';
 
 /** 수업 화면 10번 장의 네 단계 글과 같은 차례 카드 (R21) */
 const TEXTS = ['받침돌을 세웁니다.', '흙을 쌓아 비탈을 만듭니다.', '덮개돌을 비탈 위로 끌어 올립니다.', '흙을 걷어 냅니다.'];
@@ -380,6 +380,12 @@ test('차례 카드: 명세의 글을 한 장에 하나씩, 차례를 섞어 찍
   dolmen.cardOrder(4).forEach((t, k) => assert.equal(lines(k + 1).join(' '), TEXTS[t]));
   // 한 줄에 한 글자만 남는 줄이 없다
   for (let k = 1; k <= 4; k++) for (const l of lines(k)) assert.ok([...l.replace(/[.\s]/g, '')].length >= 2, `"${l}"`);
+  // 덩어리로 접는다: 서술어는 앞말과 함께, 자리 이름은 앞 낱말과 함께 한 줄에 선다 (넷째 차례 카드 지적: "비탈을 / 만듭니다.", "걷어 / 냅니다.")
+  const all = [1, 2, 3, 4].map(lines);
+  const lineOf = (phrase: string) => all.some((ls) => ls.some((l) => l.includes(phrase)));
+  for (const phrase of ['비탈을 만듭니다.', '걷어 냅니다.', '끌어 올립니다.', '비탈 위로']) assert.ok(lineOf(phrase), `"${phrase}" 가 두 줄로 갈립니다: ${JSON.stringify(all)}`);
+  assert.deepEqual(phrases('덮개돌을 비탈 위로 끌어 올립니다.'), ['덮개돌을', '비탈 위로', '끌어 올립니다.']);
+  assert.deepEqual(phrases('받침돌을 세웁니다.'), ['받침돌을', '세웁니다.']);
 });
 
 /** 점이 다각형 안에 드는가 */

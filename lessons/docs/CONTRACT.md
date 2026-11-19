@@ -127,7 +127,7 @@ import { href } from '#src/lib/url.ts';
 | 검사 (`#lib/checks.ts`) | `factIssues(lesson)`, `sourceIssues(lesson)`, `factBoxes(lesson)`(사실 대조표에 찍을 글 묶음. 12절) |
 | 파일 자리 | `ROOT`(저장소 뿌리), `hasLesson(id)`, `lessonFile(id)`, `lessonDir(id)`, `contentDir()` — 명세 파일을 고쳐 쓰는 도구(`sign`, `check:originality --record`, `migrate`)가 씁니다. `content/` 를 손으로 잇지 않습니다 (`CONTENT_DIR` 을 따르지 않게 되어 시험이 실제 명세에 서명합니다). `distDir()`, `cacheDir()` — 빌드한 사이트와 캐시의 자리 (10절) |
 
-`lib/site.ts` 에는 고정 문구(`SITE`)와 이름표(`ASSET_LABEL`, `ASSET_ROUTE`, `LICENCE_LABEL`, `PER_LABEL`, `SIDES_LABEL`, `ORIENTATION_LABEL`, `REVIEW_LABEL`, `ROLE_LABEL`), 인쇄 기본값(`PRINT_DEFAULT`, `CARDS_PER_SIDE`), 인쇄 안내 한 줄(`printLine(print, pages)`), 맞고 틀림의 표시(`MARK`, `MARK_LABEL`. 15절)와 따옴표 뒤 조사를 붙여 두는 `keepParticle(text)`(15절)가 있습니다. 같은 것은 여기 적힌 이름으로만 부릅니다.
+`lib/site.ts` 에는 고정 문구(`SITE`)와 이름표(`ASSET_LABEL`, `ASSET_ROUTE`, `LICENCE_LABEL`, `PER_LABEL`, `SIDES_LABEL`, `ORIENTATION_LABEL`, `REVIEW_LABEL`, `ROLE_LABEL`), 인쇄 기본값(`PRINT_DEFAULT`, `CARDS_PER_SIDE`), 인쇄 안내 한 줄(`printLine(print, pages)`), 양면 인쇄에서 종이를 넘기는 쪽(`DUPLEX_FLIP`. 안내 페이지의 인쇄 줄과 카드 인쇄 페이지의 '양면 맞추기'가 같은 말을 쓴다), 맞고 틀림의 표시(`MARK`, `MARK_LABEL`. 15절)와 따옴표 뒤 조사를 붙여 두는 `keepParticle(text)`(15절)가 있습니다. 같은 것은 여기 적힌 이름으로만 부릅니다.
 
 ## 5. 명세에서 알아 둘 것
 

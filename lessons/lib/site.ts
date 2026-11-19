@@ -154,6 +154,10 @@ export const PRINT_DEFAULT: Record<PrintKind, PrintInfo> = {
 /** 카드는 A4 세로 한 면에 8장 (2열 × 4행). 앞면 쪽 다음에 뒷면 쪽이 온다. */
 export const CARDS_PER_SIDE = 8;
 
+/** 양면 인쇄에서 종이를 넘기는 쪽 (인쇄 창의 말). 세로 쪽은 긴 쪽, 가로 쪽은 짧은 쪽으로 넘겨야 뒷면이 바로 서 있다.
+ *  안내 페이지의 인쇄 줄과 카드 인쇄 페이지의 '양면 맞추기'가 같은 말을 쓰도록 여기에 둔다. */
+export const DUPLEX_FLIP = { portrait: '긴 쪽으로', landscape: '짧은 쪽으로' } as const;
+
 /** 인쇄 안내 한 줄. 안내 페이지와 인쇄 페이지가 같은 말을 쓰도록 여기에서 만든다. 예: "모둠마다 1부 · A4 세로 3쪽 · 단면 · 흑백으로 뽑아도 됩니다" */
 export function printLine(p: PrintInfo, pages: number): string {
   return [PER_LABEL[p.per], `A4 ${ORIENTATION_LABEL[p.orientation]} ${pages}쪽`, SIDES_LABEL[p.sides], p.bw_ok ? '흑백으로 뽑아도 됩니다' : '색으로 뽑습니다'].join(' · ');

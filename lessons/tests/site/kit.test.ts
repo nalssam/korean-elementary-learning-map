@@ -110,6 +110,14 @@ test('양면 인쇄 줄은 넘기는 쪽을 말하고, 단면 줄은 그대로�
   assert.ok(lines.some((l) => l.includes('A4 가로') && l.includes('양면(짧은 쪽으로 넘김)')) || lines.some((l) => l.includes('양면(긴 쪽으로 넘김)')));
 });
 
+test('카드 인쇄 페이지의 양면 맞추기는 안내 페이지와 같은 말(긴 쪽으로 넘김)을 굽은 따옴표로 쓴다 (4차 문장 검수)', () => {
+  const cards = fs.readFileSync(path.join(OUT, '5-2', '1', '01', 'cards', 'index.html'), 'utf8');
+  const m = cards.match(/<dt>양면 맞추기<\/dt><dd>([^<]*)<\/dd>/);
+  assert.ok(m, '카드 인쇄 페이지에 양면 맞추기 안내가 없습니다');
+  assert.equal(m[1], '인쇄 창의 양면 인쇄에서 ‘긴 쪽으로 넘김’을 고르면 앞면과 뒷면이 맞습니다.');
+  assert.ok(html.includes('양면(긴 쪽으로 넘김)'), '안내 페이지의 카드 줄이 같은 말을 쓰지 않습니다');
+});
+
 test('확인 퀴즈 칸: 수업 화면의 QR 버튼을 알리는 문장이 있다 (3차 검수 T3-site-03)', () => {
   const sec = html.slice(html.indexOf('id="student-title"'), html.indexOf('class="qr-cards"'));
   assert.ok(sec.includes('수업 화면의 QR 버튼(q 키)을 눌러도 같은 QR 코드를 띄울 수 있습니다.'));

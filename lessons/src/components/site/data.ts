@@ -4,7 +4,7 @@ import {
   allBundles, deckCards, isPublic, lessonRoute, lessonsLabel, loadRegistry, pagesLabel, printJobs, semesterLabel, visibleLessons,
 } from '#lib/content.ts';
 import type { BundleRef, PrintJob } from '#lib/content.ts';
-import { ASSET_LABEL, PER_LABEL, printLine } from '#lib/site.ts';
+import { ASSET_LABEL, DUPLEX_FLIP, PER_LABEL, printLine } from '#lib/site.ts';
 import type { AssetKind, Lesson } from '#schema/lesson.ts';
 import { factUses } from '#schema/lesson.ts';
 import { href } from '#src/lib/url.ts';
@@ -76,10 +76,7 @@ export function usedInFlow(lesson: Lesson): Set<AssetKind> {
 }
 
 /** 인쇄 안내 한 줄: "학생마다 1부 · A4 세로 2쪽 · 양면 · 흑백으로 뽑아도 됩니다 · A4 보통 용지". 인쇄 페이지의 안내와 같은 말이다. */
-export const jobLine = (job: PrintJob) => `${printLine(job.print, job.pages).replace(' · 양면 · ', ` · 양면(${FLIP[job.print.orientation]} 넘김) · `)} · ${job.print.paper}`;
-
-/** 양면 인쇄에서 종이를 넘기는 쪽. 세로 쪽은 긴 쪽, 가로 쪽은 짧은 쪽으로 넘겨야 뒷면이 바로 서 있다 */
-const FLIP = { portrait: '긴 쪽으로', landscape: '짧은 쪽으로' } as const;
+export const jobLine = (job: PrintJob) => `${printLine(job.print, job.pages).replace(' · 양면 · ', ` · 양면(${DUPLEX_FLIP[job.print.orientation]} 넘김) · `)} · ${job.print.paper}`;
 
 /** 준비물과 '더 해 볼 자료'에 놓는 인쇄물 한 줄 */
 export interface PrintRow {
