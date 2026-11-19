@@ -204,9 +204,11 @@ slides:
     points:
       - 그림에서 본 것
       - 본 것으로 짐작한 것
-  # 둘을 나란히 견주기: left·right 마다 label(12자)과 points(30자, 4개까지), media(그림)를 적을 수 있습니다
+  # 둘을 나란히 견주기: left·right 마다 label(12자)과 points(30자, 4개까지)를 적습니다.
+  # 그림은 둘 가운데 한 가지로 싣습니다. 두 쪽이 함께 보는 그림 한 장은 아래처럼 장의 media 에, 쪽마다 한 장씩이면 left.media·right.media 에 적습니다. 둘을 섞으면 검사가 실패합니다.
   - layout: compare
     title: 둘을 견주어 봅시다
+    media: example-diagram
     left:
       label: 왼쪽 이름표
       points: [왼쪽의 특징]
@@ -215,6 +217,7 @@ slides:
       points: [오른쪽의 특징]
   # 차례가 있는 단계: steps 2~5개. 단계마다 label 6자, text 40자, media(그림)
   # 그림이 셋이면 한 줄로, 넷이면 2 × 2 로 화면을 채웁니다. 작게 놓여도 알아볼 수 있는 그림을 고릅니다.
+  # 직접 그리는 단계 그림은 가로로 넓게(2.6:1 남짓, viewBox 0 0 780 300) 그립니다. 2:1 보다 좁으면 npm run check 가 알림으로 알려 줍니다. 사진은 그대로 둡니다.
   - layout: steps
     title: 차례대로 봅시다
     steps:
@@ -379,7 +382,8 @@ quiz:
       answer: 1
       explain: 그림에서 첫째 보기를 찾을 수 있습니다.
       facts: [f2]
-    # 단답: answer 는 답(14자까지), accept 는 함께 맞다고 볼 답. 띄어쓰기는 빼고 견줍니다.
+    # 단답: answer 는 답(14자까지), accept 는 함께 맞다고 볼 답. 띄어쓰기와 끝의 문장부호는 빼고 견줍니다.
+    # 입니다·이에요·예요·요·이야 같은 끝말도 사이트가 떼고 견주므로, 끝말만 다른 답은 accept 에 적지 않습니다. 뜻이 다른 말(동의어, 줄임말)만 적습니다.
     - type: short
       q: 오늘 새로 배운 낱말은 무엇인가요?
       answer: 새 낱말

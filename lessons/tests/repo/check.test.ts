@@ -279,3 +279,35 @@ test('쓰는 법을 틀리면 쓰는 법을 찍고 2 로 끝난다', () => {
   assert.equal(r.code, 2);
   assert.match(r.err, /모르는 선택입니다: --psh\n\n쓰는 법: npm run check/);
 });
+
+test('단계 장의 우리 그림이 상자보다 좁으면 알림 한 줄, 넓은 그림과 사진은 알리지 않는다 (R22)', () => {
+  const svg = (w: number, h: number) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}"><rect x="2" y="2" width="${w - 4}" height="${h - 4}" fill="none" stroke="#132c3d"/></svg>`;
+  // 수업 화면 6번에 단계 장을 더하고, 마지막 단계(flow)가 그 장까지 쓰게 한다
+  const addSteps = (raw: Record<string, unknown>) => {
+    (raw.slides as unknown[]).push({ layout: 'steps', title: '차례대로 봅시다', steps: [{ label: '처음', text: '돌을 세웁니다.', media: 'stone' }, { label: '다음', text: '돌을 올립니다.' }] });
+    const flow = raw.flow as { slides?: number[] }[];
+    flow[flow.length - 1].slides = [4, 6];
+  };
+  const withSteps = (w: number, h: number) => {
+    t.reset();
+    fs.writeFileSync(path.join(t.dir, '5-2', '1', '01', 'media', 'stone.svg'), svg(w, h));
+    t.edit(ONE, (raw) => {
+      addSteps(raw);
+    });
+    return check();
+  };
+  const notes = (out: string) => out.split('\n').filter((l) => l.includes('단계 그림'));
+  const r = withSteps(300, 200);
+  assert.equal(r.code, 0, r.all);
+  assert.equal(notes(r.out).length, 1, r.out);
+  assert.match(notes(r.out)[0], /알림 +그림 +\d+번째 줄 · slides · \d+번째 · steps · 1번째 · media: 단계 그림 "stone"\(media\/stone\.svg\)은 가로 300 × 세로 200\(1\.5:1\)입니다\. .*가로로 넓은 꼴\(2\.6:1 남짓\).*780 × 300/);
+  // 780 × 300 으로 그린 그림은 알리지 않는다
+  assert.equal(notes(withSteps(780, 300).out).length, 0);
+  // 사진은 모양이 정해져 있으므로 보지 않는다
+  t.reset();
+  t.edit(ONE, (raw) => {
+    (raw.media as { id: string; kind: string }[])[0].kind = 'photo';
+    addSteps(raw);
+  });
+  assert.equal(notes(check().out).length, 0);
+});
