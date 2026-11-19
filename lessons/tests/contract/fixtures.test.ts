@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import * as c from '#lib/content.ts';
-import { ASSET_ROUTE, CARDS_PER_SIDE, PRINT_DEFAULT, SITE, printLine } from '#lib/site.ts';
+import { ASSET_ROUTE, CARDS_PER_SIDE, MARK, MARK_LABEL, PRINT_DEFAULT, SITE, keepParticle, printLine } from '#lib/site.ts';
 import { OPTIONAL_ASSET_KINDS } from '#schema/lesson.ts';
 import { FIXTURES } from './helpers.ts';
 
@@ -15,6 +15,31 @@ const one = () => c.loadLesson('5-2/1/01');
 const two = () => c.loadLesson('5-2/1/02-03');
 const heavy = () => c.loadLesson('5-2/1/04');
 const review = () => c.loadLesson('5-2/1/05');
+
+test('MARK: 맞고 틀림의 표시는 ○·× 이고 lib 에는 라틴 글자 O·X 표시가 없다', () => {
+  assert.deepEqual(MARK, { yes: '○', no: '×' });
+  assert.deepEqual(MARK_LABEL, { yes: '맞다', no: '아니다' });
+  // lib 의 코드(주석 말고)에 'O'·'X' 를 문자열로 적어 정답 표시로 내보내는 곳이 없다
+  for (const f of ['content.ts', 'site.ts', 'checks.ts', 'seal.ts']) {
+    const code = fs.readFileSync(path.join(c.ROOT, 'lib', f), 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
+    assert.doesNotMatch(code, /['"`][OX]['"`]/, `lib/${f} 에 O·X 글자 표시가 있습니다`);
+  }
+});
+
+test('keepParticle: 닫는 따옴표와 뒤의 조사 사이에만 U+2060 을 넣는다', () => {
+  const WJ = '⁠';
+  assert.equal(keepParticle('‘눈으로 본 것’은 무엇인가요?'), `‘눈으로 본 것’${WJ}은 무엇인가요?`);
+  assert.equal(keepParticle('“짐작”이라고 합니다. 「돌」과 『책』을'), `“짐작”${WJ}이라고 합니다. 「돌」${WJ}과 『책』${WJ}을`);
+  // 곧은 따옴표는 닫는 자리에서만 (여는 따옴표 뒤의 한글에는 넣지 않는다)
+  assert.equal(keepParticle("'덮개돌'은 \"받침돌\"과"), `'덮개돌'${WJ}은 "받침돌"${WJ}과`);
+  // 그 꼴이 없으면 그대로, 따옴표 뒤가 빈칸·문장부호·영문이면 그대로
+  for (const s of ['고인돌은 큰 돌입니다.', '‘덮개돌’ 위에', '“돌”.', "'stone'is", '', '1392년']) assert.equal(keepParticle(s), s);
+  // 두 번 불러도 더 바뀌지 않는다
+  const once = keepParticle('‘눈으로 본 것’은 ‘짐작’과 다릅니다');
+  assert.equal(keepParticle(once), once);
+  assert.equal([...once].filter((ch) => ch === WJ).length, 2);
+});
+
 
 test('시험용 명세 넷이 모두 통과한다', () => {
   assert.equal(c.contentDir(), FIXTURES);
@@ -63,17 +88,17 @@ test('quizByLesson: lesson 을 적지 않은 문항은 마지막 차시의 것',
 });
 
 test('answerText·worksheetKey: 정답과 교사용 풀이는 명세에서 저절로 나온다', () => {
-  assert.deepEqual(one().quiz.items.map(c.answerText), ['O', '1번 돌', '1392']);
-  assert.deepEqual(two().quiz.items.map(c.answerText), ['O', '1번 서쪽', '1446', 'X']);
+  assert.deepEqual(one().quiz.items.map(c.answerText), ['○', '1번 돌', '1392']);
+  assert.deepEqual(two().quiz.items.map(c.answerText), ['○', '1번 서쪽', '1446', '×']);
   assert.deepEqual(c.worksheetKey(two()), [
     { where: '2쪽 연표', text: '1446년 — 둘째 해' },
     { where: '2쪽 선 잇기', text: '서쪽 — 길이 시작하는 곳 / 동쪽 — 길이 끝나는 곳' },
-    { where: '2쪽 확인 퀴즈', text: 'O / 1번 서쪽' },
+    { where: '2쪽 확인 퀴즈', text: '○ / 1번 서쪽' },
     { where: '표', text: '규칙에서 길이 중요했다는 것을 찾으면 됩니다.' },
   ]);
   assert.deepEqual(c.worksheetKey(review()), [
     { where: '1쪽 연표', text: '1392 — 첫 해' },
-    { where: '2쪽 확인 퀴즈', text: 'O / 1392 / X' },
+    { where: '2쪽 확인 퀴즈', text: '○ / 1392 / ×' },
   ]);
   assert.deepEqual(c.worksheetKey(one()), [{ where: '문장 틀', text: '앞 칸에 본 것이 들어 있으면 됩니다.' }]);
 });
@@ -298,6 +323,8 @@ test('글 뽑기: 빠지는 글이 없다', () => {
   }
   assert.ok(paths(c.childStrings(review())).includes('assets.cards.collect[0].label'));
   assert.ok(paths(c.childStrings(one())).includes('media.stone.caption'));
+  // 학습지의 보기 블록(example)은 칸의 이름표와 글이 모두 아이가 읽는 글이다
+  for (const p of ['worksheet.pages[0].blocks[1].parts[0].label', 'worksheet.pages[0].blocks[1].parts[2].text']) assert.ok(paths(c.childStrings(one())).includes(p), `childStrings 에 없음: ${p}`);
   // 아이가 읽지 않는 글은 들어가지 않는다 (빈 표 칸, 교사용 풀이, 인쇄 안내, 제작 기록)
   for (const p of child) assert.ok(!/\.guide|\.print\.|\.notes$|\.reason$|\.idea$|^flow/.test(p), `childStrings 에 들어가면 안 됨: ${p}`);
   assert.ok(!child.includes('worksheet.pages[0].blocks[2].rows[0][1]'));

@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 import * as c from '#lib/content.ts';
 import { SITE } from '#lib/site.ts';
 import { FIXTURES, buildSite, passRows, tempContent } from './helpers.ts';
+import { PRINT_FONTS, PRINT_FONT_DIR } from '#src/components/print/fonts.ts';
 
 const SITE_DIR = path.join(c.ROOT, 'tests', 'contract', 'fixtures', 'site');
 const OUT = path.join(c.ROOT, '.cache', 'tests', `frame-${process.pid}`);
@@ -16,6 +17,9 @@ after(() => fs.rmSync(OUT, { recursive: true, force: true }));
 const build = (name: string, env: Record<string, string>, extra: string[] = [], root = SITE_DIR): string => buildSite(path.join(OUT, name), env, { root, extra });
 const pages = (out: string) => (fs.readdirSync(out, { recursive: true }) as string[]).filter((f) => f.endsWith('index.html')).map((f) => f.split(path.sep).join('/')).sort();
 const read = (out: string, page: string) => fs.readFileSync(path.join(out, page), 'utf8');
+/** dist 안의 고정 굵기 Pretendard 파일 (가변 글꼴 PretendardVariable 은 사이트 화면의 것이라 빼고 센다) */
+const staticFontFiles = (out: string) => (fs.readdirSync(out, { recursive: true }) as string[]).map((f) => f.split(path.sep).join('/'))
+  .filter((f) => /(^|\/)Pretendard-[^/]*\.(woff2?|ttf|otf)$/.test(f)).sort();
 
 test('미리 보기 빌드 (SHOW_DRAFTS=1, 하위 경로 없음)', () => {
   const out = build('drafts', { CONTENT_DIR: FIXTURES, SHOW_DRAFTS: '1' });
@@ -84,6 +88,12 @@ test('미리 보기 빌드 (SHOW_DRAFTS=1, 하위 경로 없음)', () => {
   assert.match(coloring, /href="\/files\/5-2\/1\/02-03\/coloring\.pdf" download="5-2_1단원_2~3차시_컬러링 도안\.pdf"/);
   assert.ok(coloring.includes('학생마다 1부 · A4 세로 1쪽 · 단면 · 흑백으로 뽑아도 됩니다 · A4 보통 용지'));
   assert.ok(coloring.includes('.sheet-body{') && coloring.includes('@page portrait{size:210mm 297mm'), 'print.css 가 실리지 않았습니다');
+  // 인쇄 글꼴: 우리 @font-face 가 고정 굵기 Pretendard 의 온전한 파일 몇 개를 부르고, 그 파일만 dist/_fonts/ 에 있다.
+  // 패키지의 dynamic-subset CSS(굵기마다 92조각, 모두 1,700개 남짓·30MB)는 어느 빌드에도 실리지 않는다.
+  for (const { weight, file } of PRINT_FONTS) assert.ok(coloring.includes(`font-weight:${weight};font-display:swap;src:url(/${PRINT_FONT_DIR}/${file}) format('woff2')`), `@font-face 가 없습니다: ${file}`);
+  assert.deepEqual(fs.readdirSync(path.join(out, PRINT_FONT_DIR)).sort(), PRINT_FONTS.map((f) => f.file).sort());
+  assert.deepEqual(staticFontFiles(out), PRINT_FONTS.map((f) => `${PRINT_FONT_DIR}/${f.file}`).sort());
+  assert.ok(!coloring.includes('dynamic-subset') && !home.includes(PRINT_FONT_DIR), '인쇄 글꼴은 인쇄 페이지에서만 싣습니다');
   // 학생 페이지
   const quiz = read(out, '5-2/1/04/quiz/index.html');
   assert.match(quiz, /<body data-kind="student" data-draft="true">/);
@@ -95,6 +105,9 @@ test('초안은 dev 명령에서만 저절로 열린다 (astro build --mode dev 
   const out = build('mode-dev', { CONTENT_DIR: FIXTURES, SITE_URL: 'https://example.org' }, ['--mode', 'dev']);
   assert.deepEqual(pages(out), ['index.html']);
   assert.ok(!read(out, 'index.html').includes('/5-2/1/'));
+  // 인쇄 페이지가 없는 빌드에는 인쇄 글꼴 파일이 하나도 없다 (공개된 차시가 아직 없는 공개 빌드가 이렇다)
+  assert.ok(!fs.existsSync(path.join(out, PRINT_FONT_DIR)));
+  assert.deepEqual(staticFontFiles(out), []);
 });
 
 test('공개 빌드 (하위 경로, 공개된 차시만)', () => {

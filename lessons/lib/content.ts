@@ -27,7 +27,7 @@ import { Registry } from '../schema/registry.ts';
 import type { RegistryBundle, RegistrySemester, RegistryUnit } from '../schema/registry.ts';
 import { factSeal, fileSeal, lessonSeal, registrySeal as sealOfRegistry } from './seal.ts';
 import {
-  ASSET_LABEL, ASSET_ROUTE, CARDS_PER_SIDE, LICENCE_LABEL, MEDIA_KIND_LABEL, PRINT_DEFAULT, REVIEW_LABEL, SITE,
+  ASSET_LABEL, ASSET_ROUTE, CARDS_PER_SIDE, LICENCE_LABEL, MARK, MEDIA_KIND_LABEL, PRINT_DEFAULT, REVIEW_LABEL, SITE,
 } from './site.ts';
 import type { PagedAssetKind, PrintInfo, PrintKind } from './site.ts';
 
@@ -836,9 +836,9 @@ export function quizByLesson(lesson: Lesson): { lesson: number; items: { no: num
   return lessons.map((n) => ({ lesson: n, items: numbered.filter((x) => (x.item.lesson ?? last) === n) }));
 }
 
-/** 문항의 정답을 보여 주는 글. OX 는 "O"·"X", 고르기는 "2번 보기 글", 단답은 답 그대로. 수업 화면·PPTX 메모·교사용 풀이가 같은 글을 쓴다. */
+/** 문항의 정답을 보여 주는 글. OX 는 MARK 의 ○·×, 고르기는 "2번 보기 글", 단답은 답 그대로. 수업 화면·PPTX 메모·교사용 풀이가 같은 글을 쓴다. */
 export function answerText(item: QuizItem): string {
-  if (item.type === 'ox') return item.answer ? 'O' : 'X';
+  if (item.type === 'ox') return item.answer ? MARK.yes : MARK.no;
   if (item.type === 'choice') return `${item.answer}번 ${item.choices[item.answer - 1]}`;
   return item.answer;
 }

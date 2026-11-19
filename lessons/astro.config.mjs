@@ -2,6 +2,7 @@ import { defineConfig } from 'astro/config';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PRINT_FONTS, PRINT_FONT_DIR } from './src/components/print/fonts.ts';
 
 // SITE_URL    : 배포 주소 (예: https://nalssam.github.io). QR 과 PPTX 에 박히는 주소가 여기에서 나온다. 하위 경로는 넣지 않는다.
 // SITE_BASE   : 하위 경로에 놓일 때 (예: /korean-elementary)
@@ -46,6 +47,35 @@ const devMedia = {
   },
 };
 
+// 인쇄 페이지의 글꼴 (src/components/print/fonts.ts). 고정 굵기 Pretendard 의 온전한 woff2 몇 개를 /_fonts/pretendard/ 에서 내준다.
+// 빌드: 인쇄 페이지(PrintLayout 의 @font-face 가 이 주소를 부르는 HTML)가 하나라도 있을 때만 dist 로 복사한다. 공개된 차시가 없는 빌드에는 글꼴 파일이 없다.
+// dev: node_modules 에서 바로 내준다.
+const FONT_SRC = path.join(root, 'node_modules', 'pretendard', 'dist', 'web', 'static', 'woff2');
+const fontFile = (file) => (PRINT_FONTS.some((f) => f.file === file) ? path.join(FONT_SRC, file) : undefined);
+const printFonts = {
+  name: 'print-fonts',
+  hooks: {
+    'astro:server:setup'({ server }) {
+      server.middlewares.use((req, res, next) => {
+        const base = (process.env.SITE_BASE ?? '').replace(/\/+$/, '');
+        const url = decodeURIComponent((req.url ?? '').split('?')[0]);
+        const rel = url.startsWith(base) ? url.slice(base.length) : url;
+        const file = rel.startsWith(`/${PRINT_FONT_DIR}/`) ? fontFile(rel.slice(PRINT_FONT_DIR.length + 2)) : undefined;
+        if (!file) return next();
+        res.setHeader('Content-Type', 'font/woff2');
+        fs.createReadStream(file).pipe(res);
+      });
+    },
+    'astro:build:done'({ dir }) {
+      const out = fileURLToPath(dir);
+      const wants = (fs.readdirSync(out, { recursive: true })).some((f) => String(f).endsWith('.html') && fs.readFileSync(path.join(out, String(f)), 'utf8').includes(`/${PRINT_FONT_DIR}/`));
+      if (!wants) return;
+      fs.mkdirSync(path.join(out, PRINT_FONT_DIR), { recursive: true });
+      for (const { file } of PRINT_FONTS) fs.copyFileSync(path.join(FONT_SRC, file), path.join(out, PRINT_FONT_DIR, file));
+    },
+  },
+};
+
 // 빈 글(값을 넣지 않은 CI 변수)은 주지 않은 것으로 본다. lib/content.ts 의 absoluteUrl() 과 같은 규칙이다.
 const site = process.env.SITE_URL || 'http://localhost:4321';
 // Astro 는 주소 꼴이 아니면 "Invalid URL" 한 줄만 남기고 멈춘다. 무엇을 고칠지 알려 준다. (하위 경로가 든 SITE_URL 은 absoluteUrl() 이 막는다.)
@@ -57,5 +87,6 @@ export default defineConfig({
   base: process.env.SITE_BASE || '/',
   trailingSlash: 'always',
   build: { format: 'directory' },
+  integrations: [printFonts],
   vite: { plugins: [devMedia] },
 });

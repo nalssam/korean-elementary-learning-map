@@ -13,6 +13,7 @@ import { ROOT, answerText, footerNotice, loadLesson, slideNotes, visibleLessons 
 import { FIXTURES, buildSite, noChromium } from '../contract/helpers.ts';
 import { copyMedia, serve, slideProblems } from './helpers.ts';
 import { SMALL_LABEL, STRESS_ID, makeStress } from './stress.ts';
+import { SLIDE_COPY } from '#src/components/slides/copy.ts';
 import { slideCounter } from '#src/components/slides/counter.ts';
 import { NOTE_COPY } from '#src/components/slides/copy.ts';
 
@@ -124,7 +125,7 @@ test('장 수·표지·교사 메모·조작', { skip }, async () => {
     await page.keyboard.press('ArrowRight');
     assert.equal(await cur(), 4);
     assert.equal(await answer.isVisible(), true);
-    assert.equal(await page.locator('#s4 [data-answer] .sl-ox-glyph').textContent(), answerText(one.quiz.items[0]));
+    assert.equal(await page.locator('#s4 [data-answer] .sl-ox-glyph').textContent(), SLIDE_COPY.ox[one.quiz.items[0].answer ? 'yes' : 'no']);
     await page.keyboard.press('ArrowRight'); assert.equal(await cur(), 5);
     // 교사 메모 (N): 반 아이들이 보는 화면에 뜨므로 퀴즈의 정답·풀이는 정답이 드러나기 전에 보이지 않는다
     await open(page, `${s.url}/5-2/1/01/slides/#4`);

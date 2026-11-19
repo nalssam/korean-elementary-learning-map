@@ -71,7 +71,8 @@
 - 종이에 박히는 주소(QR, PPTX, 인쇄물 바닥글)는 `absoluteUrl(lessonRoute(id, ASSET_ROUTE.quiz))` 로 만듭니다. 브라우저의 `location` 이나 `Astro.site` 로 만들지 않습니다 (PDF 는 127.0.0.1 에서 찍힙니다). 공개 빌드에서 `SITE_URL` 이 없으면 이 함수가 멈춥니다. `SITE_URL` 에는 하위 경로를 넣지 않습니다 (`https://nalssam.github.io`). 하위 경로는 `SITE_BASE` 로만 주고, `SITE_URL` 에 들어 있으면 이 함수가 멈춥니다 (그대로 두면 종이의 주소에서 하위 경로가 소리 없이 빠집니다).
 - 선택 자료 가운데 페이지가 따로 있는 것은 papercraft·coloring·cards·web_activity 넷입니다. 만들기 세트(making_kit)는 사이트 담당이 차시 안내 페이지 안에 재료·순서·안전 안내를 그립니다. 방탈출(escape)과 3D(virtual3d)는 아직 생성기가 없어 명세에서 skip·planned 만 받습니다.
 - 공개한 주소는 바꾸지 않습니다 (종이에 QR 로 박혀 있습니다). 묶음을 다시 나누면 옛 주소에 새 주소로 넘기는 페이지를 남깁니다. 배포 경로(`SITE_BASE`)도 날쌤이 한 번 정한 뒤에는 바꾸지 않습니다.
-- `/report/` 에는 양식을 넣지 않습니다. `SITE.reportUrl`(날쌤이 정하는 제보 양식 주소. 비어 있으면 빼고)과 깃허브 이슈로 가는 링크만 두고, 링크에는 차시 id 만 붙입니다.
+- `/report/` 에는 양식을 넣지 않습니다. `SITE.reportUrl`(날쌤이 정하는 제보 양식 주소. 비어 있으면 빼고)과 깃허브 이슈로 가는 링크만 두고, 링크에는 차시 id 만 붙입니다. 저작권 신고 양식으로 가는 링크는 양식의 `url` 칸(문제가 된 자료의 주소)에 그 차시 안내 페이지의 온전한 주소(`absoluteUrl(lessonRoute(id))`)도 채웁니다.
+- `/licence/` 는 코드의 이용 조건으로 기본 가지(main)의 `lessons/LICENSE` 를 겁니다.
 - `/published.json` 은 공개된 묶음 id 를 차시표 순서로 늘어놓은 JSON 배열입니다. 감싸는 칸이 없습니다: `["5-2/1/01","5-2/1/02-03"]`. `visibleLessons().filter(isPublic).map((l) => l.id)` 를 `JSON.stringify` 한 것이고, 미리 보기 빌드에서도 공개된 묶음만 나옵니다. 사이트 담당이 만들고 배포 워크플로(저장소)가 읽습니다 (12절). 본보기는 `tests/contract/fixtures/site` 에 있습니다.
 
 ### 차시 페이지 만들기
@@ -124,7 +125,7 @@ import { href } from '#src/lib/url.ts';
 | 검사 (`#lib/checks.ts`) | `factIssues(lesson)`, `sourceIssues(lesson)`, `factBoxes(lesson)`(사실 대조표에 찍을 글 묶음. 12절) |
 | 파일 자리 | `ROOT`(저장소 뿌리), `hasLesson(id)`, `lessonFile(id)`, `lessonDir(id)`, `contentDir()` — 명세 파일을 고쳐 쓰는 도구(`sign`, `check:originality --record`, `migrate`)가 씁니다. `content/` 를 손으로 잇지 않습니다 (`CONTENT_DIR` 을 따르지 않게 되어 시험이 실제 명세에 서명합니다). `distDir()`, `cacheDir()` — 빌드한 사이트와 캐시의 자리 (10절) |
 
-`lib/site.ts` 에는 고정 문구(`SITE`)와 이름표(`ASSET_LABEL`, `ASSET_ROUTE`, `LICENCE_LABEL`, `PER_LABEL`, `SIDES_LABEL`, `ORIENTATION_LABEL`, `REVIEW_LABEL`, `ROLE_LABEL`), 인쇄 기본값(`PRINT_DEFAULT`, `CARDS_PER_SIDE`), 인쇄 안내 한 줄(`printLine(print, pages)`)이 있습니다. 같은 것은 여기 적힌 이름으로만 부릅니다.
+`lib/site.ts` 에는 고정 문구(`SITE`)와 이름표(`ASSET_LABEL`, `ASSET_ROUTE`, `LICENCE_LABEL`, `PER_LABEL`, `SIDES_LABEL`, `ORIENTATION_LABEL`, `REVIEW_LABEL`, `ROLE_LABEL`), 인쇄 기본값(`PRINT_DEFAULT`, `CARDS_PER_SIDE`), 인쇄 안내 한 줄(`printLine(print, pages)`), 맞고 틀림의 표시(`MARK`, `MARK_LABEL`. 15절)와 따옴표 뒤 조사를 붙여 두는 `keepParticle(text)`(15절)가 있습니다. 같은 것은 여기 적힌 이름으로만 부릅니다.
 
 ## 5. 명세에서 알아 둘 것
 
@@ -152,7 +153,7 @@ import { href } from '#src/lib/url.ts';
 - 읽기 자료는 문단 6개, 문단마다 120자까지입니다. 수업 화면의 `passage` 장이 가리키는 읽기 자료는 문단 4개, 모두 300자까지입니다 (`PASSAGE_SLIDE`. 본문 44px 로 한 장에 들어가는 길이입니다). 더 긴 글은 학습지에만 싣거나 둘로 나눕니다.
 
 **선택 자료**
-- `state` 는 skip(만들지 않음, `reason`) · planned(만들 예정, `idea`) · ready(만들었음) 입니다. 사이트에는 ready 만 보입니다. `reason` 과 `idea` 는 제작 기록이라 사이트에 보여 주지 않습니다.
+- `state` 는 skip(만들지 않음, `reason`) · planned(만들 예정, `idea`) · ready(만들었음) 입니다. 사이트에는 ready 만 보입니다 (안내 페이지는 준비된 자료만 늘어놓습니다). `reason` 과 `idea` 는 제작 기록이라 사이트에 보여 주지 않습니다. 묶음마다 어떤 자료를 만들 예정이고 어떤 것을 만들지 않는지는 `docs/ROADMAP.md` 의 표가 알려 줍니다.
 - 인쇄 안내는 명세의 `print` 를 직접 읽지 않고 `printJobs(lesson)` 의 `print`(빈 칸이 기본값으로 채워진 값)와 `pages` 를 씁니다.
 - 카드의 놀이 방법(`assets.cards.games`)은 차시 안내 페이지에 보이고(6절), 컬러링의 '찾아볼 것'(`assets.coloring.look_for`)은 컬러링 쪽의 그림 아래에 찍힙니다(7절).
 
@@ -230,7 +231,13 @@ import { href } from '#src/lib/url.ts';
 
 ### 글꼴
 
-인쇄 페이지(`kind: print`)는 고정 굵기 Pretendard(`pretendard/dist/web/static/pretendard-dynamic-subset.css`)로 찍습니다. `PrintLayout.astro` 가 그 CSS 를 따로 걸고, tokens.css 가 `body[data-kind='print']` 의 `--font` 를 `Pretendard` 로 바꿉니다. 가변 글꼴로 찍으면 Chromium 이 PDF 에 Type 3 글꼴을 수십 벌 넣어 글을 고르거나 찾기 어렵습니다. 고정 굵기 글꼴은 CID TrueType 으로 들어갑니다 (`pdffonts` 로 봅니다. `tests/contract/print.test.ts` 가 지킵니다).
+인쇄 페이지(`kind: print`)는 고정 굵기 Pretendard 로 찍습니다. 가변 글꼴로 찍으면 Chromium 이 PDF 에 Type 3 글꼴을 수십 벌 넣어 글을 고르거나 찾기 어렵습니다. 고정 굵기 글꼴은 CID TrueType 으로 들어갑니다 (`pdffonts` 로 봅니다. `tests/contract/print.test.ts` 가 지킵니다). PDF 에는 Type 3 글꼴도, Pretendard 가 아닌 대신 글꼴도 없어야 합니다.
+
+- 글꼴 파일은 패키지의 온전한 woff2 가운데 인쇄 페이지가 실제로 쓰는 굵기만 씁니다: 400·500·600·700·800 (`src/components/print/fonts.ts` 의 `PRINT_FONTS`). `@font-face` 는 우리가 적고 `PrintLayout.astro` 가 `<head>` 에 넣습니다. tokens.css 가 `body[data-kind='print']` 의 `--font` 를 `Pretendard` 로 바꿉니다.
+- 파일은 `/_fonts/pretendard/` 에서 나갑니다. 빌드에서는 인쇄 페이지가 하나라도 있을 때만 `astro.config.mjs` 가 dist 로 복사하고, `astro dev` 는 `node_modules` 에서 바로 내줍니다. 다른 페이지는 이 글꼴을 싣지 않습니다.
+- 패키지의 나눈 글꼴 CSS(`pretendard-dynamic-subset.css`. 굵기마다 92조각, 모두 1,700개 남짓·30MB)는 어느 빌드에도 싣지 않습니다. 인쇄 페이지가 없는 공개 빌드에도 실리고 있었습니다.
+- 목록에 없는 굵기(300, 900 등)를 CSS·전개도에 쓰지 않습니다. 쓰려면 `PRINT_FONTS` 에 더합니다. 없는 굵기는 브라우저가 흉내 내어 그려 화면과 PDF 가 어긋납니다.
+- SVG 의 글에 테두리(`stroke`)를 둘러 바탕과 떼어 놓으면 Chromium 이 그 글을 Type 3 글꼴로 넣습니다. 글 뒤를 비우려면 글 아래에 채운 사각형을 깝니다.
 
 ### 쪽수와 넘침 검사
 
@@ -256,7 +263,12 @@ PDF 의 쪽수·쪽 크기·글은 `pdfjs-dist`(`pdfjs-dist/legacy/build/pdf.mjs
 
 - 번호는 아이에게 무엇을 하라고 하는 블록에만 붙습니다: `number: true` 인 prompt 와 quiz 블록의 문항. 쪽이 바뀌어도 이어 셉니다. 번호 붙은 지시 아래의 표 이름 같은 것은 번호 없는 작은 제목으로 찍습니다. 첫 쪽 머리에 반·번호·이름 칸이 들어갑니다.
 - 표의 머리 칸은 괄호 안이나 "~"와 그 뒤 낱말 사이에서 줄을 바꾸지 않습니다 (줄이 바뀌면 괄호 앞에서, 또는 "~"를 뒤 낱말에 붙인 채로 바꿉니다).
-- 한 쪽이 60% 남짓도 차지 않으면 쓰는 칸(줄·빈칸)을 늘려 종이를 씁니다. 쓰는 칸의 최소 크기(아래)는 줄이지 않습니다.
+- 쓰는 칸(줄 쓰기 칸, 빈 칸, 글을 쓰는 표, 본 것·짐작한 것·까닭)이 있는 쪽은 남는 높이를 모두 쓰는 칸이 나누어 갖습니다. 쓰는 칸의 최소 크기('한 쪽의 짜임')는 줄이지 않습니다.
+- 표: 가장 가까운 앞의 번호 붙은 지시문에 ○·×·✓ 가 있으면 표시를 받는 표입니다. 채우는 열을 좁게(40mm 남짓) 두고 칸 높이는 12mm 입니다. 그 밖의 표는 글을 쓰는 표로, 채우는 칸이 22mm 이고 쪽이 빠듯할 때만 12mm 까지 줄어듭니다.
+- 고르기 문항의 보기 번호는 "1)" 꼴로 찍습니다.
+- 풀어 놓은 보기(`example` 블록)는 "예"라는 작은 표시가 붙은 조용한 상자로 찍습니다. 글은 보통 굵기이고, 번호를 붙이지 않고, 굵은 작은 제목으로 찍지 않습니다. 칸(`parts`, 이름표와 글 2~4개)으로 적은 보기는 한 줄에 화살표로 이어 찍어 아이가 본 것 → 아는 것 → 짐작의 사슬을 봅니다.
+- 그림(`figure`)을 나란히 놓은 줄은 그림 높이가 같고 설명은 한 줄에 맞춥니다. 줄의 그림이 모두 같은 출처이면 출처 표시는 줄 아래에 한 번만 찍습니다.
+- 초안의 PDF 는 문서 제목(PDF 의 Title) 앞에 "[검수 전 초안]"이 붙습니다 (`scripts/render-pdf.mjs`).
 - 연표(timeline)는 `when` 을 늘 찍고 `blank` 인 칸은 `what` 자리를 비웁니다.
 - 선 잇기(match)는 오른쪽만 섞어 찍습니다. 섞는 순서는 묶음 id 로 정해져 빌드마다 같아야 합니다.
 - 문장 틀(sentence_frame)은 `splitFrame(frame)` 으로 나눈 조각 사이에 빈칸을 그립니다.
@@ -289,7 +301,10 @@ PDF 의 쪽수·쪽 크기·글은 `pdfjs-dist`(`pdfjs-dist/legacy/build/pdf.mjs
 - 모듈이 주는 `title`·`sub` 는 `<Sheet>` 의 머리(22mm)에 들어가야 합니다. 넘치면 `render-pdf` 가 멈춥니다 (조건 2). 긴 안내는 마지막 쪽의 '만드는 법'에 둡니다.
 - 인쇄 쪽수는 `sheets().length + 1` 입니다. 마지막 쪽은 명세의 `steps`·`try_it`·`reflect` 로 만드는 '만드는 법'입니다. 이 값이 명세의 `pages` 와 다르거나 모듈 파일이 없으면 `npm run check` 가 실패합니다.
 - 모듈 안에 적는 글은 조각 이름과 조립 표시뿐입니다. 아이가 읽는 문장(예: 차례 카드)은 명세의 `texts` 에서 받습니다. 모듈은 `texts` 를 SVG 에 넣을 때 `xmlText()` 를 거칩니다 (명세의 글이 `set:html` 로 페이지에 들어가는 단 하나의 길입니다).
-- 모듈 파일(`papercraftModuleFile(lesson)`)은 그 차시의 내용이라 명세의 지문에 들어갑니다 (12절). 검수한 뒤에 도안을 고치면 다시 검수합니다. 모듈이 가져다 쓰는 다른 파일은 지문에 들지 않으므로, 그 차시에만 맞는 그림과 글은 모듈 파일 안에 둡니다.
+- 모듈 파일(`papercraftModuleFile(lesson)`)은 그 차시의 내용이라 명세의 지문에 들어갑니다 (12절). 검수한 뒤에 도안을 고치면 다시 검수합니다. 모듈이 가져다 쓰는 다른 파일(`generators/papercraft/net.ts` 등)은 지문에 들지 않으므로, 그 차시에만 맞는 그림과 글은 모듈 파일 안에 둡니다.
+- 조각 위에 찍는 맞춤 글자(같은 글자끼리 붙이는 자리의 표시)는 `--rule` 회색(#9a9a9a)으로 찍습니다.
+- 인쇄된 조각은 모두 '만드는 법'의 단계 어딘가에서 이름으로 불립니다. 마지막 쪽의 그림은 인쇄된 조각과 꼭 같은 꼴로 그립니다.
+- 차례를 몸으로 해 보는 모형은 조각을 바닥판에 붙이지 않습니다. 바닥판에는 조각이 설 자리만 찍고, 모둠이 카드의 차례대로 조각을 옮기고 세우고 치울 수 있게 합니다. 고인돌 모형이 그 본보기입니다: 덮개돌 1, 받침돌 2, 바닥판 1, 흙 비탈 1(한 조각으로 서는 쐐기. 윗면이 비탈이고 옆이 막혀 있으며 높은 쪽이 받침돌 높이와 같다), 통나무 3(종이를 말아 만든다), 차례 카드 4. 마지막 쪽에는 통나무 위로 덮개돌을 비탈에 끌어올리는 그림(여러 짐작 가운데 하나라고 적는다)과 비탈을 치운 완성 그림을 싣습니다.
 
 ## 8. 수업 화면과 PPTX
 
@@ -298,9 +313,11 @@ PDF 의 쪽수·쪽 크기·글은 `pdfjs-dist`(`pdfjs-dist/legacy/build/pdf.mjs
 - 1번 장은 늘 표지(`layout: title`)입니다 (형식이 막습니다). 표지에 `footerNotice(lesson)` 을 찍습니다. 화면과 PPTX 가 같습니다. 두 차시 묶음이 둘째 차시 앞에 둔 표지에는 찍지 않아도 됩니다.
 - 읽기 자료 장(`passage`)에는 문단 4개, 모두 300자까지 들어옵니다 (형식이 막습니다). 이 길이까지는 본문 44px 로 한 장에 넘치지 않게 그립니다.
 - 본문 44px, 제목 72px. 그 밖의 글(그림 출처·장 번호는 빼고)도, 그림 안의 글까지 1920 × 1080 무대에서 28px 보다 작게 그리지 않습니다. 글자 크기는 `src/components/slides/copy.ts` 의 `STAGE_TYPE` 에 둡니다. 색은 tokens.css 의 것만 씁니다.
-- 그림이 셋이나 넷인 단계 장(`steps`)은 무대를 넓게 씁니다: 셋은 폭 전체에 한 줄로, 넷은 2 × 2 로 놓아 그림을 크게 보여 줍니다.
+- 그림이 셋이나 넷인 단계 장(`steps`)은 제목 아래 자리를 모두 씁니다: 셋은 폭 전체에 한 줄로, 넷은 2 × 2 로 놓습니다. 2 × 2 에서 그림 하나는 1920 무대에서 폭 500px 이상이고, 단계 글은 그림 옆이나 아래에 36px 이상으로 붙습니다. 옆이나 아래에 쓰지 않는 띠를 남기지 않습니다.
+- 글과 그림 한 장을 함께 보여 주는 장(points, question, term, activity 와 그 밖에 글과 그림 하나를 싣는 장)은 제목 아래를 두 단으로 나눕니다. 왼쪽이 글, 오른쪽이 그림입니다. 그림 단은 장 폭의 42% 이상이고 그림은 그 단에 들어가는 만큼 크게 그립니다. 글 덩어리와 그림은 세로 가운데를 맞추고, 글이 길면 위 끝을 맞춥니다. 글은 위에 있고 그림은 아래 구석에 떠 있는 꼴을 만들지 않습니다. 그림이 있는 장은 빈 자리가 장 넓이의 3분의 1 남짓을 넘지 않습니다. PPTX 도 같은 짜임입니다.
+- 그림이 있는 견주기 장과 그림이 있는 단계 장의 글은 `STAGE_FIT`(`src/components/slides/copy.ts`)의 차례대로 줄여 맞출 수 있습니다. 어느 단계에서도 28px 보다 작아지지 않습니다.
 - 교사 메모는 `slideNotes(lesson, no)` 입니다 (발표 화면의 메모와 PPTX 메모란이 같은 글).
-- 퀴즈 장의 답(`answerText()`)은 화면에서는 다음 키에 드러나고 PPTX 에서는 메모란에 적습니다.
+- 퀴즈 장의 답(`answerText()`)은 화면에서는 다음 키에 드러나고 PPTX 에서는 메모란에 적습니다. OX 문항의 표시는 화면도 메모도 ○·× 입니다 (`MARK`. 15절).
 - PPTX 는 Python(`python-pptx`)으로 만듭니다. `generators/pptx/build.mjs` 가 검증을 마친 명세를 `.cache/lessons.json` 으로 내보내고 Python 은 그 파일만 읽습니다 (`.cache/` 는 `cacheDir()` 로 얻습니다. 10절).
   - `.cache/lessons.json` 의 모양은 슬라이드 담당이 정하고 `generators/pptx/README.md` 에 적습니다. 다른 담당은 읽지 않습니다.
   - 들어가는 차시는 `visibleLessons()` 뿐입니다.
@@ -319,6 +336,9 @@ PDF 의 쪽수·쪽 크기·글은 `pdfjs-dist`(`pdfjs-dist/legacy/build/pdf.mjs
 - 확인 퀴즈는 문항마다 한 번 답합니다. 답하면 맞았는지와 풀이를 보여 주고 다음 문항으로 갑니다. 다시 풀려면 처음부터 다시 풉니다.
 - 지도에 놓기(place)의 `x`·`y` 는 그림의 왼쪽 위에서 잰 백분율입니다.
 - OX 릴레이 같은 활동은 따로 만들지 않습니다. OX 는 확인 퀴즈입니다.
+- OX 문항의 단추와 풀이에 찍는 표시는 ○·× 이고(`MARK`), 단추의 이름(`aria-label`)은 `MARK_LABEL` 의 말입니다 (15절).
+- 카드에 실린 그림은 폭 390px 휴대폰에서 짧은 변이 96px 이상입니다. 출처 표시는 카드마다 찍지 않고 활동 아래에 한 번 모아 찍습니다 (만든 이, 이용 조건과 그 안내 페이지 링크. 6절).
+- 휴대폰에서 카드를 고른 뒤에는 어디에 놓을지가 화면에 보여야 합니다. 고른 카드를 알려 주는 띠가 카드를 가리지 않습니다.
 
 ## 10. 빌드
 
@@ -366,9 +386,9 @@ npm run build:site # astro build 만 (1단계). 그림·PDF·PPTX 와 산출물 
 | 출처 | `sourceIssues(lesson)` 이 비어 있다. 출처의 이름, 그림의 소장처, 읽기 자료와 짧은 글의 `source` 에 "교과서"·"지도서"라는 말이 없다. 거기와 출처·그림의 제목에 교과서·수업 자료 회사 이름이 없다 (제목에 "교과서"라는 낱말이 든 공공 기관 자료는 쓸 수 있다). 주소가 그런 회사의 것이거나 누구나 고칠 수 있거나(위키백과, 나무위키) 개인이 올리는 곳(블로그, 지식인, 영상)이 아니다. 막는 이름과 곳의 목록은 `lib/checks.ts` 에 있다 (`DENIED_NAME`, `DENIED_PUBLISHER`, `DENIED_HOST`). 위키미디어 공용(commons.wikimedia.org)은 그림의 출처로 쓸 수 있다. `media` 에 적어 두고 어디에서도 쓰지 않는 그림이 없다 (쓰지 않아도 `/media/` 로 복사되어 공개되는데 출처 표시는 쓰는 자리에만 찍힌다). |
 | 낱말 | 차시표 순서로 이 차시보다 뒤에 오는 차시의 `terms.new[].term` 이 이 차시의 `childStrings()` 에 나오면 **알림** (이 판에서는 실패가 아니다). 따로 낱말 목록을 두지 않는다. 글자만 같은 다른 말("가야 합니다"의 가야)은 `checks/terms-allow.txt` 에 적어 뺀다 (한 줄에 하나, 그 낱말이 든 짧은 구절. `#` 뒤는 주석). |
 | 표현 | 15절의 금지 표현, 다른 회사의 서비스 이름. 교실에서 해 본 듯한 말(`teacherStrings()` 의 "가장 많", "대부분", "항상", "N분 안에")과, `scored()` 가 false 인 차시의 퀴즈·카드·웹 활동에 나오는 피해 낱말(사망, 희생, 학살, 전사, 고문, 끌려 …)은 알림. |
-| 그림 | SVG 에 `<script`, `on…=` 속성, `<foreignObject`, 바깥 주소가 없다. 파일이 1MB 를 넘지 않는다. (바로 가기(심볼릭 링크)인 그림 파일은 로더가 받지 않는다. 묶음 밖의 파일이 사이트에 실린다.) |
+| 그림 | SVG 에 `<script`, `on…=` 속성, `<foreignObject`, 바깥 주소, `javascript:` 주소, 링크 주소(`href`)를 바꿔 쓰는 `<set>`·`<animate>`, 사진(png·jpeg·gif·webp)이 아닌 `data:` 주소가 없다. 파일이 1MB 를 넘지 않는다. 출처의 제목(`credit.title`)이 그림 파일 확장자로 끝나면(파일 이름을 그대로 적은 것) 실패, 제목 안에 파일 이름이 섞여 있으면 알림. (바로 가기(심볼릭 링크)인 그림 파일은 로더가 받지 않는다. 묶음 밖의 파일이 사이트에 실린다.) |
 | 전개도 | `assets.papercraft.module` 의 파일이 있고 `sheets().length + 1` 이 명세의 `pages` 와 같다. `sheets(texts.map(() => '<i>&'))`(명세의 `texts` 와 같은 개수로 부른다. 모듈은 제 차시의 `texts` 개수에 맞춰 쓴 코드다)의 결과에 `<i>` 가 그대로 나오면 실패 (`xmlText()` 를 거치지 않은 것이다). `texts` 가 비어 있으면 이 검사는 건너뛴다. SVG 뿌리가 7절의 꼴이다. |
-| 검수 기록 | 12·13절. 초안에 지금 내용의 베끼기 검사 기록이 없으면(`reviewState(id).originality` 가 pass 가 아니면) 알림, `--push` 를 주면 실패. 차시표의 베끼기 검사 기록(`registryOriginality()`)도 같다. `--push` 는 두 곳에서만 붙인다: 기본 가지의 CI(배포 워크플로 포함)와, `TEXTBOOK_STORE` 가 있는 컴퓨터의 `.githooks/pre-push`. PR 의 CI 와 비공개 자료가 없는 기여자의 컴퓨터에서는 붙이지 않는다 (13절). 기준 가지(`--base origin/main`)에서 공개되어 있던 차시의 사실이 바뀌었는데 `corrections` 가 늘지 않았으면 실패. |
+| 검수 기록 | 12·13절. 초안에 지금 내용의 베끼기 검사 기록이 없으면(`reviewState(id).originality` 가 pass 가 아니면) 알림, `--push` 를 주면 실패. 차시표의 베끼기 검사 기록(`registryOriginality()`)도 같다. `--push` 는 두 곳에서만 붙인다: 기본 가지의 CI(배포 워크플로 포함)와, `TEXTBOOK_STORE` 가 있는 컴퓨터의 `.githooks/pre-push`. PR 의 CI 와 비공개 자료가 없는 기여자의 컴퓨터에서는 붙이지 않는다 (13절). 기준 가지(`--base origin/main`)에서 공개되어 있던 차시의 사실이 바뀌었는데 `corrections` 가 늘지 않았으면 실패. 기준 가지에서 공개되어 있던 묶음의 명세가 없어졌거나 draft 로 바뀌었어도 실패 (종이에 박힌 주소가 사라진다). 초안마다 "공개까지 남은 것"(검수·사실 확인·먼저 공개할 앞 묶음)을 한 줄 알림으로 찍는다. |
 
 `checks/outputs.mjs` 가 빌드 뒤에 보는 것: 공개 빌드의 dist 에 초안이 없는가(html 에 `data-draft` 가 없고, `dist/<id>/`·`dist/media/<id>/`·`dist/files/<id>/` 의 묶음이 모두 `visibleLessons()` 에 있다. 주소 목록을 `lessonPaths()` 로 만들지 않은 페이지가 있으면 여기에서 걸립니다), 파일마다 `printJobs()` 의 쪽수와 쪽 크기(A4, 7절 조건 5), 파일 크기(PDF 하나 5MB, PPTX 하나 20MB, 사이트 전체 1000MB 까지), 산출물(html, pdf 글자, pptx)에 `localhost`·`127.0.0.1` 이 없는가(공개 빌드), dist 의 html 이 사이트 밖 주소를 부르지 않는가(script·link·img·iframe·font), 초안의 PDF 에 `SITE.draftNotice` 가 있고 `SITE.aiNotice` 가 없는가, 공개된 차시의 PDF 에 안내 페이지 주소가 있는가 (PDF 의 글은 7절의 규칙으로 읽고 견준다: 조각을 그대로 이어 붙이고 빈칸을 뺀다), `/media/` 그림이 `object-fit: contain` 으로 그려지는가, pptx 안의 그림이 원본 파일과 가로세로 비율이 같고(±1%) 자르기 값이 0 인가 (8절), 차시표의 `focus` 가 dist 의 html 에 실리지 않았는가. dist 의 자리는 `distDir()` 로 얻는다 (10절).
 
@@ -392,13 +412,15 @@ npm run build:site # astro build 만 (1단계). 그림·PDF·PPTX 와 산출물 
 - 지문(`lib/seal.ts`)은 검수한 내용에 기록을 묶습니다. 검수한 뒤에 한 글자라도 고치면 그 기록은 없는 것으로 칩니다.
   - 명세의 지문에 들어가는 것: `status`·`reviews`·`checks`·`schema_version` 을 뺀 명세의 값 전체, 그림 파일의 내용, 전개도 모듈 파일의 내용, 그리고 **앞 묶음에서 빌려 온 것**(가리킨 사실의 문장과 출처 주소, 가리킨 그림의 권리 정보와 파일, 단원 덱에 모은 카드의 앞면·뒷면·사실·그림. 카드의 그림이 더 앞 묶음의 것이어도 그 그림까지 들어갑니다).
   - 그래서 앞 묶음을 고치면 그것을 가리키는 묶음(단원 정리 묶음)도 다시 검수합니다. 빌려 오지 않은 글을 고친 것은 뒤 묶음의 지문을 바꾸지 않습니다.
+  - **지문에는 한 차시에 딸린 것(명세, 그림, 전개도 모듈)만 듭니다. 함께 쓰는 코드는 들지 않습니다.** 페이지와 인쇄물을 그리는 코드, `generators/papercraft/net.ts`, PPTX 생성기, 스타일을 고쳐도 어느 차시의 검수 기록도 낡지 않습니다. 그런 고침은 시험과 미리 보기 빌드를 보고 확인합니다. 함께 쓰는 코드 하나를 고칠 때마다 모든 차시의 기록을 무효로 하면 다시 검수할 수 없는 양이 됩니다.
   - 사실의 지문은 문장과 출처 주소입니다.
   - 지문은 값만 봅니다. YAML 의 주석·따옴표·칸의 차례는 들지 않습니다 (주석은 13절). 값은 형식이 읽은 값입니다. 형식이 같은 값으로 읽는 것은 지문도 같습니다: 따옴표 없는 `1392` 와 `"1392"`, 한 줄 글과 여러 줄 글(`|`), 묶음 id `01` 과 `"01"`. 적는 꼴만 바꾼 것으로는 검수 기록이 낡지 않습니다. 적지 않은 칸의 기본값은 지문에 들지 않으므로 형식에 기본값이 새로 생겨도 지문은 그대로입니다.
   - 줄 끝(LF·CRLF)도 들지 않습니다. 글 파일(SVG, 전개도 모듈)은 줄 끝을 LF 로 맞춘 뒤에 지문을 내므로 Windows 에서 꺼낸 저장소에서도 같은 지문이 나옵니다 (`.gitattributes` 도 줄 끝을 LF 로 둡니다).
 - 적힌 차례가 시간 차례입니다. 나중에 적힌 fix 나 disputed 가 앞의 pass 를 뒤집습니다. 기록의 날짜는 위에서 아래로 같거나 늦어져야 합니다 (형식이 막습니다. 가지를 합치다 차례가 뒤섞이면 알 수 있습니다).
 - 지문은 손으로 적지 않습니다. `scripts/sign.mjs`(저장소)가 `sealsOf(id)` 로 얻어 기록을 적습니다. YAML 의 주석이 남도록 `parseDocument` 로 고칩니다. 베끼기 검사의 pass 는 `sign` 이 적지 않습니다 (13절의 검사 도구가 적습니다. fix 는 적을 수 있습니다).
   - 검수 기록: `npm run sign -- 5-2/1/01 voice --by "ai:다듬기"` (`--result fix`, `--note "…"` 를 받습니다)
-  - 사실 확인: `npm run sign -- 5-2/1/01 check f3 --by "ai:검증자A"` (`--verdict disputed`, `--note "…"` 를 받습니다)
+  - 사실 확인: `npm run sign -- 5-2/1/01 check f1 f3 --by "ai:검증자A"` (사실 id 를 여럿 적거나 `--all` 로 그 묶음의 사실 전부. `--verdict disputed`, `--note "…"` 를 받습니다)
+  - 이 명세에 이미 적힌 이름과 `reviewerKey()` 가 같은데 철자가 다른 이름(`ai:검증자A` 와 `AI:검증자a`)으로는 적지 않고 멈춥니다. 같은 사람이면 철자를 맞추고, 다른 사람이면 다른 이름을 씁니다.
 - **공개된 차시를 고칠 때**는 같은 커밋에서 `status` 를 `draft` 로 되돌립니다. **그 차시를 가리키는 공개된 묶음도 같은 커밋에서 `draft` 로 되돌립니다** (같은 단원의 뒤 묶음 가운데 `"01/f1"`·`"01/stone"` 처럼 가리키거나 카드를 모으는 묶음. 단원 정리 묶음은 거의 늘 그렇습니다). 그래야 다시 검수하는 동안 `npm run dev` 와 미리 보기가 열립니다. 공개된 차시는 공개된 묶음만 가리킬 수 있어서, 하나라도 `published` 인 채로 두면 `loadLesson()` 과 빌드와 `npm run dev` 가 그 묶음에서 멈춥니다 (오류 문구가 어느 묶음인지와 할 일을 알려 줍니다. 그때에도 `sealsOf()`·`reviewState()`·`publishGaps()` 는 읽힙니다).
   - 다시 검수를 마치면 날쌤이 `published` 로 적습니다.
   - 함께 내린 묶음은 빌려 온 것(사실·그림·카드)이 그대로이면 검수 기록이 그대로 맞습니다 (`reviewState()` 가 모두 pass, `publishGaps()` 가 빈 목록). 그때는 `status` 만 다시 `published` 로 적습니다. 빌려 온 것이 바뀌었으면 `publishGaps()` 가 알려 주는 대로 그 묶음도 다시 검수합니다.
@@ -410,20 +432,22 @@ npm run build:site # astro build 만 (1단계). 그림·PDF·PPTX 와 산출물 
   - 사실 대조(fact) 검수는 이 표를 끝까지 읽었다는 뜻입니다. '가리킨 사실 없음'에 사실을 말하는 문장이 있으면 fix 로 적고, 내용 담당이 `facts` 에 사실을 더해 그 글이 가리키게 합니다.
 - **`status: published` 와 `kind: owner` 기록은 날쌤만 적습니다.** 에이전트와 기여자는 적지 않습니다. 에이전트는 날쌤이 그 검수를 맡긴 때가 아니면 `npm run sign` 으로 검수·확인 기록도 적지 않습니다. 형식은 누가 적었는지 증명하지 못하므로 `.github/CODEOWNERS` 와 가지 보호로 지킵니다. 날쌤 승인이 있어야 바뀌는 곳은 그 파일이 정하고(명세와 검수 기록, 형식, 명세를 읽는 코드, 검사와 서명 도구, 전개도 도안, 워크플로, 계약서), 이 문서는 목록을 다시 적지 않습니다. 저장소 담당이 그 파일을 고칩니다.
 - `by` 에는 공개해도 되는 이름(별명)만 적습니다. 실명·학교·이메일은 적지 않습니다. AI 는 `ai:` 로 시작하는 이름을 씁니다. owner 기록은 사람만 적습니다.
+- 사실을 확인하는 두 사람은 AI 검증자여도 됩니다. 마지막 승인(owner)은 늘 사람(날쌤)이 차시 전체를 읽고 합니다. `/about/` 이 이것을 그대로 밝힙니다.
 - "서로 다른 두 사람"은 `reviewerKey(by)` 로 견줍니다: 유니코드 정규화(NFKC), 소문자, 빈칸과 보이지 않는 글자를 뺀 값입니다. `ai:검증자A` 와 `AI:검증자a` 는 한 사람입니다. `scripts/sign.mjs` 도 같은 열쇠를 씁니다.
 - 공개한 뒤에 사실을 고치면 `corrections` 에 날짜와 고친 내용을 적습니다. 안내 페이지에 보입니다.
-- 워크플로가 도는 때: `lessons-ci` 는 pull_request, 기본 가지 push, workflow_dispatch 에서만 돕니다 (PR 가지에서 두 번 돌지 않습니다). `npm run typecheck` 는 `npm run check` 와 따로 한 단계입니다. `lessons-deploy` 는 기본 가지에서만 돕니다. SITE_URL 저장소 변수가 없으면 배포 작업은 실패하지 않고 건너뜁니다 (배포 요약에 까닭을 한 줄 적습니다).
-- 배포 워크플로는 승인자가 날쌤인 `production` 환경을 쓰고, 배포 요약(`checks/deploy-summary.mjs`)에 이번에 새로 공개되는 묶음과 사이트에서 빠지는 묶음의 id(지금 사이트의 `/published.json` 과 새로 빌드한 `/published.json` 을 견준 차이. 둘 다 묶음 id 의 JSON 배열입니다. 3절)를 적습니다.
+- 워크플로가 도는 때: `lessons-ci` 는 pull_request, 기본 가지 push, workflow_dispatch 에서만 돕니다 (PR 가지에서 두 번 돌지 않습니다). `npm run typecheck` 는 `npm run check` 와 따로 한 단계입니다. `lessons-deploy` 는 기본 가지에서만 돕니다. SITE_URL 저장소 변수가 없으면 배포 작업은 실패하지 않고 건너뜁니다 (배포 요약에 까닭을 한 줄 적습니다). 빌드의 `SITE_BASE` 는 Pages 가 실제로 내주는 하위 경로(`configure-pages` 의 `base_path`)에서 얻습니다. 저장소 변수 `SITE_BASE` 는 적어 두면 그 값과 같은지만 보고, 다르면 멈춥니다.
+- 배포 워크플로는 승인자가 날쌤인 `production` 환경을 쓰고, 배포 요약(`checks/deploy-summary.mjs`)에 이번에 새로 공개되는 묶음과 사이트에서 빠지는 묶음의 id(지금 사이트의 `/published.json` 과 새로 빌드한 `/published.json` 을 견준 차이. 둘 다 묶음 id 의 JSON 배열입니다. 3절)를 적습니다. 지금 사이트를 읽지 못하면(첫 배포, 사이트가 내려가 있을 때) 배포를 막지 않고, 견주지 못했다는 까닭과 이번 빌드의 공개 묶음만 적습니다.
 
 ## 13. 베끼기 검사
 
 - 교과서·지도서·활동지·PPT 의 글은 이 저장소에 넣지 않습니다. 검사 결과에도 옮겨 적지 않습니다 (기록의 `note`, 커밋 글, CI 기록 포함). 겹친 곳은 "교과서 8쪽, 14자"처럼 쪽수와 길이로만 적습니다.
 - 교과서에서 가져오는 것은 단원명, 차시 번호, 쪽수뿐이고 차시표에만 적습니다.
 - 비공개 자료는 저장소 밖 폴더에 두고 환경 변수 `TEXTBOOK_STORE` 로 가리킵니다. 그 폴더가 저장소 안에 있으면 검사가 멈춥니다. 형식은 `<학기>/<종류>/<쪽 세 자리>.txt` (종류: textbook, guide, sheet, ppt).
-- `npm run check:originality -- <id>` (`checks/originality.mjs`, 저장소) 는 lesson.yaml 의 글자 전체(주석 포함)와, 그 묶음의 지문에 드는 글 파일(`media` 의 SVG 파일, 전개도 모듈 `papercraftModuleFile(lesson)`)의 글자 전체를 봅니다. 통과 기록의 지문이 이 파일들까지 덮으므로 검사도 같은 범위를 봅니다 (SVG 안에 `<text>` 로 적은 문장은 명세의 글 뽑기에도 나오지 않습니다). `npm run check:originality -- --registry` 는 차시표(registry.yaml)의 글자 전체를 봅니다 (학기 소개 `blurb`, 묶음의 `focus`, 주석). 띄어쓰기와 문장부호를 뺀 뒤 한글 12자 이상이 이어서 같으면 실패, 8~11자는 알림입니다. 단원명과 고유 명사 목록(`checks/originality-allow.txt`. 한 줄에 고유 명사 하나, `#` 뒤는 주석, 문장이나 구절은 적지 않습니다)은 뺍니다.
+- `npm run check:originality -- <id>` (`checks/originality.mjs`, 저장소) 는 lesson.yaml 의 글자 전체(주석 포함)와, 그 묶음의 지문에 드는 글 파일(`media` 의 SVG 파일, 전개도 모듈 `papercraftModuleFile(lesson)`)의 글자 전체를 봅니다. 통과 기록의 지문이 이 파일들까지 덮으므로 검사도 같은 범위를 봅니다 (SVG 안에 `<text>` 로 적은 문장은 명세의 글 뽑기에도 나오지 않습니다). `npm run check:originality -- --registry` 는 차시표(registry.yaml)의 글자 전체를 봅니다 (학기 소개 `blurb`, 묶음의 `focus`, 주석). 글자 그대로와 함께, 읽히는 글로 푼 것도 견줍니다: YAML 은 읽은 값(`\uAC00` 이스케이프와 여러 줄 글이 풀린 값), SVG 는 태그를 걷어 내고 문자 참조(`&#xAC00;`)를 푼 글, 전개도 모듈은 문자열 안의 `\u` 이스케이프를 푼 글입니다. 띄어쓰기와 문장부호를 뺀 뒤 한글 12자 이상이 이어서 같으면 실패, 8~11자는 알림입니다. 단원명과 고유 명사 목록(`checks/originality-allow.txt`. 한 줄에 고유 명사 하나, `#` 뒤는 주석, 문장이나 구절은 적지 않습니다)은 뺍니다.
 - 활동의 짜임(같은 질문을 같은 차례로 묻는가)과 그림의 닮음은 글자 검사로 잡히지 않습니다. 비공개 자료를 볼 수 있는 검수자가 학습지와 발문, 직접 그린 그림(도해·지도·컬러링 도안·전개도)을 교과서의 해당 쪽과 견줍니다.
 - 남의 그림·사진은 같은 검수에서 원본 페이지를 열어 이용 조건(사람이 나오면 초상)을 다시 확인하고 `credit.checked` 를 고칩니다. 고친 다음에 기록합니다 (명세를 고치면 지문이 바뀝니다).
 - 기록은 검사 도구가 적습니다. 검수자가 짜임과 그림까지 본 뒤 `--record` 를 붙여 돌리면, 통과했을 때 도구가 기록을 적습니다. `npm run sign` 으로 적은 pass 는 치지 않습니다. 손으로 적은 pass 는 이름 꼴(copy-guard@…)이 아니면 치지 않습니다. 이름 꼴을 흉내 낸 기록은 형식이 막지 못하므로 CODEOWNERS 승인이 막습니다.
+  - 기록은 견줄 자료가 있을 때만 적습니다: 비공개 자료에 그 묶음의 교과서 쪽(차시표의 `pages`)이 하나 이상, 그 학기의 지도서 쪽이 하나 이상 있어야 합니다. 모자라면 무엇이 없는지 알리고 적지 않습니다.
   - 차시: `npm run check:originality -- <id> --record` 가 `reviews` 에 `kind: originality`, `by: "copy-guard@<자료 묶음 지문 8자>"`, `result: pass`, `seal: sealsOf(id).lesson` 을 적습니다.
   - 차시표: `npm run check:originality -- --registry --record` 가 차시표의 `originality` 칸(맨 바깥 칸)에 `by`, `date`, `seal: registrySeal()` 을 적습니다. 차시표에는 명세가 없는 묶음의 `focus` 도 있어서 차시표가 제 기록을 갖습니다. `blurb` 나 `focus` 를 고치면 이 기록은 없는 것이 됩니다 (`registryOriginality()`).
 - 공개 CI 는 교과서를 볼 수 없으므로 기록의 지문이 지금 내용과 같은지만 봅니다. 지문은 값만 보고 **주석은 지문에 들지 않습니다**. 그래서 둘을 더 지킵니다.
@@ -435,7 +459,7 @@ npm run build:site # astro build 만 (1단계). 그림·PDF·PPTX 와 산출물 
   - PR 의 CI 는 `--push` 없이 `npm run check` 를 돌립니다. 기록이 없는 것은 알림으로 보입니다. 비공개 자료가 없는 기여자는 이 기록을 만들 수 없기 때문입니다 (`npm run sign` 은 적지 못하고 손으로 적은 pass 는 치지 않습니다).
 - `.githooks/pre-push` 는 `npm ci` 가 누구에게나 켭니다 (`package.json` 의 `prepare` 가 `core.hooksPath` 가 비어 있을 때만 `lessons/.githooks` 로 정합니다 (0절). 학습 지도 저장소에서 누가 이미 정해 둔 값은 덮어쓰지 않습니다. 따로 켜는 명령이 없습니다). 그래서 **비공개 자료가 없는 기여자를 막지 않습니다.**
   - `TEXTBOOK_STORE` 가 없으면: "베끼기 검사를 건너뜁니다 (비공개 자료가 없습니다). 기록은 날쌤이 PR 에서 적습니다" 한 줄을 찍고 0 으로 끝납니다. 다른 것은 돌리지 않습니다.
-  - `TEXTBOOK_STORE` 가 있으면(날쌤의 컴퓨터): 위의 다시 검사를 돌리고 `npm run check -- --push` 로 막습니다.
+  - `TEXTBOOK_STORE` 가 있으면(날쌤의 컴퓨터): 위의 다시 검사를 돌리고 `npm run check -- --push` 로 막습니다. 검사는 꺼내 둔 파일을 읽으므로, `content/` 에 커밋하지 않은 고침이 있거나 올리는 커밋이 지금 꺼낸 커밋(HEAD)이 아니면 검사하지 않고 멈춥니다 (고친 글을 검사하고 고치기 전의 글을 올리게 됩니다).
 
 ## 14. 디자인
 
@@ -462,6 +486,8 @@ npm run build:site # astro build 만 (1단계). 그림·PDF·PPTX 와 산출물 
 - 아이가 읽는 글에는 아직 배우지 않은 낱말을 쓰지 않습니다 (11절의 낱말 검사가 알려 줍니다. 이 판에서는 알림입니다).
 - 아이가 읽는 글(수업 화면, 학습지, 카드, 페이퍼크래프트의 조각 이름과 순서, 확인 퀴즈, 웹 활동)에서는 한 가지를 한 이름으로만 부릅니다. 사전마다 다른 이름이 있으면 하나를 골라 아이가 읽는 모든 글에 씁니다. 다른 이름은 교사 메모에서 한 번 "같은 말"이라고 밝힙니다. 예: 고인돌의 부분은 덮개돌과 받침돌이라고만 부르고, 굄돌·고임돌·막음돌·받침판은 아이가 읽는 글에 쓰지 않습니다. 만들기 모형도 사진과 수업 화면의 도해와 같은 짜임으로 만들고(덮개돌 하나를 받침돌 둘이 받친다), 모형이 서는 데 꼭 필요한 바닥은 바닥판이라고 부릅니다.
 - 아무도 본 적 없는 과정(옛사람이 큰 돌을 어떻게 옮기고 올렸는지 같은 것)은 사실이 아니라 여러 짐작 가운데 하나로 씁니다. 그 짐작을 그대로 설명하는 공개 출처가 있으면 근거 구절과 함께 적고, 찾지 못했거나 출처의 설명과 어긋나는 데가 있으면 교사 메모에 그대로 밝힙니다.
+- 맞고 틀림의 표시는 사람이 읽는 모든 자리(확인 퀴즈의 단추와 풀이, 안내 페이지의 정답, 학습지, 수업 화면, PPTX 메모)에서 ○(U+25CB)와 ×(U+00D7)입니다. 라틴 글자 O·X 로 쓰지 않습니다. 기호와 소리 내어 읽는 말은 `MARK`·`MARK_LABEL`(`#lib/site.ts`)에서 가져오고 손으로 적지 않습니다. 명세의 OX 문항 답은 그대로 `true`·`false` 입니다.
+- 닫는 따옴표와 바로 뒤의 조사(‘눈으로 본 것’은)는 다른 줄로 갈리지 않습니다. 수업 화면, 확인 퀴즈, 웹 활동, 인쇄 페이지는 아이가 읽는 명세의 글을 HTML 로 그릴 때 `keepParticle(text)` 를 거칩니다 (그 사이에 U+2060 WORD JOINER 를 넣습니다). PPTX, 검색 색인에 드는 차시 안내 페이지, 글 뽑기와 검사에는 쓰지 않습니다 (보이지 않는 글자가 찾기와 견주기를 어긋나게 합니다).
 - 교실에서 해 본 것처럼 쓰지 않습니다. 걸리는 시간이나 "가장 많습니다" 같은 말은 날쌤이 수업에서 확인한 것만 적고, 그 전에는 "~일 수 있습니다"로 씁니다. 수업 방법에 관한 말은 `facts` 에 넣지 않습니다.
 
 ## 16. 코드와 시험
@@ -490,8 +516,8 @@ npm run build:site # astro build 만 (1단계). 그림·PDF·PPTX 와 산출물 
 | `CONTRIBUTING.md` | ① 차시 하나 고치기·더하기 (폴더가 곧 id, `docs/template/lesson.yaml` 을 복사) ② YAML 에서 자주 틀리는 다섯 가지 (글 안의 콜론+빈칸, 따옴표로 시작하는 글, 값 뒤의 ` #`, 탭 들여쓰기, true/false 자리의 O·X) ③ 그림을 넣기 전에 확인할 것 (이용 조건, 출처 주소, 확인한 날, 1MB, 파일 이름) ④ 교과서 문장·활동·예시 답을 옮기지 않는다 ⑤ 기여한 글과 그림은 CC BY-NC-SA 4.0, 코드는 MIT 로 공개하는 데 동의한다 ⑥ 검수 기록은 누가 적는가, 실명을 적지 않는다. 베끼기 검사 기록은 날쌤이 PR 에서 적는다 (비공개 자료가 없으면 올리기 전 검사는 한 줄 알리고 지나가고, PR 의 검사에는 '기록 없음'이 알림으로 보인다. 정상이다) ⑦ 공개된 차시를 고칠 때의 순서 (12절: 그 차시와 그것을 가리키는 묶음을 draft 로, 다시 검수, 다시 공개) |
 | `LICENSE` | MIT (코드) |
 | `LICENSE-CONTENT.md` | CC BY-NC-SA 4.0: `content/` 의 글과 직접 만든 그림, `generators/papercraft/modules/` 의 도안, 만들어진 PDF·PPTX. 단원명은 교과서의 것이다. `credit.licence` 가 original 이 아닌 그림은 CC BY-NC-SA 에 들지 않고 거기 적힌 제 조건을 따른다 (퍼블릭 도메인·CC0, 공공누리 제1유형, CC BY, CC BY-SA 뿐이다. 5절) |
-| `NOTICE.md` | 가져다 쓴 자료의 출처 (이미 들어 있습니다. 더 생기면 이어 적습니다) |
-| `docs/template/lesson.yaml` | 칸마다 한국어 주석을 단 본보기. `tests/repo/` 가 형식으로 검증합니다 |
+| `NOTICE.md` | 가져다 쓴 자료의 출처 (이미 들어 있습니다. 더 생기면 이어 적습니다). 사이트 검색에 쓰는 Pagefind(MIT)도 여기에 적습니다 |
+| `docs/template/lesson.yaml` | 칸마다 한국어 주석을 단 본보기. `tests/repo/` 가 형식으로 검증합니다. 본보기가 가리키는 그림은 `docs/template/media/` 에 함께 둡니다 (폴더째 복사하면 바로 읽힙니다) |
 | `docs/CHANGELOG.md` | 형식이 바뀐 기록 |
 | git 뿌리의 `.github/CODEOWNERS`, `.github/pull_request_template.md`, `.github/ISSUE_TEMPLATE/` (양식 이름 "수업 자료 오류 제보"(`lessons-error.yml`), "수업 자료 저작권 신고"(`lessons-copyright.yml`)), `.github/workflows/lessons-ci.yml`, `.github/workflows/lessons-deploy.yml` | 0절 |
 | `.githooks/pre-push` | 13절 |

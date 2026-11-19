@@ -92,6 +92,28 @@ export const REVIEW_LABEL: Record<ReviewKind, string> = {
 /** 차시표의 role 을 보여 줄 때 쓰는 말 (content 는 표시하지 않는다) */
 export const ROLE_LABEL = { intro: '단원 도입', content: '', review: '단원 정리' } as const;
 
+/**
+ * 맞고 틀림을 묻는 문항(OX)의 표시. 사람이 읽는 자리(퀴즈 단추와 풀이, 안내 페이지의 정답, 학습지, 수업 화면, PPTX 메모)는
+ * 라틴 글자 O·X 가 아니라 이 기호를 쓴다 (○ U+25CB, × U+00D7). 손으로 적지 않고 여기에서 가져다 쓴다.
+ */
+export const MARK = { yes: '○', no: '×' } as const;
+/** 기호를 소리 내어 읽는 말. 화면 읽기 프로그램의 이름(aria-label)과 기호를 말로 풀어 쓰는 자리에 쓴다. */
+export const MARK_LABEL = { yes: '맞다', no: '아니다' } as const;
+
+// 닫는 따옴표 바로 뒤에 한글 음절이 붙은 자리. ’ ” 」 』 는 늘 닫는 표이고,
+// 곧은 따옴표(' ")는 앞에 빈칸이 아닌 글자가 있을 때만 닫는 표로 본다 (여는 표 뒤에는 넣지 않는다).
+const QUOTE_THEN_PARTICLE = /(?:[’”」』]|(?<=\S)['"])(?=[가-힣])/g;
+
+/**
+ * 닫는 따옴표와 바로 뒤의 조사가 다른 줄로 갈리지 않게 그 사이에 U+2060(WORD JOINER)을 넣는다. 예: ‘눈으로 본 것’은.
+ * 그 자리 말고는 한 글자도 바꾸지 않고, 두 번 불러도 더 바뀌지 않는다.
+ * 쓰는 곳: 아이가 읽는 명세의 글을 HTML 로 그리는 수업 화면·확인 퀴즈·웹 활동·인쇄 페이지.
+ * 쓰지 않는 곳: PPTX, 검색 색인에 드는 차시 안내 페이지, 글 뽑기와 검사 (보이지 않는 글자가 견주기와 찾기를 어긋나게 한다).
+ */
+export function keepParticle(text: string): string {
+  return text.replace(QUOTE_THEN_PARTICLE, '$&⁠');
+}
+
 /** 채워진 인쇄 안내. printJobs() 가 PrintSpec 의 빈 칸을 PRINT_DEFAULT 로 채워 돌려준다. */
 export interface PrintInfo {
   per: PrintSpec['per'];

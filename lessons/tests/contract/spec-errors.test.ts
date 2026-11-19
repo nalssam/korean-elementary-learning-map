@@ -125,13 +125,18 @@ const cases: [string, string, (l: Raw) => void, string[]][] = [
   ['표지가 첫 장이 아닌 자리에만 있음', ONE, (l) => { [l.slides[0], l.slides[2]] = [l.slides[2], l.slides[0]]; }, ['slides · 1번째 · layout', '수업 화면의 AI 사용 표시와 초안 표시가 표지에 찍힙니다']],
 
   // ── 학습지 ──
-  ['문장 틀에 빈칸이 없음', ONE, (l) => { l.worksheet.pages[0].blocks[3].frame = '나는 보았다.'; }, ['빈칸을 밑줄 세 개(___)로 적습니다']],
-  ['밑줄 두 개는 빈칸이 아니다', ONE, (l) => { l.worksheet.pages[0].blocks[3].frame = '나는 __을 보았다.'; }, ['빈칸을 밑줄 세 개(___)로 적습니다']],
+  ['문장 틀에 빈칸이 없음', ONE, (l) => { l.worksheet.pages[0].blocks[4].frame = '나는 보았다.'; }, ['빈칸을 밑줄 세 개(___)로 적습니다']],
+  ['밑줄 두 개는 빈칸이 아니다', ONE, (l) => { l.worksheet.pages[0].blocks[4].frame = '나는 __을 보았다.'; }, ['빈칸을 밑줄 세 개(___)로 적습니다']],
   ['표의 칸 수', TWO, (l) => { l.worksheet.pages[0].blocks[2].rows[0].push('하나 더'); }, ['줄마다 칸 수가 columns 와 같아야 합니다']],
   ['옛 블록 이름 (observe-infer)', TWO, (l) => { l.worksheet.pages[0].blocks[3].type = 'observe-infer'; }, ['쓸 수 없는 값입니다 (지금: "observe-infer")', 'observe_infer']],
   ['없앤 블록 (choices)', ONE, (l) => { l.worksheet.pages[0].blocks.push({ type: 'choices', q: 'x', options: ['a', 'b'] }); }, ['쓸 수 없는 값입니다 (지금: "choices")']],
   ['선 잇기는 짝으로 적는다', TWO, (l) => { l.worksheet.pages[1].blocks[1] = { type: 'match', left: ['가', '나'], right: ['다', '라', '마'] }; }, ['pairs', '모르는 칸 이름입니다: left, right']],
   ['연표의 옛 칸 이름 label', TWO, (l) => { l.worksheet.pages[1].blocks[0].points[0] = { label: '1392' }; }, ['모르는 칸 이름입니다: label']],
+  ['보기 블록은 text 와 parts 가운데 하나만', ONE, (l) => { l.worksheet.pages[0].blocks[1].text = '돌이 쌓여 있다.'; }, ['worksheet · pages · 1번째 · blocks · 2번째', 'text 와 parts 가운데 하나만 적습니다']],
+  ['보기 블록에 text 도 parts 도 없음', ONE, (l) => { delete l.worksheet.pages[0].blocks[1].parts; }, ['text 와 parts 가운데 하나만 적습니다']],
+  ['보기 블록의 칸이 하나뿐', ONE, (l) => { l.worksheet.pages[0].blocks[1].parts.splice(1); }, ['parts', '칸은 2~4개 적습니다. 한 칸뿐이면 parts 대신 text 에 한 문장으로 적습니다']],
+  ['보기 블록의 칸은 넷까지', ONE, (l) => { const p = l.worksheet.pages[0].blocks[1].parts; p.push(p[0], p[1]); }, ['칸은 4개까지 적습니다']],
+  ['보기 블록의 칸에는 이름표가 있다', ONE, (l) => { delete l.worksheet.pages[0].blocks[1].parts[0].label; }, ['parts · 1번째 · label: 꼭 있어야 하는 칸이 빠졌습니다']],
   ['단은 넷까지', TWO, (l) => { const cols = l.worksheet.pages[1].blocks[2].columns; cols.push(cols[0]); }, ['4개까지만 적습니다 (지금 5개)']],
   ['인쇄 쪽수는 적지 않는다', ONE, (l) => { l.worksheet.print.pages = 1; }, ['worksheet · print', '모르는 칸 이름입니다: pages']],
 
@@ -272,8 +277,11 @@ test('통과해야 한다: 손으로 쓰기 쉬운 여러 꼴', () => {
   // 따옴표 없는 연도
   passes(ONE, (l) => { l.quiz.items[2].answer = 1919; l.assets.cards.cards[3].front = 918; l.slides[0].subtitle = 1392; });
   // 전각 밑줄도 빈칸으로 받는다
-  passes(ONE, (l) => { l.worksheet.pages[0].blocks[3].frame = '나는 ＿＿을 보았다.'; });
-  passes(ONE, (l) => { l.worksheet.pages[0].blocks[3].frame = '나는 ______을 보았다.'; });
+  passes(ONE, (l) => { l.worksheet.pages[0].blocks[4].frame = '나는 ＿＿을 보았다.'; });
+  passes(ONE, (l) => { l.worksheet.pages[0].blocks[4].frame = '나는 ______을 보았다.'; });
+  // 보기 블록은 한 문장(text)으로도, 단 안에서도 쓸 수 있다
+  passes(ONE, (l) => { l.worksheet.pages[0].blocks[1] = { type: 'example', text: '나는 돌이 쌓인 것을 보고 여럿이 힘을 모았다고 짐작했다.' }; });
+  passes(ONE, (l) => { l.worksheet.pages[0].blocks.push({ type: 'columns', columns: [[{ type: 'example', text: '보기 하나' }], [{ type: 'lines', count: 2 }]] }); });
   // 초안은 출처 없이도 저장할 수 있다
   passes(ONE, (l) => { for (const f of l.facts) delete f.sources; });
   // 수업 화면의 진행 메모는 비워도 된다

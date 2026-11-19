@@ -261,6 +261,19 @@ const leafBlocks = [
   so({ type: z.literal('quiz'), items: z.array(z.number().int().min(1)).min(1).max(10) }),
   /** 문장 틀. 빈칸은 밑줄 세 개(___)로 적는다. */
   so({ type: z.literal('sentence_frame'), frame: Text.refine((s) => s.search(BLANK) >= 0, '빈칸을 밑줄 세 개(___)로 적습니다. 예: 나는 ___라고 짐작했다.') }),
+  /**
+   * 풀어 놓은 보기 하나. 아이가 할 일을 먼저 보여 주는 자리다 (지시가 아니므로 번호가 붙지 않는다).
+   * 인쇄는 "예"라는 작은 표시가 붙은 조용한 상자이고, 굵은 작은 제목으로 찍지 않는다.
+   * text(한 문장) 또는 parts(칸 2~4개) 가운데 하나만 적는다. parts 는 한 줄에 화살표로 이어 찍는다.
+   * 예: parts: [{ label: 본 것, text: … }, { label: 아는 것, text: … }, { label: 짐작, text: … }]
+   */
+  so({
+    type: z.literal('example'),
+    text: Text.optional(),
+    parts: z.array(so({ label: T(12), text: T(60) })).min(2, '칸은 2~4개 적습니다. 한 칸뿐이면 parts 대신 text 에 한 문장으로 적습니다').max(4, '칸은 4개까지 적습니다. 한 줄에 화살표로 이어 찍기 때문입니다').optional(),
+  }).refine((b) => (b.text === undefined) !== (b.parts === undefined), {
+    message: 'text 와 parts 가운데 하나만 적습니다. 한 문장이면 text, 본 것 → 아는 것 → 짐작처럼 이어지는 칸이면 parts 를 씁니다',
+  }),
   /** 연표. when 은 늘 찍히고, blank 인 칸의 what 은 비워 두어 아이가 채운다. */
   so({ type: z.literal('timeline'), points: z.array(so({ when: T(14), what: T(30), blank: z.boolean().default(false), facts: FactRefs })).min(2).max(8) }),
 ] as const;

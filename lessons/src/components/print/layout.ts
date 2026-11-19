@@ -49,6 +49,7 @@ export const BLOCK_LABEL: Record<Block['type'], string> = {
   quiz: '확인 퀴즈 문항',
   sentence_frame: '문장 틀',
   timeline: '연표',
+  example: '보기',
   columns: '나란히 놓기',
 };
 

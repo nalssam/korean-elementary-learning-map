@@ -106,6 +106,14 @@ worksheet:
         - type: figure
           media: stone
           width: half
+        - type: example
+          parts:
+            - label: 본 것
+              text: 돌이 여러 개 쌓여 있다.
+            - label: 아는 것
+              text: 돌은 무겁다.
+            - label: 짐작
+              text: 여럿이 힘을 모아 쌓았을 것이다.
         - type: prompt
           text: 무엇이 보이는지 적어 봅시다.
         - type: lines
