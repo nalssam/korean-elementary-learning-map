@@ -142,4 +142,4 @@ export async function readPdf(buf) {
 }
 
 /** 빈칸과 줄바꿈을 모두 뺀다. PDF 의 글과 찾는 글을 이 꼴로 견준다 (7절). */
-export const squash = (s) => s.replace(/\s+/g, '');
+export const squash = (s) => s.replace(/[\s\u2060]+/g, ''); // keepParticle() 의 U+2060 도 뺀다 (15절)

@@ -772,11 +772,16 @@ function creditParts(m: Media): { kind: string; title?: string; body: string; so
   };
 }
 
+/** 제목을 「」로 묶는다. 제목에 이미 「」『』가 있으면 겹치지 않게 그대로 둔다 (사이트의 quoteTitle() 과 같은 규칙). */
+function quoteTitle(title: string): string {
+  return /[「」『』]/.test(title) ? title : `「${title}」`;
+}
+
 /** 제목·소장처·이용 조건·주소가 모두 든 출처 표시. 차시 안내 페이지의 '출처'에 넣는다 (PPTX 마지막 장은 제목을 뺀 creditList()). */
 export function creditFull(m: Media): { text: string; sourceUrl?: string; licenceUrl?: string } {
   const { kind, title, body, sourceUrl, licenceUrl } = creditParts(m);
   return {
-    text: `${kind}: ${m.credit.licence === 'original' ? '' : `「${title ?? ''}」, `}${body}`,
+    text: `${kind}: ${m.credit.licence === 'original' ? '' : `${quoteTitle(title ?? '')}, `}${body}`,
     ...(sourceUrl ? { sourceUrl } : {}),
     ...(licenceUrl ? { licenceUrl } : {}),
   };

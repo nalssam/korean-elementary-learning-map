@@ -171,7 +171,7 @@ test('웹 활동: 네 가지가 모두 그려지고, 카드는 묶음 id 로 정
   assert.match(place, /<h2 class="credits-title" id="credits-title">그림 출처<\/h2>\s*<ul class="credits-list">\s*<li>지도: 시험용 그린이, CC BY-NC-SA 4\.0 <a href="https:\/\/creativecommons\.org\/licenses\/by-nc-sa\/4\.0\/deed\.ko" target="_blank" rel="noopener noreferrer">이용 조건/);
   // 카드 그림: 출처는 카드마다 찍지 않고 아래에 한 줄로 모인다 (같은 출처 두 장 → '2장')
   assert.ok(sort.includes(`<li>사진 2장: 시험용 사진가, CC BY-SA 4.0 <a href="${PIC_LICENCE}"`), '카드 그림의 출처 목록');
-  assert.equal(sort.match(/시험용 사진가/g)!.length, 3, '출처 목록 한 줄 + 카드에 숨긴 출처 두 곳(Media.astro)만 있어야 합니다');
+  assert.equal(sort.match(/시험용 사진가/g)!.length, 1, '출처는 목록 한 줄에만 있어야 합니다 (카드에는 Media.astro 의 credit={false})');
   assert.ok(sort.includes(`<p class="chip-why" data-why hidden>${keepParticle(QUOTED_WHY)}</p>`) && keepParticle(QUOTED_WHY) !== QUOTED_WHY, '카드의 까닭도 keepParticle() 을 거친다');
   const match = html(`${NOPLAY}/play`);
   assert.deepEqual([attrs(match, 'play-board')['data-kind'], attrs(match, 'play-board')['data-scored']], ['match', 'false']);

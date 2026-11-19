@@ -20,8 +20,8 @@ body[data-kind='print'] { background: var(--line); }
 .sheet-foot { flex: none; height: var(--sheet-foot); font-size: 7pt; line-height: 1.2; color: var(--ink-dim); }
 
 /* HTML 상자에 쓰는 선. 전개도 SVG 의 선은 모듈이 SVG 안에 직접 그린다 (SVG 안에서는 mm 가 아니라 SVG 단위로 굵기를 적는다). */
-.cut { border: 0.5mm solid var(--ink); }
-.fold { border: 0.3mm dashed var(--ink); }
+.cut { border: 2px solid var(--ink); } /* 0.53mm. Chromium 은 테두리를 px 아래로 버려 그린다 (0.5mm 는 1px) */
+.fold { border: 1px dashed var(--ink); }
 
 @media print {
   body[data-kind='print'] { background: none; }

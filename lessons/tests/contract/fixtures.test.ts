@@ -32,6 +32,9 @@ test('keepParticle: 닫는 따옴표와 뒤의 조사 사이에만 U+2060 을 �
   assert.equal(keepParticle('“짐작”이라고 합니다. 「돌」과 『책』을'), `“짐작”${WJ}이라고 합니다. 「돌」${WJ}과 『책』${WJ}을`);
   // 곧은 따옴표는 닫는 자리에서만 (여는 따옴표 뒤의 한글에는 넣지 않는다)
   assert.equal(keepParticle("'덮개돌'은 \"받침돌\"과"), `'덮개돌'${WJ}은 "받침돌"${WJ}과`);
+  // 여는 따옴표 뒤의 물결표와 뒤의 한글 (‘~ 에서 줄이 갈리지 않게)
+  assert.equal(keepParticle('아는 것을 ‘~하니까’로 적습니다.'), `아는 것을 ‘~${WJ}하니까’${WJ}로 적습니다.`);
+  assert.equal(keepParticle('3~4명'), '3~4명');
   // 그 꼴이 없으면 그대로, 따옴표 뒤가 빈칸·문장부호·영문이면 그대로
   for (const s of ['고인돌은 큰 돌입니다.', '‘덮개돌’ 위에', '“돌”.', "'stone'is", '', '1392년']) assert.equal(keepParticle(s), s);
   // 두 번 불러도 더 바뀌지 않는다

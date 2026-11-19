@@ -17,6 +17,7 @@
     "dev": "astro dev",
     "check": "node checks/run.mjs",
     "check:originality": "node checks/originality.mjs",
+    "store:add": "node scripts/store-add.mjs",
     "test": "node --test",
     "typecheck": "astro check && tsc --noEmit",
     "build": "node scripts/build.mjs",

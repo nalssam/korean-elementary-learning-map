@@ -66,7 +66,7 @@ const targets: { id: string; label: string; sr: string }[] =
 
       {act.kind === 'place' && (
         <div class="place-pic">
-          <Media lesson={lesson} id={act.media} />
+          <Media lesson={lesson} id={act.media} credit={false} />
           <div class="place-layer" data-layer>
             {act.spots.map((s, k) => (
               <button type="button" class="marker" data-target={String(k)} style={`--x:${s.x}%;--y:${s.y}%`} aria-label={`${k + 1}번 자리에 놓기`}>
@@ -85,7 +85,7 @@ const targets: { id: string; label: string; sr: string }[] =
         <ul class="drop tray-drop" data-drop="tray" data-said="처음 자리로 돌려놓았습니다">
           {chips.map((c) => (
             <li class:list={['chip', { 'chip-media': c.media, 'chip-wide': c.media && ratio(c.media) > 1.7 }]} data-item={String(c.key)} data-answer={c.answer} style={c.media ? `--ar:${ratio(c.media)}` : undefined}>
-              {c.media && <Media lesson={lesson} id={c.media} caption={false} class="chip-picture" />}
+              {c.media && <Media lesson={lesson} id={c.media} caption={false} credit={false} class="chip-picture" />}
               <button type="button" class="chip-btn">{kp(c.text)}</button>
               <span class="chip-mark" data-mark aria-live="off"></span>
               {c.why && <p class="chip-why" data-why hidden>{kp(c.why)}</p>}

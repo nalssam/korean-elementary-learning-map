@@ -9,17 +9,21 @@ interface Props {
   lesson: Lesson;
   /** 그림 id. 같은 단원 앞 묶음의 그림은 "05/rain-gauge" */
   id: string;
-  /** 명세의 caption 을 찍을지 (기본: 찍는다). 출처 표시는 늘 찍는다. */
+  /** 명세의 caption 을 찍을지 (기본: 찍는다). */
   caption?: boolean;
+  /** 출처 표시를 찍을지 (기본: 찍는다). false 는 같은 페이지의 다른 자리에 출처를 모아 찍을 때만 준다 (웹 활동의 '그림 출처'). */
+  credit?: boolean;
   class?: string;
 }
-const { lesson, id, caption = true, class: cls } = Astro.props;
+const { lesson, id, caption = true, credit = true, class: cls } = Astro.props;
 const m = getMedia(lesson, id);
 ---
 <figure class:list={['media', cls]}>
   <img src={href(mediaRoute(lesson, id))} alt={m.alt} decoding="async" />
-  <figcaption>
-    {caption && m.caption && <span class="media-caption">{m.caption}</span>}
-    <span class="media-credit">{creditShort(m)}</span>
-  </figcaption>
+  {(caption && m.caption || credit) && (
+    <figcaption>
+      {caption && m.caption && <span class="media-caption">{m.caption}</span>}
+      {credit && <span class="media-credit">{creditShort(m)}</span>}
+    </figcaption>
+  )}
 </figure>
