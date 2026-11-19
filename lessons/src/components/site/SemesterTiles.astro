@@ -1,0 +1,39 @@
+---
+// 학기 타일 여덟 개 (3-1 … 6-2). 차시표가 있는 학기는 "N/M 차시 공개"와 함께 학기 페이지로 가고,
+// 차시표가 아직 없는 학기는 링크 없이 '준비 중'이라고만 보여 준다.
+// 학기 목록은 loadRegistry() 에서 얻는다 (차시표가 없는 학기는 allBundles() 에 나오지 않는다).
+import { loadRegistry, semesterLabel } from '#lib/content.ts';
+import { href } from '#src/lib/url.ts';
+import { allRows, progressLabel, progressOf } from './data.ts';
+
+const rows = allRows();
+const tiles = loadRegistry().semesters.map((s) => ({
+  id: s.id,
+  label: semesterLabel(s.id),
+  blurb: s.blurb,
+  ready: s.units.length > 0,
+  progress: progressOf(rows.filter((r) => r.ref.semester.id === s.id)),
+}));
+---
+<ul class="tiles">
+  {tiles.map((t) => (
+    <li>
+      {t.ready ? (
+        <a class="tile" href={href(`/${t.id}/`)}>
+          <span class="tile-name">{t.label}</span>
+          {t.blurb && <span class="tile-blurb">{t.blurb}</span>}
+          <span class="tile-count">
+            {progressLabel(t.progress)}
+            {t.progress.drafts > 0 && <span class="chip chip-plain">초안 {t.progress.drafts}차시</span>}
+          </span>
+          <span class="tile-bar" aria-hidden="true"><span style={`width:${t.progress.total ? (100 * t.progress.open) / t.progress.total : 0}%`}></span></span>
+        </a>
+      ) : (
+        <div class="tile tile-off">
+          <span class="tile-name">{t.label}</span>
+          <span class="tile-count">준비 중</span>
+        </div>
+      )}
+    </li>
+  ))}
+</ul>

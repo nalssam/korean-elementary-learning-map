@@ -1,0 +1,96 @@
+---
+// 사이트 화면(첫 화면·학기·단원·차시 안내·소개·이용 조건·오류 제보)의 틀.
+// Base.astro 를 감싸고 머리(사이트 이름, 안내 링크), 초안 표시 띠, 본문, 바닥글을 놓는다.
+// 검색 색인에는 <main data-pagefind-body> 안의 글만 들어간다 (docs/CONTRACT.md 6절).
+import Base from './Base.astro';
+import '../components/site/site.css';
+import { footerNotice } from '#lib/content.ts';
+import { SITE } from '#lib/site.ts';
+import type { Lesson } from '#schema/lesson.ts';
+import { href } from '#src/lib/url.ts';
+
+interface Crumb { label: string; href?: string }
+interface Props {
+  /** <title> 앞부분 */
+  title: string;
+  description?: string;
+  /** 차시 안내 페이지이면 그 차시. 초안 표시와 오류 제보 링크에 쓴다. */
+  lesson?: Lesson;
+  /** 현재 위치 (처음 › 학기 › 단원). 마지막 것은 지금 페이지라 링크를 걸지 않는다. */
+  crumbs?: Crumb[];
+  /** 안내 링크 가운데 지금 페이지 */
+  current?: 'about' | 'licence' | 'report';
+}
+const { title, description, lesson, crumbs = [], current } = Astro.props;
+
+// 맨 아래 문구는 Base.astro 가 찍는다. 검수를 마치지 않은 글이 보이는 페이지(초안, 초안이 섞인 미리 보기)는 맨 위에도 같은 문구를 띠로 보여 준다.
+const notice = footerNotice(lesson);
+const flagged = notice !== SITE.aiNotice;
+const links = [
+  { key: 'about', label: '소개', to: href('/about/') },
+  { key: 'licence', label: '이용 조건', to: href('/licence/') },
+  // 차시 안내 페이지에서 누르면 제보 페이지가 어느 차시인지 안다. 붙이는 것은 차시 id 뿐이다.
+  { key: 'report', label: '오류 제보', to: href('/report/') + (lesson ? `?id=${lesson.id}` : '') },
+] as const;
+---
+<Base title={title} description={description} kind="site" lesson={lesson}>
+  <slot name="head" slot="head" />
+  <a class="skip" href="#main">본문으로 건너뛰기</a>
+  <header class="site-head">
+    <div class="wrap">
+      <a class="site-name" href={href('/')}>
+        <svg class="site-mark" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
+          <rect x="6.5" y="3.5" width="11" height="17" rx="3" transform="rotate(32 12 12)" />
+          <path d="M8.6 14.9l6.8 4.2" />
+        </svg>
+        {SITE.name}
+      </a>
+      <nav class="site-nav" aria-label="사이트 안내">
+        {links.map((l) => <a href={l.to} aria-current={current === l.key ? 'page' : undefined}>{l.label}</a>)}
+      </nav>
+    </div>
+  </header>
+  {flagged && (
+    <p class="site-flag"><span class="wrap"><span class="site-flag-dot" aria-hidden="true"></span>{notice}</span></p>
+  )}
+  <main id="main" data-pagefind-body>
+    <div class="wrap">
+      {crumbs.length > 0 && (
+        <nav class="crumbs" aria-label="현재 위치" data-pagefind-ignore>
+          <ol>
+            {crumbs.map((c) => <li>{c.href ? <a href={c.href}>{c.label}</a> : <span aria-current="page">{c.label}</span>}</li>)}
+          </ol>
+        </nav>
+      )}
+      <slot />
+    </div>
+  </main>
+  <footer class="site-foot">
+    <div class="wrap">
+      <p>글과 직접 만든 그림은 <a href={href('/licence/')}>{SITE.licence.name}</a> 조건으로 쓸 수 있습니다. {SITE.licenceNote}</p>
+      <p class="site-foot-links">
+        <span>만든 이 {SITE.author}</span>
+        {links.map((l) => <a href={l.to}>{l.label}</a>)}
+        <a href={SITE.repo}>깃허브 저장소</a>
+      </p>
+    </div>
+  </footer>
+  <script>
+    // 인쇄할 때는 접힌 상자를 모두 편다 (교사용 자료까지 수업 계획서 한 벌로 뽑힌다). 인쇄가 끝나면 접혀 있던 것만 다시 접는다.
+    // 주소 뒤의 #corrections 처럼 접힌 상자를 가리키고 들어오면 그 상자를 펴 준다.
+    const closed = new Set<HTMLDetailsElement>();
+    addEventListener('beforeprint', () => {
+      for (const d of document.querySelectorAll<HTMLDetailsElement>('details:not([open])')) { closed.add(d); d.open = true; }
+    });
+    addEventListener('afterprint', () => {
+      for (const d of closed) d.open = false;
+      closed.clear();
+    });
+    const openTarget = () => {
+      const target = location.hash.length > 1 ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
+      if (target instanceof HTMLDetailsElement) target.open = true;
+    };
+    addEventListener('hashchange', openTarget);
+    openTarget();
+  </script>
+</Base>

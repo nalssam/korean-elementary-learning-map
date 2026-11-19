@@ -1,0 +1,51 @@
+---
+// 학기 페이지 (/<학기>/). 단원마다 차시표 전체를 그린다. 차시표가 있는 학기에만 페이지가 있다.
+// 차시표의 글 가운데 여기에 찍는 것은 단원명과 학기 소개(blurb)뿐이다 (docs/CONTRACT.md 3절).
+import { loadRegistry, pagesLabel, semesterLabel, unitPages } from '#lib/content.ts';
+import SiteLayout from '#src/layouts/SiteLayout.astro';
+import { href } from '#src/lib/url.ts';
+import Finder from '#src/components/site/Finder.astro';
+import LessonList from '#src/components/site/LessonList.astro';
+import { allRows, progressLabel, progressOf, textbookLabel } from '#src/components/site/data.ts';
+
+export function getStaticPaths() {
+  return loadRegistry().semesters.filter((s) => s.units.length > 0).map((s) => ({ params: { semester: s.id } }));
+}
+const id = Astro.params.semester;
+const semester = loadRegistry().semesters.find((s) => s.id === id);
+if (!semester) throw new Error(`차시표에 ${id} 학기가 없습니다`);
+const rows = allRows().filter((r) => r.ref.semester.id === id);
+const label = semesterLabel(id);
+const progress = progressOf(rows);
+---
+<SiteLayout title={label} description={semester.blurb} crumbs={[{ label: '처음', href: href('/') }, { label }]}>
+  <header class="page-head">
+    <h1 class="page-title">{label}</h1>
+    {semester.blurb && <p class="lead">{semester.blurb}</p>}
+    <p class="page-meta">
+      <span>{progressLabel(progress)}</span>
+      {progress.drafts > 0 && <span class="chip chip-plain">초안 {progress.drafts}차시</span>}
+      <span>차시 번호와 쪽수는 {textbookLabel()}를 따릅니다.</span>
+    </p>
+  </header>
+  <div class="find" data-pagefind-ignore>
+    <Finder semester={id} />
+  </div>
+  {semester.units.map((unit) => {
+    const unitRows = rows.filter((r) => r.ref.unit.no === unit.no);
+    return (
+      <section class="unit" aria-labelledby={`unit-${unit.no}`}>
+        <div class="unit-head">
+          <h2 class="unit-title" id={`unit-${unit.no}`}><span class="unit-no">{unit.no}단원</span> {unit.title}</h2>
+          <p class="unit-meta">
+            <span>{pagesLabel(unitPages(unit))} · {progressLabel(progressOf(unitRows))}</span>
+            <a href={href(`/${id}/${unit.no}/`)}><span class="visually-hidden">{unit.no}단원 </span>단원 자료 보기</a>
+          </p>
+        </div>
+        <div data-pagefind-ignore>
+          <LessonList rows={unitRows} />
+        </div>
+      </section>
+    );
+  })}
+</SiteLayout>

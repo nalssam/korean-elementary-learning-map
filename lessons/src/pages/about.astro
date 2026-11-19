@@ -1,0 +1,58 @@
+---
+// 소개: 무엇을 만드는지, 어떻게 만드는지(AI 도구로 초안, 교사 검수, 사실마다 공개 출처), 누가 만드는지.
+// 여기 적는 만드는 법은 docs/CONTRACT.md 12절의 공개 조건과 schema/lesson.ts 가 막는 것만이다. 하지 않는 일을 적지 않는다.
+import { loadRegistry } from '#lib/content.ts';
+import { ASSET_LABEL, REVIEW_LABEL, SITE } from '#lib/site.ts';
+import { REVIEW_KINDS } from '#schema/lesson.ts';
+import SiteLayout from '#src/layouts/SiteLayout.astro';
+import { href } from '#src/lib/url.ts';
+import { allRows, progressOf, textbookLabel } from '#src/components/site/data.ts';
+
+const progress = progressOf(allRows());
+const reviews = REVIEW_KINDS.map((k) => REVIEW_LABEL[k]).join(', ');
+---
+<SiteLayout title="소개" current="about" crumbs={[{ label: '처음', href: href('/') }, { label: '소개' }]}>
+  <article class="prose">
+    <h1 class="page-title">소개</h1>
+    <p class="lead">초등 사회 3~6학년 교과서의 차시마다 수업 자료를 만들어 나누는 곳입니다. 로그인 없이 누구나 씁니다.</p>
+
+    <h2>차시마다 있는 자료</h2>
+    <ul>
+      <li><strong>차시 안내</strong> 준비물, 도입·전개·정리 시간표, 물어볼 것과 귀 기울일 것</li>
+      <li><strong>{ASSET_LABEL.slides}</strong> 브라우저에서 바로 띄우는 화면과, 같은 내용의 PPTX</li>
+      <li><strong>{ASSET_LABEL.worksheet}</strong> A4 인쇄 페이지와 PDF, 교사용 풀이</li>
+      <li><strong>{ASSET_LABEL.quiz}</strong> 아이들이 QR 코드로 여는 문항</li>
+    </ul>
+    <p>차시에 따라 {ASSET_LABEL.cards}, {ASSET_LABEL.web_activity}, {ASSET_LABEL.coloring}, {ASSET_LABEL.papercraft}, {ASSET_LABEL.making_kit}가 더 붙습니다. 차시마다 쓸모를 따져 보고, 맞지 않는 자료는 만들지 않습니다.</p>
+    <p>차시표에 오른 {progress.total}차시 가운데 {progress.open}차시를 공개했습니다. 학기마다 얼마나 공개했는지는 <a href={href('/')}>첫 화면</a>에 있습니다.</p>
+
+    <h2>만드는 방법</h2>
+    <ol>
+      <li>차시마다 명세 파일을 하나 씁니다. 수업 화면, 학습지, 확인 퀴즈, 카드가 모두 이 파일에서 나오므로 같은 사실이 자료마다 다르게 적히지 않습니다.</li>
+      <li>초안은 AI 도구로 만듭니다.</li>
+      <li>사실은 한 번만 적고, 박물관이나 공공 기관처럼 누구나 열어 볼 수 있는 출처를 붙입니다. 사실마다 서로 다른 둘이 출처와 맞는지 확인합니다. 이 확인은 AI 검증자가 맡기도 합니다.</li>
+      <li>공개하기 전에 다섯 가지 검수를 거칩니다: {reviews}. 마지막 승인은 교사가 직접 읽고 합니다.</li>
+      <li>검수한 뒤에 한 글자라도 고치면 그 차시는 다시 검수합니다.</li>
+      <li>공개한 뒤에 사실을 고치면 차시 안내 페이지에 날짜와 고친 내용을 남깁니다.</li>
+    </ol>
+    <p>사실마다 붙인 출처는 차시 안내 페이지 아래쪽 '사실과 출처'에서 볼 수 있습니다.</p>
+
+    <h2>교과서와의 관계</h2>
+    <p>차시 번호와 쪽수는 {textbookLabel()}를 따릅니다 ({loadRegistry().curriculum}). 교과서에서 가져온 것은 단원명, 차시 번호, 쪽수뿐입니다. 교과서의 문장, 그림, 활동, 예시 답은 싣지 않았습니다.</p>
+    <p>다른 출판사의 교과서를 쓰면 쪽수와 차시 번호가 맞지 않습니다. 그때는 첫 화면에서 낱말로 찾습니다.</p>
+
+    <h2>사진과 그림</h2>
+    <p>유물, 유적, 지도처럼 사실을 전하는 그림에는 생성형 AI로 만든 그림을 쓰지 않습니다. 박물관 같은 곳이 공개한 사진을 이용 조건을 확인하고 쓰거나, 직접 그립니다. AI로 만든 그림은 수업 화면의 곁그림으로만 쓰고 그림 옆에 'AI로 만든 그림'이라고 적습니다.</p>
+    <p>그림마다 소장처와 이용 조건을 차시 안내 페이지의 '그림 출처'에 적어 둡니다.</p>
+
+    <h2>무거운 내용을 다루는 차시</h2>
+    <p>전쟁이나 강제 동원처럼 사람들이 겪은 피해를 다루는 차시의 {ASSET_LABEL.quiz}와 {ASSET_LABEL.web_activity}은 점수를 보여 주지 않습니다. 맞았는지와 풀이만 보여 줍니다. 피해가 중심인 차시에는 {ASSET_LABEL.coloring}, {ASSET_LABEL.papercraft}, {ASSET_LABEL.making_kit}를 만들지 않습니다.</p>
+
+    <h2>개인정보</h2>
+    <p>로그인이 없습니다. 추적 도구와 광고가 없고, 사이트 밖의 글꼴이나 스크립트를 불러오지 않습니다. {ASSET_LABEL.quiz}와 {ASSET_LABEL.web_activity}은 이름을 묻지 않고, 답을 기기에 저장하거나 다른 곳으로 보내지 않습니다.</p>
+
+    <h2>만드는 사람</h2>
+    <p>만드는 사람은 {SITE.author}입니다. 공개하는 차시는 모두 직접 읽고 승인합니다.</p>
+    <p>명세와 코드는 <a href={SITE.repo}>깃허브 저장소</a>에 공개되어 있습니다. 쓸 수 있는 범위는 <a href={href('/licence/')}>이용 조건</a>에, 틀린 곳을 알리는 방법은 <a href={href('/report/')}>오류 제보</a>에 있습니다.</p>
+  </article>
+</SiteLayout>

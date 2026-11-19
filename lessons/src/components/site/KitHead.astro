@@ -1,0 +1,53 @@
+---
+// 차시 안내 페이지의 머리: 차시·쪽수, 차시 이름과 소개, 검수 상태, 목표, 성취기준, 다룰 때 살필 것.
+// 차시 번호·쪽수·성취기준은 명세가 아니라 차시표에서 온다 (bundleOf, standardsOf).
+import { bundleOf, lessonsLabel, pagesLabel, reviewedOn, scored, semesterLabel, standardsOf } from '#lib/content.ts';
+import { REVIEW_LABEL, ROLE_LABEL } from '#lib/site.ts';
+import type { Lesson } from '#schema/lesson.ts';
+import { koDate, standardCode } from './format.ts';
+
+interface Props { lesson: Lesson }
+const { lesson } = Astro.props;
+const ref = bundleOf(lesson);
+const role = ROLE_LABEL[ref.role];
+const standards = standardsOf(lesson.id);
+// 묶음에 성취기준을 따로 적지 않았으면 단원의 성취기준이 그대로 나온다. 그때는 단원의 것이라고 밝힌다.
+const ownStandards = ref.bundle.standards.length > 0;
+const reviewed = reviewedOn(lesson);
+const where = [lessonsLabel(ref.lessons), `교과서 ${pagesLabel(ref.pages)}`, ...(role ? [role] : [])];
+const level = lesson.sensitivity.level;
+---
+<header class="kit-head">
+  <p class="eyebrow" data-pagefind-meta={`where:${semesterLabel(ref.semester.id)} ${ref.unit.no}단원 ${lessonsLabel(ref.lessons)} · ${pagesLabel(ref.pages)}`}>{where.join(' · ')}</p>
+  <h1 class="page-title">{lesson.title}</h1>
+  <p class="lead">{lesson.tagline}</p>
+  <p class="kit-state">
+    {reviewed
+      ? <span class="chip">{REVIEW_LABEL.owner} <time datetime={reviewed}>{koDate(reviewed)}</time></span>
+      : <span class="chip chip-plain">검수 전 초안</span>}
+    {lesson.corrections.length > 0 && <a href="#corrections">공개한 뒤 고친 내용 {lesson.corrections.length}건</a>}
+  </p>
+
+  <div class="kit-facts">
+    <section aria-labelledby="goal-title">
+      <h2 class="facts-title" id="goal-title">목표</h2>
+      <ul class="dots">{lesson.objectives.map((o) => <li>{o}</li>)}</ul>
+    </section>
+    <section aria-labelledby="standards-title">
+      <h2 class="facts-title" id="standards-title">{ownStandards ? '성취기준' : '단원의 성취기준'}</h2>
+      <dl class="standards">
+        {standards.map((s) => <div><dt>{standardCode(s.code)}</dt><dd>{s.summary}</dd></div>)}
+      </dl>
+      <p class="fine" data-pagefind-ignore>코드 옆의 글은 줄여 쓴 요약이고, 교육부가 고시한 문장과 다릅니다.</p>
+    </section>
+  </div>
+
+  {level !== 'none' && (
+    <aside class="kit-care" aria-labelledby="care-title">
+      <h2 class="facts-title" id="care-title">다룰 때 살필 것</h2>
+      {lesson.sensitivity.note && <p>{lesson.sensitivity.note}</p>}
+      {!scored(lesson) && <p>이 차시의 확인 퀴즈와 웹 활동은 점수를 보여 주지 않습니다. 맞았는지와 풀이만 보여 줍니다.</p>}
+      {level === 'no_play' && <p>놀이가 되는 자료(페이퍼크래프트, 컬러링 도안, 만들기 세트)는 만들지 않았습니다.</p>}
+    </aside>
+  )}
+</header>
