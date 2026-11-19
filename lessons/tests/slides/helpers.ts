@@ -148,6 +148,78 @@ export async function slideProblems(): Promise<string[]> {
   return out;
 }
 
+/**
+ * 글 곁에 그림 하나를 둔 장(.sl-side, R12)을 재어 어긋난 곳을 글로 돌려준다 (브라우저 안에서 돈다. page.evaluate(sideProblems)).
+ *  - 그림 칸(그림 틀)의 폭이 무대 폭의 42% 이상이다
+ *  - 그림이 틀에 들어가는 만큼 크게 그려졌다 (contain 으로 그릴 수 있는 크기와 2px 안)
+ *  - 글 덩어리와 그려진 그림의 세로 가운데가 40px 안이다. 글이 그림보다 높으면 위 끝이 8px 안이어도 된다
+ *  - 빈 자리가 본문 자리(장의 안쪽 여백 안)의 40%('3분의 1 남짓')를 넘지 않는다. 제목 띠, 글 덩어리, 그려진 그림과 그 출처 표시가 찬 자리다.
+ *    가로세로가 2배를 넘는 그림은 두 칸 짜임으로 채울 수 없어 이 항목만 보지 않는다
+ * 이 함수는 브라우저로 넘어가므로 바깥의 값을 쓰지 않는다 (숫자는 copy.ts 의 STAGE_SIDE 와 같다). 그런 장이 아니면 빈 배열이다.
+ */
+export async function sideProblems(): Promise<string[]> {
+  const SHARE = 0.42;
+  const EMPTY = 0.4;
+  const out: string[] = [];
+  const slide = document.querySelector<HTMLElement>('.slide:not([hidden])')!;
+  const side = slide.querySelector<HTMLElement>('.sl-side');
+  if (!side) return out;
+  const inner = slide.querySelector<HTMLElement>('.slide-in')!;
+  const sr = slide.getBoundingClientRect();
+  const u = sr.width / 1920;
+  const figure = side.querySelector<HTMLElement>(':scope > .media')!;
+  const text = side.querySelector<HTMLElement>(':scope > :not(.media)')!;
+  const img = figure.querySelector('img');
+  const fr = figure.getBoundingClientRect();
+  if (fr.width / sr.width < SHARE - 0.001) out.push(`그림 칸이 좁음 (${((fr.width / sr.width) * 100).toFixed(1)}%)`);
+  if (!img || !img.naturalWidth) { out.push('그림이 실리지 않음'); return out; }
+  const cap = figure.querySelector('figcaption');
+  const capH = cap && cap.getClientRects().length ? cap.getBoundingClientRect().height + Number.parseFloat(getComputedStyle(cap).marginTop) : 0;
+  const ir = img.getBoundingClientRect();
+  const k = Math.min(ir.width / img.naturalWidth, ir.height / img.naturalHeight);
+  const pw = img.naturalWidth * k, ph = img.naturalHeight * k;
+  // 틀에 들어갈 수 있는 가장 큰 크기: 틀의 폭, 그리고 글 자리 전체 높이에서 출처 표시를 뺀 높이
+  const area = side.getBoundingClientRect();
+  const best = Math.min(fr.width / img.naturalWidth, (area.height - capH) / img.naturalHeight) * img.naturalWidth;
+  if (pw < best - 2 * u) out.push(`그림이 틀보다 작게 그려짐 (폭 ${(pw / u).toFixed(0)}px, 그릴 수 있는 폭 ${(best / u).toFixed(0)}px)`);
+  const picTop = ir.top + (ir.height - ph) / 2;
+  // 글 덩어리: 글 칸 안의 실제 글줄·번호·상자를 모두 감싸는 사각형
+  let tTop = Infinity, tBottom = -Infinity, tLeft = Infinity, tRight = -Infinity;
+  for (const el of [text, ...text.querySelectorAll<HTMLElement>('*')]) {
+    for (const r of el.getClientRects()) {
+      if (!r.width || !r.height) continue;
+      if (el === text && text.children.length) continue;
+      tTop = Math.min(tTop, r.top); tBottom = Math.max(tBottom, r.bottom); tLeft = Math.min(tLeft, r.left); tRight = Math.max(tRight, r.right);
+    }
+  }
+  const midGap = Math.abs((tTop + tBottom) / 2 - (picTop + ph / 2)) / u;
+  const topGap = Math.abs(tTop - picTop) / u;
+  const longer = tBottom - tTop > ph + 1;
+  if (midGap > 40 && !(longer && topGap <= 8)) out.push(`글과 그림의 세로 자리가 어긋남 (가운데 ${midGap.toFixed(0)}px, 위 끝 ${topGap.toFixed(0)}px)`);
+  // 빈 자리: 본문 자리를 8px 칸으로 나눠 아무것도 닿지 않는 칸을 센다
+  const cs = getComputedStyle(inner);
+  const ir2 = inner.getBoundingClientRect();
+  const box = { l: ir2.left + Number.parseFloat(cs.paddingLeft), t: ir2.top + Number.parseFloat(cs.paddingTop), r: ir2.right - Number.parseFloat(cs.paddingRight), b: ir2.bottom - Number.parseFloat(cs.paddingBottom) };
+  const filled: { l: number; t: number; r: number; b: number }[] = [
+    { l: tLeft, t: tTop, r: tRight, b: tBottom },
+    { l: ir.left + (ir.width - pw) / 2, t: picTop, r: ir.left + (ir.width + pw) / 2, b: picTop + ph + capH },
+  ];
+  const title = slide.querySelector<HTMLElement>('.sl-title');
+  if (title) filled.push({ l: box.l, t: box.t, r: box.r, b: title.getBoundingClientRect().bottom + Number.parseFloat(getComputedStyle(title).marginBottom) });
+  const step = 8 * u;
+  let all = 0, empty = 0;
+  for (let y = box.t + step / 2; y < box.b; y += step) {
+    for (let x = box.l + step / 2; x < box.r; x += step) {
+      all++;
+      if (!filled.some((f) => x >= f.l && x <= f.r && y >= f.t && y <= f.b)) empty++;
+    }
+  }
+  // 가로세로가 2배를 넘는 그림(아주 납작하거나 홀쭉한 그림)은 두 칸 짜임으로 자리를 채울 수 없으므로 빈 자리는 보지 않는다
+  const aspect = img.naturalWidth / img.naturalHeight;
+  if (aspect <= 2 && aspect >= 0.5 && empty / all > EMPTY) out.push(`빈 자리가 많음 (${((empty / all) * 100).toFixed(0)}%)`);
+  return out;
+}
+
 /** 형식이 허락하는 가장 긴 글. 실제 글처럼 두세 음절 낱말을 띄어 쓴다 (띄어쓰기가 없는 글은 받아 주지 않는 낱말이 아니므로 따로 본다). */
 export function longText(n: number, seed = 0): string {
   const words = ['고인돌', '사람들', '무덤을', '만들고', '큰', '돌을', '옮겨', '올렸습니다', '마을의', '힘을', '모아', '함께', '일했을까요'];

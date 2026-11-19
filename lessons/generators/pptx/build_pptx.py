@@ -51,6 +51,9 @@ class Ctx:
         # 장에 맞게 줄어드는 글의 크기 차례 (copy.ts 의 STAGE_FIT)와 그림 틀의 크기 (STAGE_PICTURE)
         self.fit = data['fit']
         self.pic = data['picture']
+        # 글 곁에 그림 하나를 두는 장의 짜임 (copy.ts 의 STAGE_SIDE, sideCandidates)과 2 × 2 단계 장의 그림 몫 (STAGE_STEPS)
+        self.side = data.get('side')
+        self.steps = data.get('steps')
 
 
 # ───────────────────────── 글 재기 ─────────────────────────
@@ -295,32 +298,92 @@ def lay_cover(ctx, s, sl, L):
         text(ctx, s, PAD_X, y + th + 32, CW, sh, sl['subtitle'], T['coverSub'], 'gray', lh=1.35)
 
 
+def side_plan(ctx, kind, measure, area_h):
+    """글 곁에 그림을 두는 장 (R12): [그림 칸 폭, 글 크기] 후보를 웹 무대와 같은 차례로 해 보고 처음 들어가는 것을 고른다.
+    measure(글 칸 폭, 글 크기) -> (글 덩어리 높이, 글 한 덩이의 가장 많은 줄 수).
+    먼저 글 한 덩이가 maxLines 줄을 넘지 않는 짜임을 (가장 좁은 그림 칸은 빼고) 찾고, 없으면 줄 수를 보지 않고 (가장 넓은 칸은 빼고) 찾는다."""
+    S = ctx.side
+    cands = S['candidates'][kind]
+    narrow = min(p for p, _ in cands)
+    wide = max(p for p, _ in cands)
+    for strict in (True, False):
+        for pic, size in cands:
+            # 줄 수를 지키려고 가장 좁은 칸까지 가지 않고, 가장 넓은 칸은 줄 수를 지킬 때만 쓴다 (웹 무대와 같다)
+            if (pic <= narrow) if strict else (pic >= wide):
+                continue
+            h, lines = measure(CW - S['gap'] - pic, size)
+            # 가장 넓은 칸은 글 한 덩이가 maxLines 보다 한 줄 적게 들어갈 때만 쓴다
+            limit = S['maxLines'][kind] - (1 if pic >= wide else 0)
+            if h <= area_h + 1 and (not strict or lines <= limit):
+                return pic, size
+    raise Overflow(f'{kind} 장의 글이 그림 곁에 들어가지 않습니다')
+
+
+def side_place(ctx, s, media, pic, size, top, area_h, measure):
+    """그림을 오른쪽 칸에 크게 그리고, 글 덩어리를 그릴 (x, y, 폭) 을 돌려준다.
+    그림이 칸의 높이에 걸려 칸보다 좁게 그려지면 그림 칸을 그림 폭까지 좁힌다 (가장 좁은 후보 아래로는 줄이지 않는다).
+    글이 그림보다 높으면 위 끝을 맞추고 둘을 한 덩어리로 위아래 가운데에, 아니면 둘의 가운데 높이를 맞춘다 (웹 무대와 같다)."""
+    S = ctx.side
+    narrow = min(p for p, _ in S['candidates']['points'] + S['candidates']['question'])
+    ch = credit_h(ctx, media, pic)
+    k = min(pic / media['width'], (area_h - ch) / media['height'])
+    pw, ph = media['width'] * k, media['height'] * k
+    if pw < pic - 1:
+        pic = max(narrow, pw)
+        ch = credit_h(ctx, media, pic)
+    tw = CW - S['gap'] - pic
+    th, _ = measure(tw, size)
+    px = W - PAD_X - pic
+    if th > ph + 1:
+        group = max(th, ph + ch)
+        y0 = top + (area_h - group) / 2
+        picture(ctx, s, media, px, y0, pic, ph + ch)
+        return PAD_X, y0, tw
+    picture(ctx, s, media, px, top, pic, area_h)
+    return PAD_X, top + (area_h - th) / 2, tw
+
+
+def question_measure(ctx, sl):
+    T = ctx.type
+
+    def measure(tw, size):
+        kh = T['label'] * 1.3 + 24 if sl.get('kicker') else 0
+        lines = len(wrap(ctx, sl['title'], size, tw, True))
+        h = kh + lines * size * 1.3
+        if sl.get('hint'):
+            hw = min(tw, text_w(ctx, sl['hint'], T['body']) / FIT + 64)
+            h += 48 + text_h(ctx, sl['hint'], T['body'], hw - 64, 1.35) + 40
+        return h, lines
+    return measure
+
+
 def lay_question(ctx, s, sl, L):
     T = ctx.type
     media = sl.get('media')
-    tw = (CW - 72) / 1.72 if media else CW
-    kh = T['label'] * 1.3 + 24 if sl.get('kicker') else 0
-    th = text_h(ctx, sl['title'], T['question'], tw, 1.3, True)
+    measure = question_measure(ctx, sl)
+    if media:
+        area = BOTTOM - PAD_T
+        pic, size = side_plan(ctx, 'question', measure, area)
+        x, y, tw = side_place(ctx, s, media, pic, size, PAD_T, area, measure)
+    else:
+        size, tw = T['question'], CW
+        total, _ = measure(tw, size)
+        x, y = PAD_X, PAD_T + (BOTTOM - PAD_T - total) / 2
+    if y < PAD_T - 1:
+        raise Overflow('질문 장')
+    if sl.get('kicker'):
+        text(ctx, s, x, y, tw, T['label'] * 1.3, sl['kicker'], T['label'], 'coral', True, 1.3)
+        y += T['label'] * 1.3 + 24
+    th = text_h(ctx, sl['title'], size, tw, 1.3, True)
+    text(ctx, s, x, y, tw, th, sl['title'], size, 'navy', True, 1.3)
+    y += th
     hint = sl.get('hint')
     if hint:
         hw = min(tw, text_w(ctx, hint, T['body']) / FIT + 64)
         hh = text_h(ctx, hint, T['body'], hw - 64, 1.35) + 40
-    total = kh + th + (48 + hh if hint else 0)
-    y = PAD_T + (BOTTOM - PAD_T - total) / 2
-    if y < PAD_T:
-        raise Overflow('질문 장')
-    if kh:
-        text(ctx, s, PAD_X, y, tw, T['label'] * 1.3, sl['kicker'], T['label'], 'coral', True, 1.3)
-        y += kh
-    text(ctx, s, PAD_X, y, tw, th, sl['title'], T['question'], 'navy', True, 1.3)
-    y += th
-    if hint:
         y += 48
-        box(ctx, s, PAD_X, y, hw, hh, fill='teal-soft', line=None, radius=16)
-        text(ctx, s, PAD_X + 32, y + 20, hw - 64, hh - 40, hint, T['body'], 'navy', lh=1.35)
-    if media:
-        mx = PAD_X + tw + 72
-        picture(ctx, s, media, mx, PAD_T, W - PAD_X - mx, BOTTOM - PAD_T)
+        box(ctx, s, x, y, hw, hh, fill='teal-soft', line=None, radius=16)
+        text(ctx, s, x + 32, y + 20, hw - 64, hh - 40, hint, T['body'], 'navy', lh=1.35)
 
 
 def lay_picture(ctx, s, sl, L):
@@ -354,9 +417,13 @@ def lay_points(ctx, s, sl, L):
     media = sl.get('media')
     y = title(ctx, s, sl['title'])
     if media:
-        lw = CW - 72 - 620
-        numbered(ctx, s, sl['points'], PAD_X, y, lw, 44, 1.4, 32, BOTTOM)
-        picture(ctx, s, media, W - PAD_X - 620, y, 620, BOTTOM - y)
+        # 제목 아래를 두 칸으로: 항목은 왼쪽, 그림은 오른쪽 (R12, 웹 무대의 .sl-side 와 같은 규칙)
+        def measure(tw, size):
+            h = numbered_h(ctx, sl['points'], tw, size, 1.4, 32)
+            return h, max(len(wrap(ctx, t, size, tw - 92)) for t in sl['points'])
+        pic, size = side_plan(ctx, 'points', measure, BOTTOM - y)
+        x, ty, tw = side_place(ctx, s, media, pic, size, y, BOTTOM - y, measure)
+        numbered(ctx, s, sl['points'], x, ty, tw, size, 1.4, 32, BOTTOM)
         return
     # 그림이 없으면 크게 쓰고(넘치면 줄이고) 제목 아래 남은 자리의 위아래 가운데에 둔다
     for size in ctx.fit['points']:
@@ -422,7 +489,9 @@ def lay_compare(ctx, s, sl, L):
 
 def steps_row(ctx, sl, y, size, shared):
     """그림 있는 단계를 한 줄로 늘어놓은 자리. 넘치거나 그림 틀이 너무 작으면 Overflow.
-    돌려주는 값: 칸마다 (x, 칸 폭, 그림 틀, 글 y) 와 가장 작게 그려지는 그림의 넓이"""
+    돌려주는 값: 칸마다 (x, 칸 폭, 그림 틀, 글 y, 위 선 y) 와 가장 작게 그려지는 그림의 넓이.
+    그림이 모두 칸의 폭에 걸려 틀보다 낮게 그려지면 그림 줄을 그림 높이로 줄이고 단계 전체를 위아래 가운데에 둔다
+    (틀의 짧은 변은 shortSide 아래로 줄이지 않는다. 웹 무대의 tightenRow 와 같다)."""
     steps = sl['steps']
     n = len(steps)
     cw = (CW - 32 * (n - 1)) / n
@@ -431,36 +500,44 @@ def steps_row(ctx, sl, y, size, shared):
     # 글의 첫 줄을 모든 칸에서 같은 높이에 둔다 (웹의 subgrid 와 같다)
     ty = bottom - max(text_h(ctx, st['text'], size, cw, 1.35) for st in steps)
     top = y + 30 + chh + 20
-    cells, low = [], float('inf')
+    cells, low, need = [], float('inf'), 0
+    fh = ty - 20 - top
     for i, st in enumerate(steps):
-        x = PAD_X + i * (cw + 32)
-        fh = ty - 20 - top
         m = st.get('media')
         if m:
-            ph = fh - (0 if shared else credit_h(ctx, m, cw))
+            cr = 0 if shared else credit_h(ctx, m, cw)
+            ph = fh - cr
             if min(cw, ph) < ctx.pic['shortSide'] - 0.5:
                 raise Overflow('단계')
             pw, pph = fit_box(m, cw, ph)
             low = min(low, pw * pph)
+            need = max(need, max(pph, ctx.pic['shortSide'] + 1) + cr)
         elif fh < 0:
             raise Overflow('단계')
-        cells.append((x, cw, (x, top, cw, fh), ty))
+    off = 0
+    if all(st.get('media') for st in steps) and need < fh - 2:
+        off = (fh - need) / 2
+        fh = need
+    for i, st in enumerate(steps):
+        x = PAD_X + i * (cw + 32)
+        cells.append((x, cw, (x, top + off, cw, fh), ty - off, y + off))
     return cells, low
 
 
-def steps_grid(ctx, sl, y, size, shared):
-    """그림 넷을 2 × 2 로 놓은 자리 (칸마다 그림 왼쪽, 이름표와 글 오른쪽). 웹 무대의 data-arrange="grid" 와 같은 치수."""
+def steps_grid(ctx, sl, y, size, shared, share):
+    """그림 넷을 2 × 2 로 놓은 자리 (칸마다 그림 왼쪽, 이름표와 글 오른쪽). 웹 무대의 data-arrange="grid" 와 같은 치수.
+    share: 칸 폭 가운데 그림 칸의 몫(%, copy.ts 의 STAGE_STEPS.gridShare)"""
     bottom = BOTTOM - (shared_credit_h(ctx, shared) if shared else 0)
     cw = (CW - 48) / 2
-    ch = (bottom - y - 40) / 2
+    ch = (bottom - y - 32) / 2
     chh = 44 * 1.3 + 12
-    pw = (cw - 32) * 55 / 100
+    pw = cw * share / 100
     tw = cw - 32 - pw
     cells, low = [], float('inf')
     for i, st in enumerate(sl['steps']):
         x = PAD_X + (i % 2) * (cw + 48)
-        cy = y + (i // 2) * (ch + 40)
-        inner = ch - 26
+        cy = y + (i // 2) * (ch + 32)
+        inner = ch - 22
         if chh + 16 + text_h(ctx, st['text'], size, tw, 1.35) > inner + 1:
             raise Overflow('단계')
         m = st['media']
@@ -487,30 +564,33 @@ def lay_steps(ctx, s, sl, L):
         credits = {m['credit'] for m in pictured}
         shared = pictured[0]['credit'] if len(pictured) > 1 and len(credits) == 1 else None
 
-        def first_fit(plan):
+        def first_fit(plan, *extra):
             for size in ctx.fit['stepsMedia']:
                 try:
-                    return (size,) + plan(ctx, sl, y, size, shared)
+                    return (size,) + plan(ctx, sl, y, size, shared, *extra)
                 except Overflow:
                     continue
             return None
         row = first_fit(steps_row)
-        # 그림이 넷이면 한 줄과 2 × 2 가운데 그림이 더 크게 그려지는 쪽 (웹 무대와 같은 규칙)
-        grid = first_fit(steps_grid) if len(steps) == 4 and len(pictured) == 4 else None
+        # 그림이 넷이면 한 줄과 2 × 2 가운데 그림이 더 크게 그려지는 쪽 (웹 무대와 같은 규칙).
+        # 2 × 2 는 칸 안의 그림 몫을 큰 것부터 해 본다 (R13: 제목 아래를 다 쓰고 그림을 크게)
+        grid = None
+        if len(steps) == 4 and len(pictured) == 4:
+            grid = next((g for g in (first_fit(steps_grid, sh) for sh in ctx.steps['gridShare']) if g), None)
         if grid and (not row or grid[2] > row[2]):
             size, cells, _ = grid
             for st, (x, cy, cw, pw, tw, inner) in zip(steps, cells):
                 box(ctx, s, x, cy, cw, 6, fill='teal', line=None, radius=0, shape=MSO_SHAPE.RECTANGLE)
                 tx = x + pw + 32
-                _, chh = chip(ctx, s, tx, cy + 26, st['label'])
+                _, chh = chip(ctx, s, tx, cy + 22, st['label'])
                 th = text_h(ctx, st['text'], size, tw, 1.35)
-                text(ctx, s, tx, cy + 26 + chh + 16, tw, th, st['text'], size, 'navy', lh=1.35)
-                picture(ctx, s, st['media'], x, cy + 26, pw, inner, credit=not shared)
+                text(ctx, s, tx, cy + 22 + chh + 16, tw, th, st['text'], size, 'navy', lh=1.35)
+                picture(ctx, s, st['media'], x, cy + 22, pw, inner, credit=not shared)
         elif row:
             size, cells, _ = row
-            for st, (x, cw, (fx, fy, fw, fh), ty) in zip(steps, cells):
-                box(ctx, s, x, y, cw, 6, fill='teal', line=None, radius=0, shape=MSO_SHAPE.RECTANGLE)
-                chip(ctx, s, x, y + 30, st['label'])
+            for st, (x, cw, (fx, fy, fw, fh), ty, ry) in zip(steps, cells):
+                box(ctx, s, x, ry, cw, 6, fill='teal', line=None, radius=0, shape=MSO_SHAPE.RECTANGLE)
+                chip(ctx, s, x, ry + 30, st['label'])
                 th = text_h(ctx, st['text'], size, cw, 1.35)
                 text(ctx, s, x, ty, cw, th, st['text'], size, 'navy', lh=1.35)
                 if st.get('media'):

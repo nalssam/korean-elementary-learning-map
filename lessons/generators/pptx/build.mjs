@@ -18,7 +18,9 @@ import {
 import { SITE } from '#lib/site.ts';
 import { coverText } from '#src/components/slides/cover.ts';
 import { slideCounter } from '#src/components/slides/counter.ts';
-import { CREDIT_COPY, NOTE_COPY, SLIDE_COPY, STAGE_FIT, STAGE_PICTURE, STAGE_TYPE } from '#src/components/slides/copy.ts';
+import {
+  CREDIT_COPY, NOTE_COPY, SLIDE_COPY, STAGE_FIT, STAGE_PICTURE, STAGE_SIDE, STAGE_STEPS, STAGE_TYPE, sideCandidates,
+} from '#src/components/slides/copy.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const argv = process.argv.slice(2);
@@ -205,6 +207,13 @@ async function main() {
     type: STAGE_TYPE,
     fit: STAGE_FIT,
     picture: STAGE_PICTURE,
+    // 글 곁에 그림 하나를 두는 장 (R12): 해 볼 [그림 칸 폭, 글 크기] 차례는 웹 무대와 같은 sideCandidates() 로 만든다
+    side: {
+      gap: STAGE_SIDE.gap,
+      maxLines: STAGE_SIDE.maxLines,
+      candidates: { points: sideCandidates(STAGE_FIT.pointsMedia), question: sideCandidates(STAGE_FIT.questionMedia) },
+    },
+    steps: STAGE_STEPS,
     copy: { slide: SLIDE_COPY },
     lessons: entries,
   };

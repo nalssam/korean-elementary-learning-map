@@ -15,7 +15,7 @@ import { lessonRoute } from '#lib/content.ts';
 import type { Lesson } from '#schema/lesson.ts';
 import { href } from '#src/lib/url.ts';
 import Slide from './Slide.astro';
-import { CREDITS_ANCHOR, NOTE_COPY, STAGE_COPY } from './copy.ts';
+import { CREDITS_ANCHOR, NOTE_COPY, STAGE_COPY, STAGE_PICTURE } from './copy.ts';
 import { slideCounter } from './counter.ts';
 import './stage.css';
 
@@ -28,7 +28,7 @@ const firstCount = slideCounter(lesson, 1).text;
 <Base title={`${lesson.title} 수업 화면`} kind="stage" lesson={lesson}>
   <script is:inline slot="head">document.documentElement.classList.add('stage-js');</script>
   <main class="stage" data-exit={href(lessonRoute(lesson.id))} data-total={total} aria-label={STAGE_COPY.region}>
-    <div class="screen">
+    <div class="screen" data-short-side={STAGE_PICTURE.shortSide}>
       {lesson.slides.map((slide, i) => <Slide lesson={lesson} slide={slide} no={i + 1} total={total} />)}
     </div>
     <nav class="hud" aria-label={STAGE_COPY.region}>
@@ -80,16 +80,26 @@ const firstCount = slideCounter(lesson, 1).text;
   for (const img of screen.querySelectorAll<HTMLImageElement>('.media img')) {
     if (img.complete && img.naturalWidth === 0) missing(img);
     else img.addEventListener('error', () => missing(img), { once: true });
+    // 그림의 가로세로를 알아야 고를 수 있는 것(단계 장의 한 줄·2 × 2, 그림 줄의 높이)이 있어 그림이 실리면 다시 잰다
+    if (!img.complete) img.addEventListener('load', () => refit(), { once: true });
   }
 
   // ───── 장에 맞게 글 크기 고르기 (copy.ts 의 STAGE_FIT) ─────
   const unit = (s: HTMLElement) => s.getBoundingClientRect().width / 1920;
+  const SHORT_SIDE = Number(screen.dataset.shortSide);
   /** 장 안의 글과 그림이 장의 본문 자리를 넘지 않는가 */
   function fits(s: HTMLElement): boolean {
     const inner = s.querySelector<HTMLElement>('.slide-in')!;
     const box = inner.firstElementChild as HTMLElement;
     if (box.scrollHeight > box.clientHeight + 1 || box.scrollWidth > box.clientWidth + 1) return false;
     const limit = inner.getBoundingClientRect().bottom - Number.parseFloat(getComputedStyle(inner).paddingBottom) + 1;
+    // 2 × 2 단계 장: 칸 안의 글이 칸 아래로 비어져 나오면 (다음 칸이나 출처 표시와 겹친다) 넘친 것이다
+    for (const step of box.querySelectorAll<HTMLElement>('[data-arrange="grid"] > .sl-step')) {
+      const bottom = step.getBoundingClientRect().bottom + 1;
+      const range = document.createRange();
+      range.selectNodeContents(step);
+      if (range.getBoundingClientRect().bottom > bottom) return false;
+    }
     for (const el of box.querySelectorAll<HTMLElement>('*')) {
       if (el.scrollHeight > el.clientHeight + 1 && getComputedStyle(el).overflowY !== 'visible') return false;
       if (el.getClientRects().length && el.getBoundingClientRect().bottom > limit) return false;
@@ -119,9 +129,80 @@ const firstCount = slideCounter(lesson, 1).text;
     }
     return low;
   }
+  /** 그림 틀 안에 실제로 그려진 그림(과 보이는 출처 표시)의 높이 (화면 px). 그림이 아직 없으면 0 */
+  function drawnHeight(f: HTMLElement): number {
+    const img = f.querySelector<HTMLImageElement>('img');
+    if (!img || !img.naturalWidth) return 0;
+    const r = img.getBoundingClientRect();
+    const k = Math.min(r.width / img.naturalWidth, r.height / img.naturalHeight);
+    const cap = f.querySelector('figcaption');
+    const capH = cap && cap.getClientRects().length ? cap.getBoundingClientRect().height + Number.parseFloat(getComputedStyle(cap).marginTop) : 0;
+    return img.naturalHeight * k + capH;
+  }
+  /** 한 줄로 놓은 단계 장: 그림이 모두 칸의 폭에 걸려 틀보다 낮게 그려지면 그림 줄을 그림 높이로 줄인다 (단계 전체는 위아래 가운데로) */
+  function tightenRow(s: HTMLElement) {
+    const list = s.querySelector<HTMLElement>('.sl-steps-list.is-across');
+    if (!list || list.dataset.arrange === 'grid') return;
+    list.style.removeProperty('--media-row');
+    const frames = [...list.querySelectorAll<HTMLElement>(':scope > .sl-step > .media')];
+    if (!frames.length) return;
+    const u = unit(s);
+    // 그림 틀의 짧은 변은 STAGE_PICTURE.shortSide 아래로 줄이지 않는다 (아주 납작한 그림은 틀이 그림보다 조금 높게 남는다)
+    const capH = (f: HTMLElement) => { const c = f.querySelector('figcaption'); return c && c.getClientRects().length ? c.getBoundingClientRect().height + Number.parseFloat(getComputedStyle(c).marginTop) : 0; };
+    const need = Math.max(...frames.map((f) => Math.max(drawnHeight(f), (SHORT_SIDE + 1) * u + capH(f))));
+    const frame = Math.max(...frames.map((f) => f.getBoundingClientRect().height));
+    if (frames.some((f) => !drawnHeight(f)) || need >= frame - 2) return;
+    // 칸(subgrid)의 줄 사이(row-gap)가 그림 줄에서 빠지므로 그만큼 더한다
+    const gap = Number.parseFloat(getComputedStyle(frames[0].parentElement!).rowGap) || 0;
+    list.style.setProperty('--media-row', `calc(${((need + gap) / u).toFixed(2)} * var(--u))`);
+  }
+  /** 글 곁에 그림을 두는 장 (R12): [그림 칸 폭, 글 크기] 를 차례대로 해 보고 처음 들어가는 것을 쓴다 (copy.ts 의 sideCandidates) */
+  function fitSide(s: HTMLElement, box: HTMLElement): boolean {
+    if (!box.dataset.side) return false;
+    const plan = JSON.parse(box.dataset.side) as [number, number][];
+    delete box.dataset.align;
+    // 글 한 덩이(항목, 질문 제목)가 data-max-lines 줄을 넘지 않는 짜임을 먼저 찾고, 없으면 줄 수를 보지 않고 다시 찾는다
+    const max = Number(box.dataset.maxLines ?? 0);
+    const narrowest = Math.min(...plan.map(([pic]) => pic));
+    const widest = Math.max(...plan.map(([pic]) => pic));
+    const lines = (el: HTMLElement) => Math.round(el.getBoundingClientRect().height / Number.parseFloat(getComputedStyle(el).lineHeight));
+    const short = (limit: number) => !limit || [...box.querySelectorAll<HTMLElement>('.sl-li-text, .sl-question-title')].every((el) => lines(el) <= limit);
+    const tryPlan = (strict: boolean) => {
+      for (const [pic, size] of plan) {
+        box.style.setProperty('--pic', String(pic));
+        box.style.setProperty('--fit', String(size));
+        // 줄 수를 지키려고 가장 좁은 칸까지 가지 않는다. 가장 넓은 칸은 글 한 덩이가 maxLines 보다 한 줄 적게 들어갈 때만 쓴다 (좁은 글 칸에서 낱말이 어색하게 갈리지 않게)
+        if (strict ? pic <= narrowest : pic >= widest) continue;
+        if (fits(s) && (!strict || short(pic >= widest ? max - 1 : max))) return true;
+      }
+      return false;
+    };
+    if (!tryPlan(true)) tryPlan(false);
+    // 그림이 칸의 높이에 걸려 칸보다 좁게 그려지면 그림 칸을 그림 폭까지 좁힌다 (가장 좁은 후보 아래로는 줄이지 않는다). 남는 폭은 글 칸이 받는다.
+    const fig = box.querySelector<HTMLElement>('.sl-side > .media');
+    const im = fig?.querySelector('img');
+    if (fig && im?.naturalWidth) {
+      const r = im.getBoundingClientRect();
+      const w = im.naturalWidth * Math.min(r.width / im.naturalWidth, r.height / im.naturalHeight) / unit(s);
+      const pic = Number(box.style.getPropertyValue('--pic'));
+      if (w < pic - 1) box.style.setProperty('--pic', Math.max(narrowest, Math.ceil(w)).toString());
+    }
+    // 글 덩어리가 그려진 그림보다 높으면 둘의 위 끝을 맞추고, 둘을 한 덩어리로 위아래 가운데에 둔다 (그 밖에는 가운데 높이를 맞춘다)
+    const text = box.querySelector<HTMLElement>('.sl-side > :not(.media)');
+    const figure = box.querySelector<HTMLElement>('.sl-side > .media');
+    const img = figure?.querySelector('img');
+    if (text && figure && img?.naturalWidth) {
+      const r = img.getBoundingClientRect();
+      const drawn = img.naturalHeight * Math.min(r.width / img.naturalWidth, r.height / img.naturalHeight);
+      if (text.getBoundingClientRect().height > drawn + 1) box.dataset.align = 'top';
+    }
+    return true;
+  }
   function fitSlide(s: HTMLElement) {
     if (s.dataset.fitted) return;
     const box = s.querySelector<HTMLElement>('.slide-in')!.firstElementChild as HTMLElement;
+    if (fitSide(s, box)) { s.dataset.fitted = 'true'; return; }
+    s.querySelector<HTMLElement>('.sl-steps-list')?.style.removeProperty('--media-row');
     const sizes = (box.dataset.fit ?? '').split(' ').filter(Boolean);
     const picture = Number(box.dataset.fitPicture ?? 0);
     const ok = () => fits(s) && (!picture || lowestFrame(s) >= picture - 0.5);
@@ -134,16 +215,24 @@ const firstCount = slideCounter(lesson, 1).text;
     };
     pick();
     // 그림이 넷인 단계 장: 한 줄과 2 × 2 가운데 넘치지 않으면서 그림이 더 크게 그려지는 쪽
+    // 2 × 2 는 칸 안의 그림 몫(data-shares)을 큰 것부터 해 본다
     const list = s.querySelector<HTMLElement>('[data-arrange]');
     if (list) {
+      list.dataset.arrange = 'row';
       const row = { fit: box.style.getPropertyValue('--fit'), area: fits(s) ? smallestPicture(s) : 0 };
       list.dataset.arrange = 'grid';
-      const grid = pick() ? smallestPicture(s) : 0;
+      let grid = 0;
+      for (const share of (list.dataset.shares ?? '55').split(' ')) {
+        list.style.setProperty('--share', share);
+        if (pick()) { grid = smallestPicture(s); break; }
+      }
       if (grid <= row.area) {
         list.dataset.arrange = 'row';
+        list.style.removeProperty('--share');
         box.style.setProperty('--fit', row.fit);
       }
     }
+    tightenRow(s);
     s.dataset.fitted = 'true';
   }
   // 글꼴이 늦게 실리거나 화면 크기가 바뀌면 다시 잰다

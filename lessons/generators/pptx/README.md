@@ -55,6 +55,9 @@ LibreOffice Impress 는 한글과 로마자·숫자·문장 부호 사이에 조
   "type": { "cover": 104, "title": 72, "body": 44, … },          // 글자 크기 px (src/components/slides/copy.ts 의 STAGE_TYPE)
   "fit": { "points": [56, 52, 48, 44], … },                      // 장에 맞게 줄어드는 글의 크기 차례 (STAGE_FIT)
   "picture": { "compareMin": 360, "shortSide": 200 },            // 그림 틀의 크기 (STAGE_PICTURE)
+  "side": { "gap": 72, "maxLines": { "points": 2, "question": 3 }, // 글 곁에 그림 하나를 두는 장 (STAGE_SIDE, R12)
+            "candidates": { "points": [[1120, 48], [1008, 48], …], "question": [[1120, 80], …] } }, // 해 볼 [그림 칸 폭, 글 크기] 차례 (sideCandidates)
+  "steps": { "gridShare": [63, 58, 54] },                        // 2 × 2 단계 장에서 칸 폭 가운데 그림 칸의 몫 % (STAGE_STEPS, R13)
   "copy": { "slide": { "term": "새 낱말", "quiz": "확인 퀴즈", … } }, // 장 안의 이름표 (SLIDE_COPY)
   "lessons": [
     {

@@ -1,6 +1,9 @@
 // 수업 화면(/<id>/slides/)을 빌드해 Chromium 으로 열어 본다.
 //  - 명세의 장 하나가 화면 한 장이고, 모든 장이 1920 × 1080, 1280 × 720, 1024 × 768 에서 넘치거나 겹치지 않는다
 //  - 형식이 허락하는 가장 긴 글로 채운 장(stress.ts)도 넘치지 않는다
+//  - 글 곁에 그림 하나를 둔 장은 두 칸 짜임(R12)을 지킨다: 그림 칸 42% 이상, 그림을 크게, 세로 가운데(긴 글은 위 끝), 빈 자리 3분의 1 남짓
+//  - 그림 넷의 단계 장은 2 × 2 로 제목 아래를 다 쓴다 (R13)
+//  - ○× 표시와 읽는 말은 lib 의 MARK·MARK_LABEL (R17), 닫는 따옴표와 조사는 한 줄에 (R18)
 //  - 조작: 글쇠·클릭·터치·주소의 #번호·퀴즈 정답 드러내기·교사 메모·화면 가리기·차시 안내로 돌아가기
 //  - 조작 단추는 가만히 있으면 숨는다 (열자마자, 단추를 마우스로 누른 뒤에도)
 import { after, before, test } from 'node:test';
@@ -11,8 +14,9 @@ import YAML from 'yaml';
 import type { Browser, Page } from 'playwright';
 import { ROOT, answerText, footerNotice, loadLesson, slideNotes, visibleLessons } from '#lib/content.ts';
 import { FIXTURES, buildSite, noChromium } from '../contract/helpers.ts';
-import { copyMedia, serve, slideProblems } from './helpers.ts';
-import { SMALL_LABEL, STRESS_ID, makeStress } from './stress.ts';
+import { MARK, MARK_LABEL } from '#lib/site.ts';
+import { copyMedia, serve, sideProblems, slideProblems } from './helpers.ts';
+import { QUOTED_QUESTION, SMALL_LABEL, STRESS_ID, makeStress } from './stress.ts';
 import { SLIDE_COPY } from '#src/components/slides/copy.ts';
 import { slideCounter } from '#src/components/slides/counter.ts';
 import { NOTE_COPY } from '#src/components/slides/copy.ts';
@@ -48,6 +52,7 @@ async function sweep(url: string, ids: string[], sizes: [number, number][]) {
       for (let i = 1; i <= n; i++) {
         await open(page, `${url}/${id}/slides/#${i}`);
         for (const p of await page.evaluate(slideProblems)) bad.push(`${id} ${i}번 장 ${w}×${h}: ${p}`);
+        for (const p of await page.evaluate(sideProblems)) bad.push(`${id} ${i}번 장 ${w}×${h}: ${p}`);
         if (await page.evaluate(() => !!document.querySelector('.slide:not([hidden])[data-quiz]'))) {
           await page.keyboard.press('ArrowRight');
           for (const p of await page.evaluate(slideProblems)) bad.push(`${id} ${i}번 장(정답) ${w}×${h}: ${p}`);
@@ -64,7 +69,7 @@ test('시험용 명세 넷: 모든 장이 화면 크기마다 넘치지 않는�
   try {
     const ids = visibleLessons().map((l) => l.id);
     assert.equal(ids.length, 4);
-    assert.deepEqual(await sweep(s.url, ids, [[1920, 1080], [1280, 720], [1024, 768]]), []);
+    assert.deepEqual(await sweep(s.url, ids, [[1920, 1080], [1366, 768], [1280, 720], [1024, 768]]), []);
   } finally { await s.close(); }
 });
 
@@ -84,6 +89,55 @@ test('가장 긴 글로 채운 장도 넘치지 않는다 (모든 layout, 그림
     const known = bad.filter((b) => b.includes('그림 안의 글자가 작음') && b.includes(`"${SMALL_LABEL.text}"`) && b.includes(`${SMALL_LABEL.media}.svg`));
     assert.equal(known.length, 2, `22 단위 글을 화면 크기마다 한 번씩 잡아야 합니다:\n${bad.join('\n')}`);
     assert.deepEqual(bad.filter((b) => !known.includes(b)), []);
+
+    const lesson = loadLesson(STRESS_ID);
+    const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+    try {
+      // R12: 글 곁에 그림 하나를 둔 장은 모두 두 칸 짜임이다 (sideProblems 가 위의 sweep 에서 재었다)
+      const sided = lesson.slides.flatMap((x, i) => ((x.layout === 'points' || x.layout === 'question') && x.media ? [i + 1] : []));
+      assert.ok(sided.length >= 6);
+      for (const at of sided) {
+        await open(page, `${s.url}/${STRESS_ID}/slides/#${at}`);
+        assert.equal(await page.locator(`#s${at} .sl-side`).count(), 1, `${at}번 장이 두 칸 짜임이 아닙니다`);
+      }
+      // R13: 그림 넷이고 글이 짧은 단계 장은 2 × 2 로 놓이고, 그림 하나가 1920 무대에서 폭 500px 이상이다
+      const four = lesson.slides.findIndex((x) => x.layout === 'steps' && x.steps.length === 4 && x.steps.every((st) => st.media === 'labelled')) + 1;
+      await open(page, `${s.url}/${STRESS_ID}/slides/#${four}`);
+      assert.equal(await page.locator(`#s${four} [data-arrange]`).getAttribute('data-arrange'), 'grid');
+      const widths = await page.locator(`#s${four} .media img`).evaluateAll((imgs) => imgs.map((i) => {
+        const im = i as HTMLImageElement; const r = im.getBoundingClientRect();
+        return im.naturalWidth * Math.min(r.width / im.naturalWidth, r.height / im.naturalHeight);
+      }));
+      for (const w of widths) assert.ok(w >= 500, `2 × 2 의 그림 폭 ${w.toFixed(0)}px`);
+      // R18: 닫는 따옴표와 조사 사이에 WORD JOINER 를 넣어, 문제 글이 어디에서 줄을 바꾸든 ’ 와 은 이 한 줄에 있다
+      const q = lesson.quiz.items.findIndex((it) => it.q === QUOTED_QUESTION) + 1;
+      const at = lesson.slides.findIndex((x) => x.layout === 'quiz' && x.item === q) + 1;
+      assert.ok(at > 0);
+      const html = fs.readFileSync(path.join(s.out, ...STRESS_ID.split('/'), 'slides', 'index.html'), 'utf8');
+      assert.ok(html.includes('’\u2060은'), '수업 화면의 글이 keepParticle() 을 거치지 않았습니다');
+      await page.setViewportSize({ width: 1024, height: 768 });
+      await open(page, `${s.url}/${STRESS_ID}/slides/#${at}`);
+      const split = await page.evaluate((no) => {
+        const h = document.querySelector<HTMLElement>(`#s${no} .sl-quiz-q`)!;
+        const text = h.textContent!;
+        const out: number[] = [];
+        // 앞에 낱말을 하나씩 더 붙여 줄이 바뀌는 자리를 옮겨 가며 본다
+        for (let k = 0; k <= 24; k++) {
+          h.textContent = `${'가나 '.repeat(k)}${text}`;
+          const node = h.firstChild!;
+          const i = node.textContent!.indexOf('’');
+          const r = document.createRange();
+          r.setStart(node, i); r.setEnd(node, i + 1);
+          const a = r.getBoundingClientRect();
+          r.setStart(node, node.textContent!.indexOf('은', i)); r.setEnd(node, node.textContent!.indexOf('은', i) + 1);
+          const b = r.getBoundingClientRect();
+          if (Math.abs(a.top - b.top) > 2) out.push(k);
+        }
+        h.textContent = text;
+        return out;
+      }, at);
+      assert.deepEqual(split, [], `’ 와 은 이 다른 줄로 갈렸습니다 (앞에 붙인 낱말 수: ${split})`);
+    } finally { await page.close(); }
   } finally { await s.close(); }
 });
 
@@ -125,7 +179,11 @@ test('장 수·표지·교사 메모·조작', { skip }, async () => {
     await page.keyboard.press('ArrowRight');
     assert.equal(await cur(), 4);
     assert.equal(await answer.isVisible(), true);
-    assert.equal(await page.locator('#s4 [data-answer] .sl-ox-glyph').textContent(), SLIDE_COPY.ox[one.quiz.items[0].answer ? 'yes' : 'no']);
+    // ○× 는 lib 의 MARK 와 MARK_LABEL (R17): 드러난 정답의 기호가 교사 메모의 answerText() 와 같다
+    assert.deepEqual(SLIDE_COPY.ox, MARK);
+    assert.equal(await page.locator('#s4 [data-answer] .sl-ox-glyph').textContent(), answerText(one.quiz.items[0]));
+    assert.deepEqual(await page.locator('#s4 .sl-ox-glyph').allTextContents(), [MARK.yes, MARK.no]);
+    assert.deepEqual(await page.locator('#s4 .sl-ox-glyph').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label'))), [MARK_LABEL.yes, MARK_LABEL.no]);
     await page.keyboard.press('ArrowRight'); assert.equal(await cur(), 5);
     // 교사 메모 (N): 반 아이들이 보는 화면에 뜨므로 퀴즈의 정답·풀이는 정답이 드러나기 전에 보이지 않는다
     await open(page, `${s.url}/5-2/1/01/slides/#4`);

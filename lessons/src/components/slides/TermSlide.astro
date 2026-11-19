@@ -1,5 +1,6 @@
 ---
 // 새 낱말 하나. 풀이는 terms.new 에서 가져온다 (termMeaning).
+import { keepParticle } from '#lib/site.ts';
 import { termMeaning } from '#lib/content.ts';
 import { SLIDE_COPY } from './copy.ts';
 import type { SlideProps } from './types.ts';
@@ -9,12 +10,12 @@ const { lesson, slide } = Astro.props;
 ---
 <div class="sl-term">
   <p class="sl-kicker">{SLIDE_COPY.term}</p>
-  <h2 class="sl-term-word">{slide.term}</h2>
-  <p class="sl-term-meaning">{termMeaning(lesson, slide.term)}</p>
+  <h2 class="sl-term-word">{keepParticle(slide.term)}</h2>
+  <p class="sl-term-meaning">{keepParticle(termMeaning(lesson, slide.term))}</p>
   {slide.example && (
     <div class="sl-box">
       <p class="sl-box-label">{SLIDE_COPY.example}</p>
-      <p class="sl-box-text">{slide.example}</p>
+      <p class="sl-box-text">{keepParticle(slide.example)}</p>
     </div>
   )}
 </div>

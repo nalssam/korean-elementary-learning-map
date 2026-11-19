@@ -34,7 +34,7 @@ interface Inspected {
   width: number; height: number; embedded: string[]; fontdata: string[]; colors: string[]; faces: string[];
   core: { title: string; author: string; last_modified_by: string; comments: string; keywords: string; revision: number };
   raw: { core: string; app: string; sldSz: string };
-  slides: { texts: string[]; boxes: number[][]; notes: string; pictures: { ratio_shape: number; ratio_image: number; crop: number[]; inside: boolean; alt: string }[] }[];
+  slides: { texts: string[]; boxes: number[][]; notes: string; pictures: { ratio_shape: number; ratio_image: number; crop: number[]; inside: boolean; alt: string; box: number[] }[] }[];
 }
 const inspect = (file: string): Inspected =>
   JSON.parse(execFileSync(PYTHON, [path.join(ROOT, 'tests', 'slides', 'inspect_pptx.py'), file], { encoding: 'utf8', maxBuffer: 64 << 20 }));
@@ -119,6 +119,7 @@ test('시험용 명세 넷의 PPTX', { skip }, () => {
 });
 
 let stressFile: string | undefined;
+let stressSlides: { layout: string; media?: string; steps?: { media?: string }[] }[] = [];
 /** 가장 긴 글로 채운 묶음의 PPTX 를 한 번 만든다 */
 function stressPptx(): string {
   if (stressFile) return stressFile;
@@ -127,6 +128,7 @@ function stressPptx(): string {
   const file = path.join(content, ...STRESS_ID.split('/'), 'lesson.yaml');
   const raw = YAML.parse(fs.readFileSync(file, 'utf8'));
   makeStress(content, raw);
+  stressSlides = raw.slides;
   fs.writeFileSync(file, YAML.stringify(raw));
   const dist = path.join(OUT, 'stress');
   // 넘칠 장이 있으면 build_pptx.py 가 어느 장인지 적고 멈춘다 (build.mjs 가 0 이 아닌 값으로 끝난다)
@@ -137,6 +139,37 @@ function stressPptx(): string {
 test('가장 긴 글로 채운 PPTX 를 만들 수 있다 (모든 layout, 그림 있음·없음)', { skip }, () => {
   const p = inspect(stressPptx());
   for (const s of p.slides) for (const pic of s.pictures) assert.ok(Math.abs(pic.ratio_shape / pic.ratio_image - 1) < 0.01);
+});
+
+test('PPTX: 글 곁에 그림 하나를 둔 장은 두 칸 짜임이고, 그림 넷의 단계 장은 2 × 2 다 (R12, R13)', { skip }, () => {
+  const p = inspect(stressPptx());
+  // 치수는 pt (장 폭 960pt = 무대 1920px). 본문 자리는 위 40pt, 아래 540 - 44pt
+  const W = 960, TOP = 40, BOTTOM = 540 - 44;
+  let sided = 0;
+  stressSlides.forEach((sl, i) => {
+    if (!((sl.layout === 'points' || sl.layout === 'question') && sl.media === 'labelled')) return;
+    sided++;
+    const s = p.slides[i];
+    assert.equal(s.pictures.length, 1, `${i + 1}번 장 그림`);
+    const [px0, py0, px1, py1] = s.pictures[0].box;
+    // 그림은 오른쪽 칸에: 오른쪽 끝이 본문 오른쪽 끝(60pt 안쪽)에 닿고, 폭이 장의 42% 이상이거나 본문 높이를 다 쓴다
+    assert.ok(Math.abs(px1 - (W - 60)) < 1, `${i + 1}번 장: 그림이 오른쪽 끝에 붙지 않았습니다 (${px1})`);
+    assert.ok((px1 - px0) / W >= 0.42 - 0.001 || py1 - py0 >= (BOTTOM - TOP) * 0.85, `${i + 1}번 장: 그림 폭 ${((px1 - px0) / W * 100).toFixed(1)}%`);
+    // 글 덩어리: 그림 왼쪽에 있는 글상자 (제목은 장 폭 전체라 빠진다, 장 번호·초안 표시는 아래 여백에 있어 빠진다)
+    const text = s.boxes.filter(([x0, y0, x1]) => x1 <= px0 + 0.5 && y0 < BOTTOM);
+    assert.ok(text.length > 0, `${i + 1}번 장: 그림 왼쪽에 글이 없습니다`);
+    const ty0 = Math.min(...text.map((b) => b[1])), ty1 = Math.max(...text.map((b) => b[3]));
+    const mid = Math.abs((ty0 + ty1) / 2 - (py0 + py1) / 2);
+    const top = Math.abs(ty0 - py0);
+    assert.ok(mid <= 20 || (ty1 - ty0 > py1 - py0 && top <= 4), `${i + 1}번 장: 글과 그림의 세로 가운데 ${mid.toFixed(0)}pt, 위 끝 ${top.toFixed(0)}pt`);
+  });
+  assert.ok(sided >= 4);
+  // 그림 넷이고 글이 짧은 단계 장: 2 × 2 로 놓이고 그림 폭이 500px(250pt) 이상
+  const at = stressSlides.findIndex((sl) => sl.layout === 'steps' && sl.steps!.length === 4 && sl.steps!.every((st) => st.media === 'labelled'));
+  const pics = p.slides[at].pictures.map((x) => x.box);
+  assert.equal(pics.length, 4);
+  assert.equal(new Set(pics.map((b) => Math.round(b[1]))).size, 2, '2 × 2 가 아닙니다');
+  for (const b of pics) assert.ok(b[2] - b[0] >= 250, `2 × 2 의 그림 폭 ${((b[2] - b[0]) * 2).toFixed(0)}px`);
 });
 
 test('그림 출처 장: 앞 장을 채운 뒤 새 장을 열고, 앞 장에 들어갈 한 줄만 따로 남기지 않는다', { skip: noPython() }, () => {
@@ -166,7 +199,9 @@ test('가장 긴 글로 채운 PPTX 를 LibreOffice 로 찍어도 글줄이 글�
     for (const m of pg.matchAll(/<word xMin="([\d.]+)" yMin="([\d.]+)" xMax="([\d.]+)" yMax="([\d.]+)">([^<]*)<\/word>/g)) {
       const [x0, y0, x1, y1] = m.slice(1, 5).map(Number);
       const words = m[5];
-      const inside = p.slides[i].boxes.some(([a, b, c, d]) => x0 >= a - 3 && x1 <= c + 3 && y0 >= b - 6 && y1 <= d + 6);
+      // 줄 끝의 문장 부호(? . ! ,)는 LibreOffice 가 글상자 오른쪽 밖으로 내밀어 찍는다 (동아시아 글의 문장 부호 내밀기). 글자 하나 폭까지는 넘친 것이 아니다.
+      const hang = /^[?.!,]+$/.test(words) ? (x1 - x0) + 30 : 3;
+      const inside = p.slides[i].boxes.some(([a, b, c, d]) => x0 >= a - 3 && x1 <= c + hang && y0 >= b - 6 && y1 <= d + 6);
       if (!inside) bad.push(`${i + 1}번 장: "${words.slice(0, 30)}" (${x0.toFixed(0)}, ${y0.toFixed(0)})–(${x1.toFixed(0)}, ${y1.toFixed(0)})`);
     }
   });
