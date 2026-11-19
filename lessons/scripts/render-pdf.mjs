@@ -235,6 +235,8 @@ async function measureSheets({ pages, footGap }) {
       };
       let last;
       for (const el of drawn(body)) {
+        // 인쇄 페이지에 바로 놓인 <svg>(전개도)는 상자가 그림 칸 전체다. 잉크는 그 안의 선과 글이므로 뿌리 상자는 재지 않는다.
+        if (el instanceof SVGSVGElement && !(el.parentElement && el.parentElement.closest('svg'))) continue;
         const q = el.getBoundingClientRect();
         if (q.height <= 0 || q.width <= 0) continue;
         const bottom = inkBottom(el, q);

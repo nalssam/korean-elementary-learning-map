@@ -26,6 +26,18 @@ test('MARK: 맞고 틀림의 표시는 ○·× 이고 lib 에는 라틴 글자 O
   }
 });
 
+test('keepParticle: 낱말에 붙은 짧은 괄호 이름표는 앞 낱말과 한 덩어리가 된다', () => {
+  const WJ = '\u2060', NB = '\u00a0';
+  assert.equal(keepParticle('혼자 들 수 없다(아는 것) → 옮겼다'), `혼자 들 수 없다${WJ}(아는${NB}것) → 옮겼다`);
+  // 앞에 빈칸이 있는 괄호와 긴 괄호는 그대로
+  assert.equal(keepParticle('덮개돌 (큰 돌)'), '덮개돌 (큰 돌)');
+  const long = '고인돌(옛사람이 큰 돌을 얹어 만든 무덤)';
+  assert.equal(keepParticle(long), long);
+  // 두 번 불러도 같다
+  const once = keepParticle('큰 덮개돌(눈으로 본 것)');
+  assert.equal(keepParticle(once), once);
+});
+
 test('keepParticle: 닫는 따옴표와 뒤의 조사 사이에만 U+2060 을 넣는다', () => {
   const WJ = '⁠';
   assert.equal(keepParticle('‘눈으로 본 것’은 무엇인가요?'), `‘눈으로 본 것’${WJ}은 무엇인가요?`);

@@ -119,6 +119,18 @@ test('고인돌 초안을 읽는다', () => {
   assert.ok(c.publishGaps('5-2/1/01').length > 0);
 });
 
+test('고인돌 초안: 종이 고인돌의 차례 카드는 수업 화면 단계 장의 글과 글자까지 같고, 통나무가 없다 (R21)', () => {
+  const l = c.loadLesson('5-2/1/01');
+  const pc = l.assets.papercraft;
+  assert.equal(pc.state, 'ready');
+  if (pc.state !== 'ready') return;
+  const steps = l.slides.filter((s) => s.layout === 'steps');
+  assert.equal(steps.length, 1);
+  assert.deepEqual(pc.texts, steps[0].layout === 'steps' ? steps[0].steps.map((s) => s.text) : []);
+  // 비탈 위의 통나무는 자료가 말하지 않는다: 아이가 만드는 종이 모형(조각·차례 카드·만드는 법)에는 없다
+  assert.doesNotMatch(JSON.stringify(pc), /통나무/);
+});
+
 test('주소: href 는 Node 에서도 돌고, absoluteUrl 은 SITE_URL·SITE_BASE 를 따른다', () => {
   const saved = { ...process.env };
   try {

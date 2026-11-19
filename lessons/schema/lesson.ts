@@ -693,6 +693,8 @@ export const Lesson = LessonShape.superRefine((l, ctx) => {
     if (s.layout !== 'compare' || !s.media) return;
     for (const side of ['left', 'right'] as const) {
       if (s[side].media) issue(['slides', i, side, 'media'], `견주기 장에 함께 보는 그림(media)이 있으면 ${side}.media 는 적지 않습니다. 두 쪽이 한 그림을 함께 보면 media 만 남기고, 쪽마다 그림이 따로 있으면 media 를 지웁니다`);
+      // 함께 보는 그림이 있으면 두 상자가 왼쪽 단(장 폭의 58% 이하)에 위아래로 쌓인다. 항목이 셋 넘게 들면 36px 로도 장 밖으로 넘친다.
+      if (s[side].points.length > 2) issue(['slides', i, side, 'points'], `견주기 장에 함께 보는 그림(media)이 있으면 ${side}.points 는 2개까지입니다 (지금 ${s[side].points.length}개). 두 상자가 그림 옆 한 단에 쌓이므로 더 들어가지 않습니다`);
     }
   });
   l.slides.forEach((s, i) => { if (s.layout === 'term' && !terms.has(s.term)) issue(['slides', i, 'term'], `terms.new 에 "${s.term}" 이 없습니다. 풀이를 terms.new 에 적습니다`); });
