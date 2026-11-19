@@ -227,12 +227,12 @@ facts:
         quote: 선대의 인류가 후대에 남긴 물건.
         accessed: "2026-11-19"
   - id: f15
-    claim: 추론은 미루어 생각하는 일로, 어떤 판단을 근거로 삼아 다른 판단을 이끌어 내는 것이다.
+    claim: 추론은 미루어 생각하는 일이다.
     sources:
       - name: 표준국어대사전 (국립국어원)
         title: 추론2 (推論)
         url: https://stdict.korean.go.kr/search/searchView.do?wordNo=493941&searchKeywordTo=3
-        quote: 「1」 미루어 생각하여 논함. … 「2」 『철학』 어떠한 판단을 근거로 삼아 다른 판단을 이끌어 냄.
+        quote: 「1」 미루어 생각하여 논함.
         accessed: "2026-11-19"
 
 media:
