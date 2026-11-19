@@ -99,3 +99,18 @@ test('사이트 화면의 소스에 OX 표시를 손으로 적지 않는다 (lib
     assert.ok(!/['"`>][OX]['"`<]/.test(src), `${f}: O·X 를 손으로 적었습니다`);
   }
 });
+
+test('양면 인쇄 줄은 넘기는 쪽을 말하고, 단면 줄은 그대로다 (3차 검수 T3-site-02)', () => {
+  const lines = [...html.matchAll(/<p class="mat-line">([^<]*(?:단면|양면)[^<]*)<\/p>/g)].map((m) => m[1]);
+  assert.ok(lines.length > 0, '인쇄 안내 줄이 없습니다');
+  for (const line of lines) {
+    if (line.includes('양면')) assert.match(line, /양면\((긴|짧은) 쪽으로 넘김\)/);
+    else assert.ok(!line.includes('넘김'), line);
+  }
+  assert.ok(lines.some((l) => l.includes('A4 가로') && l.includes('양면(짧은 쪽으로 넘김)')) || lines.some((l) => l.includes('양면(긴 쪽으로 넘김)')));
+});
+
+test('확인 퀴즈 칸: 수업 화면의 QR 버튼을 알리는 문장이 있다 (3차 검수 T3-site-03)', () => {
+  const sec = html.slice(html.indexOf('id="student-title"'), html.indexOf('class="qr-cards"'));
+  assert.ok(sec.includes('수업 화면의 QR 버튼(q 키)을 눌러도 같은 QR 코드를 띄울 수 있습니다.'));
+});
