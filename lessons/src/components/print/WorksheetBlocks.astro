@@ -6,21 +6,36 @@
 import Media from '#src/components/Media.astro';
 import { getPassage } from '#lib/content.ts';
 import type { Lesson } from '#schema/lesson.ts';
-import { choiceColumns, frameParts, matchOrder, tableWeights } from './layout.ts';
+import { choiceColumns, frameParts, keepParts, matchOrder, tableWidths } from './layout.ts';
 import type { Placed } from './layout.ts';
 
 interface Props {
   lesson: Lesson;
   items: Placed[];
+  /** 블록이 놓이는 폭(mm). 표의 칸 폭을 셀 때 쓴다. 세로 종이 190, 가로 277, 단 안은 그 단의 폭. */
+  width?: number;
 }
-const { lesson, items } = Astro.props;
+const { lesson, items, width = 190 } = Astro.props;
 const count = (n: number) => Array.from({ length: n }, (_, i) => i);
 const percent = (weights: number[]) => { const sum = weights.reduce((a, b) => a + b, 0); return weights.map((w) => `width:${((w / sum) * 100).toFixed(2)}%`); };
+// 단(columns) 사이 틈(mm). worksheet.css 의 .ws-columns column-gap 과 같은 값이다.
+const COL_GAP = 5;
+// 머리 칸이 같은 표가 한 쪽에 여럿이면 모든 줄을 모아 칸 폭을 정한다. 위아래로 놓인 표의 세로줄이 맞는다.
+const rowsByHead = new Map<string, string[][]>();
+for (const it of items) if (it.block.type === 'table') {
+  const k = it.block.columns.join('\u0001');
+  rowsByHead.set(k, [...(rowsByHead.get(k) ?? []), ...it.block.rows]);
+}
+// 글을 쓰는 표가 바라는 높이: 머리 줄(한 줄짜리 어림)과 22mm 칸 (worksheet.css 의 .ws-table-write)
+const WRITE_HEAD_MM = 10;
+const WRITE_ROW_MM = 22;
 ---
 {items.map((it) => {
   const b = it.block;
   switch (b.type) {
     case 'prompt':
+      // 번호 없는 지시문은 그 아래 표·칸의 이름표다. 물음처럼 보이지 않게 작은 제목으로 찍는다.
+      if (it.no === undefined) return <p class="ws-block ws-sub" data-part={it.where}>{b.text}</p>;
       return (
         <p class="ws-block ws-prompt" data-part={it.where}>
           {it.no !== undefined && <span class="ws-no">{it.no}</span>}
@@ -32,6 +47,7 @@ const percent = (weights: number[]) => { const sum = weights.reduce((a, b) => a 
         <div class="ws-block ws-lines" data-part={it.where}>
           {b.label && <p class="ws-label">{b.label}</p>}
           {count(b.count).map(() => <div class="ws-rule"></div>)}
+          <div class="ws-more" aria-hidden="true"></div>
         </div>
       );
     case 'box':
@@ -57,7 +73,7 @@ const percent = (weights: number[]) => { const sum = weights.reduce((a, b) => a 
                 {[b.observe_label, b.infer_label, b.reason_label].map((label) => (
                   <div class="ws-oi-col">
                     <p class="ws-oi-label">{label}</p>
-                    <div class="ws-oi-lines">{count(b.lines).map(() => <div class="ws-rule"></div>)}</div>
+                    <div class="ws-oi-lines">{count(b.lines).map(() => <div class="ws-rule"></div>)}<div class="ws-more" aria-hidden="true"></div></div>
                   </div>
                 ))}
               </div>
@@ -66,13 +82,15 @@ const percent = (weights: number[]) => { const sum = weights.reduce((a, b) => a 
         </div>
       );
     case 'table': {
-      const widths = percent(tableWeights(b.columns, b.rows));
+      const widths = percent(tableWidths(b.columns, rowsByHead.get(b.columns.join('\u0001')) ?? b.rows, { width, marks: it.marks }));
+      // 표시(○·×)만 받는 표는 칸이 한 줄 높이, 글을 쓰는 표는 쓰는 줄이 그어진 두 줄 높이다
       return (
-        <table class="ws-block ws-table" data-part={it.where}>
+        <table class:list={['ws-block', 'ws-table', it.marks ? 'ws-table-marks' : 'ws-table-write']} data-part={it.where} style={it.marks ? undefined : `--want:calc(${WRITE_HEAD_MM}mm + ${b.rows.length} * ${WRITE_ROW_MM}mm)`}>
           <colgroup>{widths.map((w) => <col style={w} />)}</colgroup>
-          <thead><tr>{b.columns.map((c) => <th scope="col">{c}</th>)}</tr></thead>
+          {/* 괄호로 묶은 말과 "~낱말"은 줄을 바꾸지 않는 덩어리(.ws-keep)로 찍는다 */}
+          <thead><tr>{b.columns.map((c) => <th scope="col">{keepParts(c).map((p) => (p.keep ? <span class="ws-keep">{p.text}</span> : p.text))}</th>)}</tr></thead>
           <tbody>
-            {b.rows.map((row) => <tr>{row.map((cell) => <td class:list={[cell === '' && 'ws-fill']}>{cell}</td>)}</tr>)}
+            {b.rows.map((row) => <tr>{row.map((cell) => <td class:list={[cell === '' && 'ws-fill']}>{keepParts(cell).map((p) => (p.keep ? <span class="ws-keep">{p.text}</span> : p.text))}</td>)}</tr>)}
           </tbody>
         </table>
       );
@@ -104,7 +122,7 @@ const percent = (weights: number[]) => { const sum = weights.reduce((a, b) => a 
                 </p>
                 {q.type === 'choice' && (
                   <ol class="ws-choices" data-columns={choiceColumns(q.choices)}>
-                    {q.choices.map((c, ci) => <li><span class="ws-choice-no">{ci + 1}</span><span>{c}</span></li>)}
+                    {q.choices.map((c, ci) => <li><span class="ws-choice-no">{ci + 1})</span><span>{c}</span></li>)}
                   </ol>
                 )}
                 {q.type === 'short' && <div class="ws-answer"></div>}
@@ -154,7 +172,7 @@ const percent = (weights: number[]) => { const sum = weights.reduce((a, b) => a 
     case 'columns':
       return (
         <div class="ws-block ws-columns" data-part={it.where} style={`grid-template-columns:repeat(${b.columns.length},minmax(0,1fr))`}>
-          {(it.columns ?? []).map((col) => <div class="ws-col"><Astro.self lesson={lesson} items={col} /></div>)}
+          {(it.columns ?? []).map((col) => <div class="ws-col"><Astro.self lesson={lesson} items={col} width={(width - COL_GAP * (b.columns.length - 1)) / b.columns.length} /></div>)}
         </div>
       );
   }

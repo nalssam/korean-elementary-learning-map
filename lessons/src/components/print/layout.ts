@@ -27,6 +27,8 @@ export interface Placed {
   quizNos?: number[];
   /** columns 블록: 단마다 그 안의 블록 */
   columns?: Placed[][];
+  /** table 블록: 바로 앞 지시문이 ○·× 같은 표시를 하라고 하면 true. 빈 칸은 글이 아니라 표시를 받는다. */
+  marks?: boolean;
   /** 이 블록이 쪽·단에서 몇째인지로 만든 값. 선 잇기의 섞는 순서가 여기에서 나온다. */
   key: string;
 }
@@ -57,21 +59,36 @@ export const BLOCK_LABEL: Record<Block['type'], string> = {
  */
 export function placeWorksheet(lesson: Lesson): PlacedPage[] {
   let next = 1;
+  // 표 앞에서 가장 가까운 번호 붙은 지시문 (쪽이 바뀌면 지운다). 번호 없는 작은 제목은 건너뛴다.
+  let ask = '';
   const leaf = (block: LeafBlock, key: string, where: string): Placed => {
-    if (block.type === 'prompt' && block.number) return { block, key, where, no: next++ };
+    if (block.type === 'prompt') {
+      if (!block.number) return { block, key, where };
+      ask = block.text;
+      return { block, key, where, no: next++ };
+    }
     if (block.type === 'quiz') return { block, key, where, quizNos: block.items.map(() => next++) };
+    if (block.type === 'table') return { block, key, where, marks: asksForMarks(ask) };
     return { block, key, where };
   };
-  return lesson.worksheet.pages.map((page, pi) => ({
-    ...(page.heading ? { heading: page.heading } : {}),
-    items: page.blocks.map((block, bi): Placed => {
-      const key = `${pi + 1}-${bi + 1}`;
-      const where = `${bi + 1}번째 블록(${BLOCK_LABEL[block.type]})`;
-      if (block.type !== 'columns') return leaf(block, key, where);
-      const columns = block.columns.map((col, ci) => col.map((b, li) => leaf(b, `${key}-${ci + 1}-${li + 1}`, `${bi + 1}번째 블록의 ${ci + 1}째 단(${BLOCK_LABEL[b.type]})`)));
-      return { block, key, where, columns };
-    }),
-  }));
+  return lesson.worksheet.pages.map((page, pi) => {
+    ask = '';
+    return {
+      ...(page.heading ? { heading: page.heading } : {}),
+      items: page.blocks.map((block, bi): Placed => {
+        const key = `${pi + 1}-${bi + 1}`;
+        const where = `${bi + 1}번째 블록(${BLOCK_LABEL[block.type]})`;
+        if (block.type !== 'columns') return leaf(block, key, where);
+        const columns = block.columns.map((col, ci) => col.map((b, li) => leaf(b, `${key}-${ci + 1}-${li + 1}`, `${bi + 1}번째 블록의 ${ci + 1}째 단(${BLOCK_LABEL[b.type]})`)));
+        return { block, key, where, columns };
+      }),
+    };
+  });
+}
+
+/** 지시문이 글 대신 ○·×·✓ 같은 표시를 하라고 하는가. 예: "… ○표 해 봅시다." */
+export function asksForMarks(prompt: string): boolean {
+  return /[○◯×✕✓✔]/.test(prompt);
 }
 
 // ───────────────────────────── 선 잇기 ─────────────────────────────
@@ -136,13 +153,80 @@ export function frameParts(frame: string): FramePart[] {
 
 // ───────────────────────────── 표 ─────────────────────────────
 
+// 12pt 글자의 대강의 폭(mm). 한글·한자는 글자 크기만큼, 영문·숫자는 그 반 남짓, 빈칸과 문장 부호는 더 좁다.
+const PT12 = 12 * 25.4 / 72;
+function textWidth(text: string): number {
+  let em = 0;
+  for (const ch of text) {
+    if (/\s/.test(ch)) em += 0.28;
+    else if (/[.,:;!?'"()~·\-]/.test(ch)) em += 0.38;
+    else if (/[\x21-\x7e]/.test(ch)) em += 0.58;
+    else em += 1;
+  }
+  return em * PT12;
+}
+/** 칸의 안쪽 여백(좌우 3mm)과 테두리 */
+const CELL_PAD = 6.8;
+/** 표시(○·×)만 받는 칸의 폭 */
+const MARK_COL = 40;
+
 /**
- * 표의 칸 폭 비율. 아이가 채우는 칸("")이 있는 열을 넓게 준다.
- * 모든 줄에 글이 적힌 열(이름표 구실)은 1, 채우는 칸이 하나라도 있는 열은 1.6.
+ * 글을 줄을 바꿔도 되는 곳과 안 되는 곳으로 나눈다. keep 인 조각 안에서는 줄을 바꾸지 않는다.
+ * 괄호로 묶은 말과 "~"가 붙은 낱말이 한 덩어리다 (docs/CONTRACT.md 7절 학습지).
+ * "어떻게 이어지나요? (~하니까)" → "어떻게 이어지나요? " / "(~하니까)"(keep)
  */
-export function tableWeights(columns: string[], rows: string[][]): number[] {
-  const fill = columns.map((_, c) => rows.some((r) => r[c] === ''));
-  return fill.some(Boolean) && !fill.every(Boolean) ? fill.map((f) => (f ? 1.6 : 1)) : columns.map(() => 1);
+export function keepParts(text: string): { text: string; keep: boolean }[] {
+  const out: { text: string; keep: boolean }[] = [];
+  let at = 0;
+  for (const m of text.matchAll(/\([^()]*\)|~\S+/g)) {
+    if (m.index > at) out.push({ text: text.slice(at, m.index), keep: false });
+    out.push({ text: m[0], keep: true });
+    at = m.index + m[0].length;
+  }
+  if (at < text.length) out.push({ text: text.slice(at), keep: false });
+  return out;
+}
+
+/** 머리 칸 글에서 줄을 바꾸지 않는 가장 긴 덩어리의 폭(mm). 낱말 가운데에서는 줄을 바꾸지 않는다(keep-all). */
+function headMin(text: string): number {
+  const units = keepParts(text).flatMap((p) => (p.keep ? [p.text] : p.text.split(/\s+/)));
+  return Math.max(0, ...units.map((u) => textWidth(u) * 1.04)) + CELL_PAD;
+}
+
+/**
+ * 표의 칸 폭(mm). 합이 width 다.
+ * 몸 칸이 모두 빈("") 열은 아이가 채우는 열이고, 글이 있는 열은 이름표 구실을 한다.
+ *  - marks: 채우는 칸이 ○·× 표시만 받는다. 채우는 열은 40mm 남짓으로 좁히고, 나머지를 글 열에 주어 문장이 한 줄에 들게 한다.
+ *  - 그 밖: 아이가 글을 쓴다. 글 열은 가장 긴 글이 들어갈 만큼만(표 폭의 40%까지) 주고, 나머지를 채우는 열이 똑같이 나눈다.
+ * 채우는 열이 없거나 모두 채우는 열이면 똑같이 나눈다.
+ */
+export function tableWidths(columns: string[], rows: string[][], { width = 190, marks = false } = {}): number[] {
+  const fill = columns.map((_, c) => rows.every((r) => (r[c] ?? '') === ''));
+  const equal = columns.map(() => width / columns.length);
+  if (!fill.some(Boolean) || fill.every(Boolean)) return equal;
+  const head = columns.map(headMin);
+  const need = columns.map((col, c) => Math.max(head[c], ...rows.map((r) => textWidth(r[c] ?? '') + CELL_PAD)));
+  const nFill = fill.filter(Boolean).length;
+  const textCols = columns.map((_, c) => c).filter((c) => !fill[c]);
+  const share = (total: number, cols: number[], want: number[]) => {
+    // 원하는 만큼 줄 수 있으면 주고 남는 것은 똑같이 더한다. 모자라면 원하는 폭에 비례해 나눈다.
+    const sum = cols.reduce((a, c) => a + want[c], 0);
+    return cols.map((c) => (sum <= total ? want[c] + (total - sum) / cols.length : (want[c] / sum) * total));
+  };
+  const out = columns.map(() => 0);
+  if (marks) {
+    const markW = Math.min(Math.max(MARK_COL, ...columns.map((_, c) => (fill[c] ? head[c] : 0))), (width * 0.6) / nFill);
+    const rest = width - markW * nFill;
+    share(rest, textCols, need).forEach((w, i) => { out[textCols[i]] = w; });
+    columns.forEach((_, c) => { if (fill[c]) out[c] = markW; });
+    return out;
+  }
+  const textW = textCols.map((c) => Math.min(need[c], (width * 0.4) / textCols.length));
+  textCols.forEach((c, i) => { out[c] = textW[i]; });
+  const rest = width - textW.reduce((a, b) => a + b, 0);
+  const fillCols = columns.map((_, c) => c).filter((c) => fill[c]);
+  share(rest, fillCols, columns.map((_, c) => head[c])).forEach((w, i) => { out[fillCols[i]] = w; });
+  return out;
 }
 
 // ───────────────────────────── 고르기 문항의 보기 ─────────────────────────────

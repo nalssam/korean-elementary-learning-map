@@ -71,3 +71,44 @@ test('카드 앞면 글자는 길수록 작게 찍는다 (14자까지)', () => {
   assert.equal(L.frontSize('가나다라마바사아자'), 'md');
   assert.equal(L.frontSize('가나다라마바사아자차카타파하'), 'sm');
 });
+
+test('번호 없는 지시문은 번호를 건너뛰고, ○표를 하라는 지시 아래의 표만 표시 받는 표가 된다', () => {
+  const lesson = structuredClone(c.loadLesson('5-2/1/01'));
+  const table = (columns: string[]) => ({ type: 'table' as const, columns, rows: [['가', '', '']] });
+  lesson.worksheet.pages = [
+    { blocks: [
+      { type: 'prompt', text: '본 것인지 짐작한 것인지 ○표 해 봅시다.', number: true },
+      table(['말', '본 것', '짐작']),
+      { type: 'prompt', text: '표를 채워 봅시다.', number: true },
+      { type: 'prompt', text: '그릇', number: false },
+      table(['곳', '본 것', '짐작']),
+    ] },
+    { blocks: [table(['곳', '본 것', '짐작']), { type: 'prompt', text: '돌 도구', number: false }, { type: 'prompt', text: '써 봅시다.', number: true }] },
+  ] as typeof lesson.worksheet.pages;
+  const [one, two] = L.placeWorksheet(lesson);
+  assert.deepEqual(one.items.map((it) => it.no), [1, undefined, 2, undefined, undefined]);
+  assert.deepEqual(two.items.map((it) => it.no), [undefined, undefined, 3]);
+  assert.deepEqual([one.items[1].marks, one.items[4].marks, two.items[0].marks], [true, false, false]);
+  assert.equal(L.asksForMarks('맞으면 ○, 틀리면 × 해 봅시다.'), true);
+  assert.equal(L.asksForMarks('표를 채워 봅시다.'), false);
+});
+
+test('괄호로 묶은 말과 "~낱말"은 줄을 바꾸지 않는 한 덩어리다', () => {
+  assert.deepEqual(L.keepParts('어떻게 이어지나요? (~하니까)'), [{ text: '어떻게 이어지나요? ', keep: false }, { text: '(~하니까)', keep: true }]);
+  assert.deepEqual(L.keepParts('~하니까 생각'), [{ text: '~하니까', keep: true }, { text: ' 생각', keep: false }]);
+  assert.deepEqual(L.keepParts('그냥 말'), [{ text: '그냥 말', keep: false }]);
+});
+
+test('표의 칸 폭: 표시만 받는 열은 40mm 남짓, 글을 쓰는 열은 넓게, 합은 표 폭', () => {
+  const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
+  const statements = ['많은 사람이 힘을 모아 돌을 옮겼다.', '덮개돌이 받침돌 위에 얹혀 있다.'];
+  const marks = L.tableWidths(['말', '눈으로 본 것', '짐작한 것'], statements.map((s) => [s, '', '']), { width: 190, marks: true });
+  assert.ok(Math.abs(sum(marks) - 190) < 0.01);
+  assert.ok(marks[1] <= 45 && marks[2] <= 45, `표시 열 ${marks}`);
+  assert.ok(marks[0] > marks[1], '문장 열이 표시 열보다 넓어야 합니다');
+  const write = L.tableWidths(['살펴볼 곳', '눈으로 본 것', '짐작한 것', '어떻게 이어지나요? (~하니까)'], [['바닥 모양', '', '', ''], ['가장자리와 끝', '', '', '']], { width: 190 });
+  assert.ok(Math.abs(sum(write) - 190) < 0.01);
+  assert.ok(write.slice(1).every((w) => w > write[0]), `채우는 열이 이름표 열보다 넓어야 합니다: ${write}`);
+  // 채우는 열이 없으면 똑같이 나눈다
+  assert.deepEqual(L.tableWidths(['가', '나'], [['1', '2']], { width: 100 }), [50, 50]);
+});

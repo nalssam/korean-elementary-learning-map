@@ -1,6 +1,6 @@
 // 저장소의 인쇄 페이지(학습지·카드·컬러링)를 시험용 명세로 빌드하고 scripts/render-pdf.mjs 로 찍어 본다 (docs/CONTRACT.md 7·10절).
 //  - 가장 긴 글(제목 30자, 부제 40자, 카드 앞 14자·뒤 50자, 보기 30자 …)과 모든 블록 종류를 실은 학습지가 일곱 조건을 통과한다.
-//  - 찍은 PDF 는 printJobs() 의 쪽수와 A4 크기이고, 다시 돌리면 캐시에서 복사만 한다. --only 는 한 묶음만 찍는다.
+//  - 찍은 PDF 는 printJobs() 의 쪽수와 A4 크기이고, Type 3 글꼴이 없으며, 다시 돌리면 캐시에서 복사만 한다. --only 는 한 묶음만 찍는다.
 //  - 일부러 넘치게 만든 쪽은 차시·인쇄물·쪽을 짚는 한국어 알림과 함께 빌드를 멈춘다.
 // 만든 것은 .cache/tests/print-render-<pid>/ 아래에만 둔다. Chromium 이 없으면 건너뛴다 (16절).
 import { after, test } from 'node:test';
@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import * as c from '#lib/content.ts';
 import { buildSite, noChromium, tempContent } from '../contract/helpers.ts';
+import { type3Fonts } from './fonts.ts';
 
 const skip = await noChromium();
 const ROOT_OUT = path.join(c.ROOT, '.cache', 'tests', `print-render-${process.pid}`);
@@ -102,6 +103,8 @@ test('인쇄 페이지를 찍는다: 가장 긴 글과 모든 블록, 캐시, --
         assert.equal(info.pages, job.pages, `${lesson.id} ${job.label}`);
         const [w, h] = job.print.orientation === 'portrait' ? [210, 297] : [297, 210];
         for (const [pw, ph] of info.sizes) assert.ok(Math.abs(pw - w) <= 1 && Math.abs(ph - h) <= 1, `${lesson.id} ${job.label}: ${pw} × ${ph}mm`);
+        // 고정 굵기 글꼴로 찍혀 Type 3 글꼴이 없다 (가변 글꼴로 찍으면 수십 벌이 들어간다)
+        assert.deepEqual(type3Fonts(file), [], `${lesson.id} ${job.label} PDF 에 Type 3 글꼴이 있습니다`);
         // 초안의 바닥글과 쪽/전체
         assert.ok(info.text.includes(`${c.sheetFooter(lesson)}·1/${job.pages}`.replace(/\s+/g, '')), `${lesson.id} ${job.label} 바닥글`);
       }

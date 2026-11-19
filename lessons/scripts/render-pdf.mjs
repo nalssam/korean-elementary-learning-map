@@ -19,7 +19,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { ROOT, cacheDir, distDir, printJobs, visibleLessons } from '#lib/content.ts';
+import { ROOT, cacheDir, distDir, isPublic, printJobs, visibleLessons } from '#lib/content.ts';
 
 const A4 = { portrait: [210, 297], landscape: [297, 210] };
 const ORIENTATION = { portrait: '세로', landscape: '가로' };
@@ -134,6 +134,8 @@ function siteInputs(dist, route, extra = []) {
 }
 
 const TOOL_FILES = ['scripts/render-pdf.mjs', 'package-lock.json'];
+/** 초안 PDF 의 제목 앞에 붙이는 말 */
+const DRAFT_TITLE = '[검수 전 초안] ';
 
 /** 캐시 파일(<kind>.pdf.sha256)에 적는 글: 첫 줄은 전체의 sha256, 그 아래는 입력마다 한 줄 */
 function manifest(dist, job, inputs) {
@@ -257,7 +259,7 @@ async function pdfProblems(data, job) {
 // ───────────────────────────── 한 장 찍기 ─────────────────────────────
 
 /** 인쇄 페이지 하나를 열어 재고 찍는다. { pdf, problems, loaded } — problems 가 있으면 pdf 는 쓰지 않는다. */
-async function render(browser, site, dist, job) {
+async function render(browser, site, dist, lesson, job) {
   const page = await browser.newPage();
   const problems = [];
   const loaded = new Set();
@@ -282,6 +284,8 @@ async function render(browser, site, dist, job) {
     await page.goto(site.origin + (BASE === '/' ? '' : BASE) + job.route, { waitUntil: 'load' });
     problems.push(...await page.evaluate(measureSheets, job.pages));
     if (problems.length) return { problems, loaded: [...loaded] };
+    // PDF 의 제목(Title)은 페이지의 <title> 이다. 초안은 파일만 따로 돌아다녀도 초안인 줄 알게 제목 앞에 적는다.
+    if (!isPublic(lesson)) await page.evaluate((mark) => { if (!document.title.startsWith(mark)) document.title = mark + document.title; }, DRAFT_TITLE);
     const pdf = await page.pdf({ preferCSSPageSize: true, printBackground: true });
     problems.push(...await pdfProblems(pdf, job));
     return { pdf, problems, loaded: [...loaded] };
@@ -348,7 +352,7 @@ async function main() {
           throw new Stop(`Chromium 을 띄울 수 없습니다. npx playwright install chromium 으로 깔거나 CHROMIUM_PATH 로 가리킵니다.\n  ${String(e.message).split('\n')[0]}`);
         }
       }
-      const { pdf, problems, loaded } = await render(browser, site, dist, job);
+      const { pdf, problems, loaded } = await render(browser, site, dist, lesson, job);
       if (problems.length || !pdf) { fail(problems); continue; }
       for (const f of [target, cached]) { fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, pdf); }
       fs.writeFileSync(record, manifest(dist, job, siteInputs(dist, job.route, loaded)));
