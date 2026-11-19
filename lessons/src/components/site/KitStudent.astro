@@ -2,7 +2,7 @@
 // 확인 퀴즈와 웹 활동: 아이들이 여는 페이지의 QR 과 링크. QR 은 이 페이지만 만든다 (docs/CONTRACT.md 6절).
 // 주소는 absoluteUrl() 로 만든다. 종이와 화면에 박히는 주소라서 브라우저의 location 으로 만들지 않는다.
 import { absoluteUrl, answerText, lessonRoute, quizByLesson, scored } from '#lib/content.ts';
-import { ASSET_LABEL, ASSET_ROUTE } from '#lib/site.ts';
+import { ASSET_LABEL, ASSET_ROUTE, MARK_LABEL } from '#lib/site.ts';
 import type { Lesson } from '#schema/lesson.ts';
 import { href } from '#src/lib/url.ts';
 import { usedInFlow } from './data.ts';
@@ -56,7 +56,9 @@ const webAside = web && !usedInFlow(lesson).has('web_activity');
               <li value={no}>
                 <p class="quiz-q">{item.q}</p>
                 {item.type === 'choice' && <ol class="quiz-choices">{item.choices.map((c) => <li>{c}</li>)}</ol>}
-                <p class="quiz-a"><strong>정답</strong> {answerText(item)}</p>
+                <p class="quiz-a"><strong>정답</strong> {item.type === 'ox'
+                  ? <><span class="quiz-mark" aria-hidden="true">{answerText(item)}</span><span class="sr-only" data-pagefind-ignore>{MARK_LABEL[item.answer ? 'yes' : 'no']}</span></>
+                  : answerText(item)}</p>
                 <p class="quiz-why">{item.explain}</p>
               </li>
             ))}

@@ -16,6 +16,8 @@ body[data-kind='site'] > main { flex: 1; padding-block: var(--s6) var(--s7); }
 
 .skip { position: absolute; left: var(--s4); top: var(--s2); z-index: 10; padding: var(--s2) var(--s4); border-radius: var(--radius-sm); background: var(--navy); color: var(--card); transform: translateY(-200%); }
 .skip:focus { transform: none; }
+/* 눈에는 안 보이고 화면 읽기 프로그램만 읽는 글. ○·× 를 '맞다'·'아니다'로 읽게 할 때 쓴다 */
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
 /* 머리 */
 .site-head { border-bottom: 1px solid var(--line); }
@@ -147,7 +149,8 @@ a.tile:hover { border-color: var(--teal); }
 .lesson-off { font-size: var(--fs-sm); color: var(--gray); }
 .is-off .lesson-no { font-weight: 400; color: var(--gray); }
 
-.pager { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4); margin-top: var(--s8); padding-top: var(--s5); border-top: 1px solid var(--line); }
+/* 앞뒤 링크 위에는 선을 긋지 않는다. 바로 위 목록(차시 목록·교사용 자료)이 이미 선으로 끝나서, 선을 하나 더 그으면 두 선 사이에 빈 띠가 생긴다 */
+.pager { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4); margin-top: var(--s7); }
 .pager-link { display: grid; gap: var(--s1); text-decoration: none; }
 .pager-next { text-align: right; }
 .pager-dir { font-size: var(--fs-xs); color: var(--gray); }
@@ -256,10 +259,12 @@ ol.sources { padding-left: 1.6em; list-style: decimal; }
 .quiz-choices { display: grid; gap: 2px; margin-top: var(--s1); padding-left: 1.4em; list-style: decimal; font-size: var(--fs-sm); }
 .quiz-a { margin-top: var(--s1); font-size: var(--fs-sm); }
 .quiz-a strong { margin-right: var(--s1); color: var(--teal); }
+/* ○·× 는 글자보다 작아 보여서 한 단계 키운다 */
+.quiz-mark { font-size: var(--fs-lg); font-weight: 700; line-height: 1; }
 .quiz-why { font-size: var(--fs-sm); color: var(--gray); }
 .kit-report { margin-top: var(--s5); font-size: var(--fs-sm); color: var(--gray); }
-/* 앞뒤 차시가 없어 pager 가 빠지면 제보 줄이 교사용 자료에 붙지 않게 선을 긋는다 */
-.kit + .kit-report { margin-top: var(--s7); padding-top: var(--s5); border-top: 1px solid var(--line); }
+/* 앞뒤 차시가 없어 pager 가 빠지면 제보 줄은 여백만으로 교사용 자료와 떨어진다. 교사용 자료가 선으로 끝나므로 선을 더 긋지 않는다 */
+.kit + .kit-report { margin-top: var(--s7); }
 
 /* ───────────── 긴 글 (소개·이용 조건·오류 제보) ───────────── */
 .prose { max-width: 44rem; }
