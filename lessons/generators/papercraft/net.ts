@@ -25,6 +25,12 @@ export const INK_DIM = '#555555';
 export const RULE = '#9a9a9a';
 export const RULE_SOFT = '#c9c9c9';
 
+/**
+ * 도안 글의 글꼴. 고정 굵기 Pretendard 를 먼저 적는다 (7절). 인쇄 페이지는 고정 굵기 Pretendard 를 싣는데,
+ * 가변 글꼴(Pretendard Variable)을 적으면 전개도의 글만 PDF 에 Type 3 글꼴로 들어간다.
+ */
+export const FONT_FAMILY = 'Pretendard, sans-serif';
+
 /** 계약이 정한 선: 자르는 선 0.5 실선, 접는 선 0.3 점선 */
 export const CUT_W = 0.5;
 export const FOLD_W = 0.3;
@@ -41,15 +47,18 @@ export interface Face {
 /**
  * 맞닿거나 풀로 붙는 두 변. 시험이 두 변의 길이가 같은지, 두 변이 정말 도안에 있는 변인지 본다.
  * glue: a 는 탭의 경첩, b 는 탭을 붙이는 면의 변 · meet: 조립하면 맞닿는 두 변
+ * seat: a 는 발(탭)의 경첩, b 는 그 발을 붙이는 '놓는 자리'(점선 사각형)의 한 변. 자리는 조각의 변이 아니라 그림이다.
  */
 export interface Join {
   what: string;
-  kind: 'glue' | 'meet';
+  kind: 'glue' | 'meet' | 'seat';
   a: Seg;
   b: Seg;
   /** glue 일 때 탭의 깊이와, 탭을 붙이는 면이 그 변에서 안쪽으로 가진 길이. 탭이 면 밖으로 삐져나오지 않는지 본다. */
   depth?: number;
   room?: number;
+  /** glue 일 때 탭과 붙일 자리에 함께 찍는 글자. 한 글자는 도안 전체에서 한 곳의 붙임만 뜻한다. */
+  mark?: string;
 }
 
 /** 조각 하나 */
@@ -234,7 +243,10 @@ export interface TextOpts {
   anchor?: 'start' | 'middle' | 'end';
   weight?: number;
   fill?: string;
-  /** 빗금·돌결 위에서도 읽히게 글자 둘레에 흰 테를 두른다 */
+  /**
+   * 빗금·돌결·지시선 위에서도 읽히게 글 뒤에 흰 바탕을 깐다.
+   * 글자에 흰 stroke 를 두르면 Chromium 이 그 글을 PDF 에 Type 3 글꼴로 넣으므로 바탕 사각형으로 한다.
+   */
   halo?: boolean;
   rotate?: number;
 }
@@ -246,19 +258,33 @@ export function text(x: number, y: number, s: string, o: TextOpts = {}): string 
     `x="${fmt(x)}"`, `y="${fmt(y + size * 0.36)}"`, `font-size="${fmt(size)}"`,
     `text-anchor="${o.anchor ?? 'middle'}"`, `font-weight="${o.weight ?? 600}"`, `fill="${o.fill ?? INK}"`,
   ];
-  if (o.halo) attrs.push('stroke="#ffffff"', 'stroke-width="0.9"', 'stroke-linejoin="round"', 'paint-order="stroke"');
-  if (o.rotate) attrs.push(`transform="rotate(${o.rotate} ${fmt(x)} ${fmt(y)})"`);
-  return `<text ${attrs.join(' ')}>${xmlText(s)}</text>`;
+  const turn = o.rotate ? ` transform="rotate(${o.rotate} ${fmt(x)} ${fmt(y)})"` : '';
+  if (o.rotate) attrs.push(turn.trim());
+  const t = `<text ${attrs.join(' ')}>${xmlText(s)}</text>`;
+  if (!o.halo) return t;
+  const w = textWidth(s, size) + 1.2, h = size * 1.2;
+  const anchor = o.anchor ?? 'middle';
+  const x0 = anchor === 'start' ? x - 0.6 : anchor === 'end' ? x - w + 0.6 : x - w / 2;
+  return `<rect x="${fmt(x0)}" y="${fmt(y - h / 2)}" width="${fmt(w)}" height="${fmt(h)}" rx="${fmt(size * 0.25)}" fill="#ffffff"${turn}/>` + t;
 }
 
-/** 조립 표시: 동그라미 안의 글자. 탭과, 그 탭을 붙이는 자리에 같은 글자를 찍는다. */
-export function mark(x: number, y: number, s: string): string {
-  return `<circle cx="${fmt(x)}" cy="${fmt(y)}" r="2.3" fill="#ffffff" stroke="${INK}" stroke-width="0.3"/>` + text(x, y, s, { size: 2.9, weight: 700 });
+/**
+ * 조립 표시: 동그라미 안의 글자. 탭과, 그 탭을 붙이는 자리에 같은 글자를 찍는다.
+ * 탭은 붙이면 안쪽으로 숨으므로 진하게 찍는다. 붙일 자리('target')는 완성하면 겉으로 보이는 면이라 작고 옅게 찍는다.
+ */
+export function mark(x: number, y: number, s: string, role: 'tab' | 'target' = 'tab'): string {
+  const target = role === 'target';
+  const color = target ? RULE : INK;
+  return `<g data-mark="${xmlText(s)}" data-mark-role="${role}"><circle cx="${fmt(x)}" cy="${fmt(y)}" r="${target ? 1.8 : 2.3}" fill="#ffffff" stroke="${color}" stroke-width="${target ? 0.25 : 0.3}"/>`
+    + text(x, y, s, { size: target ? 2.3 : 2.9, weight: 700, fill: color }) + '</g>';
 }
 
-/** 놓을 자리 (받침판 위의 자리 같은 것). 접는 선과 헷갈리지 않게 점으로 찍는다. */
+/** 놓는 자리를 찍는 점선 (점만 찍히게 길이 0 의 둥근 끝을 쓴다) */
+export const SPOT_DASH = '0.01 1.1';
+
+/** 놓는 자리 (바닥판 위의 자리 같은 것). 접는 선과 헷갈리지 않게 점으로 찍는다. */
 export function spot(x: number, y: number, w: number, h: number): string {
-  return `<rect x="${fmt(x)}" y="${fmt(y)}" width="${fmt(w)}" height="${fmt(h)}" fill="none" stroke="${INK_DIM}" stroke-width="0.45" stroke-linecap="round" stroke-dasharray="0.01 1.1"/>`;
+  return `<rect x="${fmt(x)}" y="${fmt(y)}" width="${fmt(w)}" height="${fmt(h)}" fill="none" stroke="${INK_DIM}" stroke-width="0.45" stroke-linecap="round" stroke-dasharray="${SPOT_DASH}"/>`;
 }
 
 /** 꾸밈 선 (돌결, 나뭇결). 자르는 선·접는 선과 헷갈리지 않게 옅고 가늘게 그린다. */
@@ -270,12 +296,14 @@ export function grain(d: string): string {
 
 /** 쪽마다 맨 위에 두는 선 안내와 5cm 자. 쪽을 따로 나눠 줘도 선을 읽을 수 있고, 실제 크기로 찍혔는지 자로 잴 수 있다. */
 export const LEGEND_H = 8;
-function legend(glueId: string): string {
+function legend(glueId: string, withSpot: boolean): string {
   const y = 3.6;
   const g: string[] = [];
   g.push(`<line x1="0.5" y1="${y}" x2="10.5" y2="${y}" stroke="${INK}" stroke-width="${CUT_W}"/>`, text(12.5, y, '자르는 선', { size: 3.2, anchor: 'start', weight: 500 }));
   g.push(`<line x1="34" y1="${y}" x2="44" y2="${y}" stroke="${INK}" stroke-width="${FOLD_W}" stroke-dasharray="${FOLD_DASH}"/>`, text(46, y, '접는 선', { size: 3.2, anchor: 'start', weight: 500 }));
   g.push(`<rect x="63" y="${y - 2.2}" width="10" height="4.4" fill="url(#${glueId})" stroke="${INK}" stroke-width="0.3"/>`, text(75, y, '풀칠', { size: 3.2, anchor: 'start', weight: 500 }));
+  // 놓는 자리는 그 점선이 있는 쪽에만 안내한다
+  if (withSpot) g.push(spot(90, y - 2.2, 4.4, 4.4), text(96.4, y, '놓는 자리', { size: 3.2, anchor: 'start', weight: 500 }));
   // 5cm 자: 실제 크기(100%)로 찍혔는지 자를 대어 본다
   const x0 = 139.5;
   g.push(`<path d="M${x0},${y + 1.6} L${x0 + 50},${y + 1.6}" stroke="${INK}" stroke-width="0.3" fill="none"/>`);
@@ -292,8 +320,9 @@ export function render(plan: Plan, no: number): string {
   const glueId = `pc-glue-${no}`;
   const out: string[] = [SVG_OPEN];
   out.push(`<defs><pattern id="${glueId}" patternUnits="userSpaceOnUse" width="1.6" height="1.6" patternTransform="rotate(45)"><rect width="1.6" height="1.6" fill="#ffffff"/><line x1="0" y1="0" x2="0" y2="1.6" stroke="${RULE}" stroke-width="0.35"/></pattern></defs>`);
-  out.push(`<g font-family="'Pretendard Variable', Pretendard, sans-serif">`);
-  out.push(legend(glueId));
+  out.push(`<g font-family="${FONT_FAMILY}">`);
+  const withSpot = [...plan.art, ...plan.pieces.flatMap((p) => p.art)].some((a) => a.includes(`stroke-dasharray="${SPOT_DASH}"`));
+  out.push(legend(glueId, withSpot));
   for (const piece of plan.pieces) {
     const { cut, fold } = analyse(piece);
     out.push('<g>');
