@@ -11,7 +11,7 @@
 //
 // 하는 일
 //  1. 빌드한 사이트를 127.0.0.1 에서 내준다 (file:// 로 열면 글꼴이 실리지 않는다). SITE_BASE 는 떼고 dist 에 대응시킨다.
-//  2. 인쇄 페이지마다 인쇄 모양(emulateMedia print)으로 열어 일곱 조건을 잰다. 하나라도 어긋나면 어느 차시의 어느 인쇄물 몇 쪽인지 적고
+//  2. 인쇄 페이지마다 인쇄 모양(emulateMedia print)으로 열어 일곱 조건과 바닥글 앞의 틈(R29)을 잰다. 하나라도 어긋나면 어느 차시의 어느 인쇄물 몇 쪽인지 적고
 //     0 이 아닌 값으로 끝난다 (PDF 를 남기지 않는다).
 //  3. 입력이 그대로인 인쇄물은 찍지 않고 캐시에서 복사한다.
 //     입력은 찍는 HTML, 그 HTML 이 부르는 사이트 안 파일(CSS·글꼴·스크립트·그림), 이 스크립트, package-lock.json 이다.
@@ -24,6 +24,10 @@ import { ROOT, cacheDir, distDir, isPublic, printJobs, visibleLessons } from '#l
 const A4 = { portrait: [210, 297], landscape: [297, 210] };
 const ORIENTATION = { portrait: '세로', landscape: '가로' };
 const KINDS = ['worksheet', 'papercraft', 'coloring', 'cards'];
+/** 본문의 마지막 블록과 바닥글 글자 사이의 가장 작은 틈(mm). docs/CONTRACT.md 7절 (R29). src/components/print/layout.ts 의 FOOT_GAP_MM 과 같은 값이다. */
+const FOOT_GAP_MM = 6;
+// 바닥글 앞의 틈을 어기면 멈추는 인쇄물. 페이퍼크래프트는 전개도 쪽이 아직 틈을 남기지 않아 알리기만 한다 (담당이 맞추면 여기에 더한다).
+const GAP_STOPS = new Set(['worksheet', 'cards', 'coloring']);
 
 // ───────────────────────────── 인자 ─────────────────────────────
 
@@ -149,13 +153,13 @@ function manifest(dist, job, inputs) {
 /** 지난번 캐시 글에서 입력 경로를 읽는다 (도구 파일 빼고) */
 const manifestInputs = (text) => text.split('\n').slice(2).map((l) => l.split('  ')[1]).filter((p) => p && !p.startsWith('repo:'));
 
-// ───────────────────────────── 페이지 안에서 재기 (조건 1·2·4·6·7) ─────────────────────────────
+// ───────────────────────────── 페이지 안에서 재기 (조건 1·2·4·6·7, 바닥글 앞의 틈) ─────────────────────────────
 
 /**
  * 브라우저 안에서 돈다. 인쇄 모양을 건 뒤에 부른다. 어긋난 곳을 { page, text } 로 돌려준다 (page 0 은 쪽을 짚을 수 없는 것).
  * tests/contract/print.test.ts 의 sheetProblems() 와 같은 것을 같은 값으로 잰다. 알림 글에는 얼마나, 어디부터 넘쳤는지를 더한다.
  */
-async function measureSheets(pages) {
+async function measureSheets({ pages, footGap }) {
   await document.fonts.ready;
   await Promise.all([...document.images].map((img) => img.decode().catch(() => undefined)));
   const mm = (px) => `${Math.max(0.1, Math.round((px * 254) / 96) / 10)}mm`;
@@ -214,6 +218,33 @@ async function measureSheets(pages) {
         break;
       }
     }
+    // 바닥글 앞의 틈 (R29): 본문에 그려진 것 가운데 가장 아래의 것과 바닥글의 첫 글줄 사이가 footGap(mm) 이상이다.
+    // 넘친 쪽은 위에서 이미 알렸으므로 다시 알리지 않는다.
+    const body = sheet.querySelector('.sheet-body');
+    const foot = sheet.querySelector('.sheet-foot');
+    if (!partOver && body && foot && foot.textContent.trim()) {
+      const range = document.createRange();
+      range.selectNodeContents(foot);
+      const lines = [...range.getClientRects()].filter((q) => q.height > 0);
+      const footTop = Math.min(...lines.map((q) => q.top));
+      // 테두리도 바탕도 없는 상자(블록을 담는 .ws 같은 것)의 아래 여백은 종이에 찍히지 않으므로 빼고 잰다
+      const inkBottom = (el, q) => {
+        const st = getComputedStyle(el);
+        const painted = parseFloat(st.borderBottomWidth) > 0 || st.backgroundImage !== 'none' || !/rgba\(0, 0, 0, 0\)|transparent/.test(st.backgroundColor);
+        return painted ? q.bottom : q.bottom - parseFloat(st.paddingBottom);
+      };
+      let last;
+      for (const el of drawn(body)) {
+        const q = el.getBoundingClientRect();
+        if (q.height <= 0 || q.width <= 0) continue;
+        const bottom = inkBottom(el, q);
+        if (!last || bottom > last.bottom) last = { el, bottom };
+      }
+      const gapMm = last ? ((footTop - last.bottom) * 25.4) / 96 : Infinity;
+      if (gapMm < footGap - 0.05) {
+        out.push({ page, gap: true, text: `바닥글 앞의 틈이 ${footTop > last.bottom ? mm(footTop - last.bottom) : '0mm'}뿐입니다 (${nameOf(last.el)} 아래). ${footGap}mm 이상 띄웁니다. 내용을 줄이거나 다음 쪽으로 옮깁니다.` });
+      }
+    }
   });
 
   // 조건 4: 글꼴
@@ -258,10 +289,11 @@ async function pdfProblems(data, job) {
 
 // ───────────────────────────── 한 장 찍기 ─────────────────────────────
 
-/** 인쇄 페이지 하나를 열어 재고 찍는다. { pdf, problems, loaded } — problems 가 있으면 pdf 는 쓰지 않는다. */
+/** 인쇄 페이지 하나를 열어 재고 찍는다. { pdf, problems, warnings, loaded } — problems 가 있으면 pdf 는 쓰지 않는다. warnings 는 알리기만 한다. */
 async function render(browser, site, dist, lesson, job) {
   const page = await browser.newPage();
   const problems = [];
+  const warnings = [];
   const loaded = new Set();
   try {
     // 인쇄 페이지는 사이트 밖으로 아무것도 부르지 않는다 (학교망에서 막힌다). 부르면 막고 알린다.
@@ -282,13 +314,16 @@ async function render(browser, site, dist, lesson, job) {
     // 재기 전에 인쇄 모양을 건다. .no-print 와 @media print 로 달라지는 모양이 재는 값에 섞이지 않는다.
     await page.emulateMedia({ media: 'print' });
     await page.goto(site.origin + (BASE === '/' ? '' : BASE) + job.route, { waitUntil: 'load' });
-    problems.push(...await page.evaluate(measureSheets, job.pages));
-    if (problems.length) return { problems, loaded: [...loaded] };
+    for (const p of await page.evaluate(measureSheets, { pages: job.pages, footGap: FOOT_GAP_MM })) {
+      if (p.gap && !GAP_STOPS.has(job.kind)) warnings.push(p);
+      else problems.push(p);
+    }
+    if (problems.length) return { problems, warnings, loaded: [...loaded] };
     // PDF 의 제목(Title)은 페이지의 <title> 이다. 초안은 파일만 따로 돌아다녀도 초안인 줄 알게 제목 앞에 적는다.
     if (!isPublic(lesson)) await page.evaluate((mark) => { if (!document.title.startsWith(mark)) document.title = mark + document.title; }, DRAFT_TITLE);
     const pdf = await page.pdf({ preferCSSPageSize: true, printBackground: true });
     problems.push(...await pdfProblems(pdf, job));
-    return { pdf, problems, loaded: [...loaded] };
+    return { pdf, problems, warnings, loaded: [...loaded] };
   } finally {
     await page.close();
   }
@@ -352,7 +387,8 @@ async function main() {
           throw new Stop(`Chromium 을 띄울 수 없습니다. npx playwright install chromium 으로 깔거나 CHROMIUM_PATH 로 가리킵니다.\n  ${String(e.message).split('\n')[0]}`);
         }
       }
-      const { pdf, problems, loaded } = await render(browser, site, dist, lesson, job);
+      const { pdf, problems, warnings, loaded } = await render(browser, site, dist, lesson, job);
+      for (const w of warnings) console.log(`  ! ${name} ${w.page}쪽: ${w.text}`);
       if (problems.length || !pdf) { fail(problems); continue; }
       for (const f of [target, cached]) { fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, pdf); }
       fs.writeFileSync(record, manifest(dist, job, siteInputs(dist, job.route, loaded)));

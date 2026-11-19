@@ -112,3 +112,30 @@ test('표의 칸 폭: 표시만 받는 열은 40mm 남짓, 글을 쓰는 열은 
   // 채우는 열이 없으면 똑같이 나눈다
   assert.deepEqual(L.tableWidths(['가', '나'], [['1', '2']], { width: 100 }), [50, 50]);
 });
+
+test('바닥글 앞의 틈: 바닥글이 한 줄이면 본문에서 3mm 남짓, 두 줄(공개된 차시의 주소)이면 6mm 남짓을 비운다', async () => {
+  const { SITE } = await import('#lib/site.ts');
+  assert.equal(L.footLines(`${SITE.draftNotice} · 2/2`), 1);
+  const published = `${SITE.printFooter} · https://nalssam.github.io/korean-elementary-learning-map/5-2/1/01/ · 2/2`;
+  assert.equal(L.footLines(published), 2);
+  // 바닥글 상자 6mm 의 위쪽 빈자리와 본문에서 비운 높이를 더하면 6mm 이상
+  for (const [text, lines] of [[`${SITE.draftNotice} · 1/1`, 1], [published, 2]] as const) {
+    const reserve = L.footReserve(text);
+    assert.ok(reserve + (6 - lines * 8 * 1.05 * 25.4 / 72) >= L.FOOT_GAP_MM, `${lines}줄: ${reserve}mm`);
+    assert.ok(reserve < lines * 3 + 0.5, `${lines}줄: 너무 많이 비웁니다 (${reserve}mm)`);
+  }
+});
+
+test('카드 높이: 덱의 가장 많이 든 쪽의 줄이 본문을 나누어 갖고, 85mm 를 넘지 않는다', () => {
+  const r = 3.2;
+  assert.equal(L.cardRows(8), 4);
+  assert.equal(L.cardRows(9), 4);
+  assert.equal(L.cardRows(6), 3);
+  assert.equal(L.cardRows(1), 1);
+  assert.ok(Math.abs(L.cardHeight(8, r) - (249 - r) / 4) < 0.1);
+  assert.ok(Math.abs(L.cardHeight(6, r) - (249 - r) / 3) < 0.1);
+  assert.equal(L.cardHeight(4, r), L.CARD_MAX_MM);
+  assert.equal(L.cardHeight(17, r), L.cardHeight(8, r), '쪽이 늘어도 한 덱의 카드는 같은 크기다');
+  // 그림 줄: 줄의 어느 한 장에 그림이 있으면 그 줄의 두 장 모두
+  assert.deepEqual(L.pictureRows([{}, {}, { media: 'a' }, {}, undefined, undefined]), [false, false, true, true, false, false]);
+});

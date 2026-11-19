@@ -1,13 +1,14 @@
 ---
 // 학습지 인쇄 페이지 (/<id>/worksheet/). 명세의 worksheet.pages 한 묶음이 종이 한 쪽이다.
 // 첫 쪽 머리에 반·번호·이름 칸이 들어가고, 번호는 쪽이 바뀌어도 이어 센다 (docs/CONTRACT.md 7절).
+// 본문 아래에는 바닥글과의 틈(6mm, R29)을 남긴다. 쓰는 칸이 남는 높이를 나누어 가져도 이 틈은 남는다.
 // 블록이 한 쪽에 다 들어가지 않으면 render-pdf 가 어느 쪽 몇째 블록부터 넘치는지 알리고 빌드를 멈춘다.
 import PrintLayout from '#src/components/print/PrintLayout.astro';
 import Sheet from '#src/components/print/Sheet.astro';
 import WorksheetBlocks from '#src/components/print/WorksheetBlocks.astro';
 import '#src/components/print/worksheet.css';
-import { placeWorksheet } from '#src/components/print/layout.ts';
-import { lessonPaths, loadLesson, printJobs } from '#lib/content.ts';
+import { footReserve, placeWorksheet } from '#src/components/print/layout.ts';
+import { lessonPaths, loadLesson, printJobs, sheetFooter } from '#lib/content.ts';
 import { keepParticle as k } from '#lib/site.ts';
 
 export function getStaticPaths() { return lessonPaths(); }
@@ -15,13 +16,16 @@ const lesson = loadLesson(Astro.props.id);
 const job = printJobs(lesson).find((j) => j.kind === 'worksheet')!;
 const worksheet = lesson.worksheet;
 const pages = placeWorksheet(lesson);
+const width = job.print.orientation === 'landscape' ? 277 : 190;
+// 바닥글 앞의 틈(6mm)을 남기려고 본문 아래에 비워 두는 높이 (worksheet.css 의 .ws padding-bottom)
+const reserve = footReserve(`${sheetFooter(lesson)} · ${job.pages}/${job.pages}`, width);
 ---
 <PrintLayout lesson={lesson} job={job}>
   {pages.map((page, i) => (
     <Sheet lesson={lesson} job={job} no={i + 1} title={k(worksheet.title)} sub={worksheet.subtitle && k(worksheet.subtitle)} name={i === 0 ? 'student' : 'none'}>
-      <div class="ws">
+      <div class="ws" style={`--foot-reserve:${reserve}mm`}>
         {page.heading && <h2 class="ws-heading">{k(page.heading)}</h2>}
-        <WorksheetBlocks lesson={lesson} items={page.items} width={job.print.orientation === 'landscape' ? 277 : 190} />
+        <WorksheetBlocks lesson={lesson} items={page.items} width={width} />
       </div>
     </Sheet>
   ))}

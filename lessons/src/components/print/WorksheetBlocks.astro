@@ -37,7 +37,7 @@ const kept = (text: string) => keepParts(k(text));
 // 단마다 그림 한 장만 든 나란히 놓기는 '그림 줄'이다. 그림 높이·설명·출처 표시를 줄 단위로 맞춘다.
 const figureRow = (cols: Placed[][] | undefined) => !!cols && cols.every((col) => col.length === 1 && col[0].block.type === 'figure');
 // 줄 아래에 한 번 찍는 출처 표시는 몇 장의 것인지 밝힌다: "사진: 국립중앙박물관 · …" → "사진 3장: 국립중앙박물관 · …"
-// (가운데 그림 밑에 놓여 그 그림 하나의 출처로 읽히지 않게 한다)
+// (줄의 왼쪽 끝에 찍고 장수를 밝혀, 어느 한 그림의 출처로 읽히지 않게 한다)
 const rowCredit = (credit: string, n: number) => credit.replace(/^([^:]+):/, `$1 ${n}장:`);
 ---
 {items.map((it) => {

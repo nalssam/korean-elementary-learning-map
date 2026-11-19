@@ -1,7 +1,7 @@
 // 저장소의 인쇄 페이지(학습지·카드·컬러링)를 시험용 명세로 빌드하고 scripts/render-pdf.mjs 로 찍어 본다 (docs/CONTRACT.md 7·10절).
 //  - 가장 긴 글(제목 30자, 부제 40자, 카드 앞 14자·뒤 50자, 보기 30자 …)과 모든 블록 종류를 실은 학습지가 일곱 조건을 통과한다.
 //  - 찍은 PDF 는 printJobs() 의 쪽수와 A4 크기이고, Type 3 글꼴이 없으며, 다시 돌리면 캐시에서 복사만 한다. --only 는 한 묶음만 찍는다.
-//  - 일부러 넘치게 만든 쪽은 차시·인쇄물·쪽을 짚는 한국어 알림과 함께 빌드를 멈춘다.
+//  - 일부러 넘치게 만든 쪽, 마지막 블록이 바닥글에 6mm 보다 가까운 쪽은 차시·인쇄물·쪽을 짚는 한국어 알림과 함께 빌드를 멈춘다.
 // 만든 것은 .cache/tests/print-render-<pid>/ 아래에만 둔다. Chromium 이 없으면 건너뛴다 (16절).
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -133,6 +133,16 @@ test('인쇄 페이지를 찍는다: 가장 긴 글과 모든 블록, 캐시, --
     assert.match(over.out, /1쪽: 본문이 아래로 [\d.]+mm 넘칩니다/);
     assert.match(over.out, /번째 블록\((줄 쓰기 칸|빈 칸)\)부터 자리가 모자랍니다/);
     assert.ok(!fs.existsSync(path.join(out, 'files', '5-2', '1', '04', 'worksheet.pdf')), '고칠 곳이 있는 PDF 는 남기지 않습니다');
+
+    // 바닥글 앞의 틈 (R29): 본문을 넘치지는 않지만 바닥글 글자와 6mm 를 띄우지 못한 쪽도 멈춘다.
+    // 빈 칸 두 개(200 + 6 + 41 = 247mm)가 본문(249mm)의 아래 2mm 앞에서 끝난다.
+    t.edit('5-2/1/04', (l) => { l.worksheet.pages[0] = { blocks: [{ type: 'box', height_mm: 200 }, { type: 'box', height_mm: 41 }] }; });
+    buildSite(out, env);
+    copyMedia(out);
+    const near = renderPdf(env, ['--out', out, '--only', '5-2/1/04']);
+    assert.equal(near.code, 1, near.out);
+    assert.doesNotMatch(near.out, /넘칩니다/);
+    assert.match(near.out, /1쪽: 바닥글 앞의 틈이 [\d.]+mm뿐입니다 \(2번째 블록\(빈 칸\) 아래\)\. 6mm 이상 띄웁니다/);
   } finally {
     for (const k of ['CONTENT_DIR', 'SHOW_DRAFTS']) delete process.env[k];
     t.cleanup();
