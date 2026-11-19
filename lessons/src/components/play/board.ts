@@ -34,6 +34,9 @@ function enableDrag(root: HTMLElement, opts: {
     ghost.classList.add('ghost');
     ghost.setAttribute('aria-hidden', 'true');
     ghost.style.width = `${r.width}px`;
+    // 그림 칸의 크기는 board 에 적혀 있다. body 로 옮긴 복사본도 같은 칸을 갖게 옮겨 적는다.
+    const cs = getComputedStyle(s.el);
+    for (const v of ['--box-w', '--box-h']) { const val = cs.getPropertyValue(v); if (val) ghost.style.setProperty(v, val); }
     s.dx = s.x0 - r.left;
     s.dy = s.y0 - r.top;
     ghost.style.left = `${r.left}px`;

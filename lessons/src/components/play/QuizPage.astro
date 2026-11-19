@@ -113,7 +113,24 @@ const OX = [{ value: 'true', key: 'yes' }, { value: 'false', key: 'no' }] as con
     <section class="quiz-end" data-screen="end" aria-labelledby="quiz-end-title">
       <h2 id="quiz-end-title" class="quiz-screen-title" tabindex="-1">문제를 다 풀었습니다</h2>
       {isScored && <p class="quiz-end-score" data-score></p>}
-      <p class="quiz-end-note">풀이를 다시 읽고 싶으면 처음부터 다시 풀어 봅시다.</p>
+      {/* 틀린 문제만 정답·풀이와 함께 다시 보여 준다. 처음부터 다시 풀지 않아도 풀이를 읽을 수 있게. 모두 맞혔으면 이 칸은 없다. */}
+      <section class="review" data-review aria-labelledby="review-title" hidden>
+        <h3 class="review-title" id="review-title">다시 읽어 볼 문제</h3>
+        <ol class="review-list">
+          {groups.map((g) => g.items.map(({ item }, i) => (
+            <li class="review-item" data-review-for={`${g.lesson}-${i}`} hidden>
+              <p class="review-q"><span class="review-no">{i + 1}번</span> {kp(item.q)}</p>
+              <p class="feedback-answer">
+                <span class="answer-label">정답</span>
+                {item.type === 'ox'
+                  ? <b><span class="answer-mark" aria-hidden="true">{answerText(item)}</span><span class="visually-hidden">{MARK_LABEL[item.answer ? 'yes' : 'no']}</span></b>
+                  : <b>{kp(answerText(item))}</b>}
+              </p>
+              <p class="review-explain">{kp(item.explain)}</p>
+            </li>
+          )))}
+        </ol>
+      </section>
       <div class="quiz-end-actions">
         <button type="button" class="btn btn-primary" data-restart>처음부터 다시 풀기</button>
         {multi && groups.map((g) => <button type="button" class="btn btn-quiet" data-start={g.lesson} data-other>{g.lesson}차시 문제 풀기</button>)}

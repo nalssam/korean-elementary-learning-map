@@ -29,8 +29,34 @@ test('단답 채점: 앞뒤 공백을 떼고 안쪽 공백을 모두 없앤 뒤 
   // 9절이 정한 것 말고는 바꾸지 않는다 (가운데 문장부호, 끝이 아닌 '입니다', 글자 모양)
   assert.ok(!markShort('13.92', '1392'));
   assert.ok(!markShort('유물입니다만', '유물'));
-  assert.ok(!markShort('유물요', '유물'));
   assert.ok(!markShort('ABC', 'abc'));
+});
+
+test('단답 채점: 흔한 끝말(입니다·이에요·예요·이요·요·이야·야·이다)은 떼고 견준다 (R28, 9절)', () => {
+  for (const said of ['유물이에요', '유물이다', '유물예요', '유물이야', '유물요', '유 물 입니다.', '유물이에요!', '유물야', '유물이요?', ' 유물 ']) {
+    assert.ok(markShort(said, '유물'), `'${said}' 는 '유물' 로 맞아야 합니다`);
+    assert.equal(normalizeShort(said), '유물', said);
+  }
+  // 긴 끝말부터 뗀다 ('이에요' 를 '요' 하나로 떼지 않는다)
+  assert.equal(normalizeShort('고인돌이에요'), '고인돌');
+  // 끝말만 쓴 답은 아무것도 아닌 글로 줄이지 않는다. 그래서 맞는 답이 되지 않는다.
+  for (const only of ['입니다', '요', '이에요', '야', '이다.']) {
+    assert.ok(normalizeShort(only).length > 0, only);
+    assert.ok(!markShort(only, '유물'), `'${only}' 가 맞는 답이 되었습니다`);
+  }
+  assert.equal(normalizeShort('입니다'), '입니다');
+  assert.equal(normalizeShort('요'), '요');
+  // 틀린 낱말은 끝말을 떼어도 틀린다
+  for (const wrong of ['유적이에요', '유적입니다', '유적요', '돌이다', '유물들이에요']) assert.ok(!markShort(wrong, '유물'), wrong);
+  // 정답 쪽 끝말은 떼지 않는다: '가야' 의 '야' 는 끝말이 아니다
+  assert.ok(markShort('가야', '가야'));
+  assert.ok(markShort('가야예요', '가야'));
+  assert.ok(markShort('가야요.', '가야'));
+  assert.ok(!markShort('가', '가야'), "'가' 가 '가야' 로 맞았습니다");
+  // 정답이 '이'로 끝나는 낱말이어도 '요'만 떼면 맞는다
+  assert.ok(markShort('거북이요', '거북이'));
+  // accept 에 끝말을 적은 옛 명세도 그대로 맞는다
+  assert.ok(markShort('유물입니다', '유물', ['유물입니다']));
 });
 
 test('섞기: 씨앗이 같으면 늘 같은 차례이고, 모든 번호가 한 번씩 나오며, 처음 차례 그대로 나오지 않는다', () => {
