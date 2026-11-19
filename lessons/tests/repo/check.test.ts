@@ -8,7 +8,7 @@ import path from 'node:path';
 import * as c from '#lib/content.ts';
 import { passRows, tempContent } from '../contract/helpers.ts';
 import { runNode } from './helpers.ts';
-import { BANNED, CLASSROOM, SERVICES, fileNameTitle, svgProblems } from '../../checks/rules.mjs';
+import { BANNED, CLASSROOM, SERVICES, fileNameTitle, straightQuotes, svgProblems } from '../../checks/rules.mjs';
 import { gapSummary } from '../../checks/run.mjs';
 
 const t = tempContent('repo-check');
@@ -243,6 +243,35 @@ test('출처 칸의 회사 이름은 출처 검사가 한 번만 알린다 (서�
   t.reset();
   t.editText(TWO, (s) => s.replace('  title: 시험용 두 차시 학습지', '  title: 비상교육 학습지'));
   assert.match(check().out, /표현 +.*다른 회사의 서비스 이름\("비상교육"\)/);
+});
+
+test('곧은 따옴표: 교사 메모의 한 글에 알림 한 줄, 몇째 줄인지와 고친 꼴을 함께 찍는다', () => {
+  t.reset();
+  // 한 글에 따옴표가 넷이어도 알림은 그 글에 한 줄이다. 출처 칸과 영문 값은 보지 않는다.
+  t.editText(ONE, (s) => s
+    .replace('      - 시험용 메모 한 줄', `      - 아이가 "왜요?"라고 물으면 '본 것'부터 다시 봅니다.`)
+    .replace('url: https://example.org/fact/1', `url: "https://example.org/fact/1?q='a'"`));
+  const lines = fs.readFileSync(t.file(ONE), 'utf8').split('\n');
+  const line = lines.findIndex((l) => l.includes('라고 물으면')) + 1;
+  const r = check();
+  assert.equal(r.code, 0, r.all);
+  const notes = r.out.split('\n').filter((l) => l.includes('따옴표'));
+  assert.deepEqual(notes, [`  알림     표현       ${line}번째 줄 · teacher_notes · 1번째 · body · 1번째: 곧은 따옴표(" ')를 “ ”, ‘ ’ 로 바꿉니다: 아이가 “왜요?”라고 물으면 ‘본 것’부터 다시 봅니다.`]);
+  // 고치면 알림이 사라진다
+  t.editText(ONE, (s) => s.replace(`"왜요?"라고 물으면 '본 것'`, '“왜요?”라고 물으면 ‘본 것’'));
+  assert.doesNotMatch(check().out, /따옴표/);
+});
+
+test('straightQuotes: 한국어 글의 곧은 따옴표만 잡고, 주소·코드·영어 줄임표·숫자 표시·영문 값은 뺀다', () => {
+  assert.equal(straightQuotes('id-with-no-hangul "x"'), undefined);
+  assert.equal(straightQuotes("주소는 https://example.org/?a='b' 입니다"), undefined);
+  assert.equal(straightQuotes('칸 이름 `answer: "true"` 는 그대로 둡니다'), undefined);
+  assert.equal(straightQuotes("영어로는 don't 라고 합니다"), undefined);
+  assert.equal(straightQuotes(`높이는 5' 3" 입니다`), undefined);
+  assert.equal(straightQuotes('‘이미 굽은 따옴표’는 그대로입니다'), undefined);
+  assert.equal(straightQuotes("'본 것'과 '짐작한 것'")?.fixed, '‘본 것’과 ‘짐작한 것’');
+  assert.equal(straightQuotes('(“앞”) 그리고 ("뒤")')?.fixed, '(“앞”) 그리고 (“뒤”)');
+  assert.deepEqual(straightQuotes('그가 "네"라고 했다')?.marks, ['"']);
 });
 
 test('쓰는 법을 틀리면 쓰는 법을 찍고 2 로 끝난다', () => {

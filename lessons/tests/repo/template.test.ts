@@ -8,7 +8,7 @@ import type { Node } from 'yaml';
 import * as c from '#lib/content.ts';
 import { factIssues } from '#lib/checks.ts';
 import { OPTIONAL_ASSET_KINDS } from '#schema/lesson.ts';
-import { BANNED, SERVICES } from '../../checks/rules.mjs';
+import { BANNED, SERVICES, straightQuotes } from '../../checks/rules.mjs';
 import { tempContent } from '../contract/helpers.ts';
 import { runNode } from './helpers.ts';
 
@@ -21,7 +21,11 @@ test('본보기는 형식에 맞고, 사실 대조와 금지 표현 검사도 �
   for (const s of [...c.childStrings(lesson), ...c.teacherStrings(lesson)]) {
     for (const b of BANNED) assert.ok(!b.re.test(s.text), `${s.path}: ${s.text}`);
     assert.ok(!SERVICES.test(s.text), s.path);
+    // 본보기를 베껴 쓰는 글이 곧은 따옴표 알림을 물려받지 않게 한다 (15절)
+    assert.equal(straightQuotes(s.text), undefined, `${s.path}: ${s.text}`);
   }
+  // 맞고 틀림의 표시는 사이트가 ○·× 로 찍는다. 아이가 읽는 글에 라틴 글자 O·X 를 적어 두면 그대로 베껴 쓴다 (15절)
+  for (const s of c.childStrings(lesson)) assert.doesNotMatch(s.text, /(^|[^A-Za-z])[OX]([^A-Za-z]|$)|[○×]/, `${s.path}: ${s.text}`);
   // 새 차시는 초안으로 시작하고, 기록 칸은 비어 있다 (손으로 적지 않는다)
   assert.equal(lesson.status, 'draft');
   assert.deepEqual(lesson.reviews, []);
@@ -32,7 +36,7 @@ test('본보기에는 수업 화면의 장 꼴과 학습지 블록, 퀴즈 꼴, 
   const lesson = c.parseLessonText(TEXT, FILE);
   assert.deepEqual(new Set(lesson.slides.map((s) => s.layout)), new Set(['title', 'question', 'picture', 'points', 'compare', 'steps', 'term', 'passage', 'activity', 'quiz', 'closing']));
   const blocks = new Set(lesson.worksheet.pages.flatMap((p) => p.blocks.flatMap((b) => (b.type === 'columns' ? ['columns', ...b.columns.flat().map((x) => x.type)] : [b.type]))));
-  assert.deepEqual(blocks, new Set(['prompt', 'note', 'passage', 'lines', 'box', 'figure', 'observe_infer', 'table', 'match', 'quiz', 'sentence_frame', 'timeline', 'columns']));
+  assert.deepEqual(blocks, new Set(['prompt', 'note', 'passage', 'lines', 'box', 'figure', 'observe_infer', 'table', 'match', 'quiz', 'sentence_frame', 'timeline', 'columns', 'example']));
   assert.deepEqual(new Set(lesson.quiz.items.map((q) => q.type)), new Set(['ox', 'choice', 'short']));
   assert.deepEqual(Object.keys(lesson.assets).sort(), [...OPTIONAL_ASSET_KINDS].sort());
   for (const state of ['skip', 'planned', 'ready']) assert.ok(OPTIONAL_ASSET_KINDS.some((k) => lesson.assets[k].state === state), state);

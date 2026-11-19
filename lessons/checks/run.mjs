@@ -17,7 +17,7 @@ import { Lesson } from '#schema/lesson.ts';
 import { UsageError, gitRoot, parseArgs, rel } from './lib.mjs';
 import { REVIEW_LABEL } from '#lib/site.ts';
 import { REVIEW_KINDS } from '#schema/lesson.ts';
-import { BANNED, CLASSROOM, EMOJI, PAIN_WORDS, SERVICES, fileNameTitle, isPlayPath, parseAllow, svgProblems } from './rules.mjs';
+import { BANNED, CLASSROOM, EMOJI, PAIN_WORDS, SERVICES, fileNameTitle, isPlayPath, parseAllow, straightQuotes, svgProblems } from './rules.mjs';
 
 const USAGE = `쓰는 법: npm run check [-- --push] [-- --base <기준 가지>]
   --push   베끼기 검사 기록이 없거나 낡았으면 실패로 칩니다 (기본 가지의 CI 와 날쌤의 컴퓨터에서만 붙입니다)
@@ -70,6 +70,13 @@ function locator(id) {
 
 /** 글의 경로("slides[3].title")를 같은 꼴로 */
 const at = (loc, p, text) => loc(`${p}: ${text}`);
+
+/** 긴 글은 고칠 자리 둘레만 보여 준다 (한 줄 알림이 터미널 한 줄을 넘지 않게) */
+function excerpt(text, i, width = 36) {
+  if (text.length <= width) return text;
+  const from = Math.max(0, Math.min(i - 8, text.length - width));
+  return `${from > 0 ? '…' : ''}${text.slice(from, from + width)}${from + width < text.length ? '…' : ''}`;
+}
 
 /** 남의 자료 이름을 밝히는 출처 칸인가: 사실의 출처, 그림의 credit, 읽기 자료와 짧은 글의 source */
 const isSourcePath = (p) => /^facts\[\d+\]\.sources\[|\.credit\.|(^|\.)source$/.test(p);
@@ -128,6 +135,12 @@ function checkWords({ lesson, sec, loc }) {
     const svc = !isSourcePath(s.path) && SERVICES.exec(s.text);
     if (svc) sec.fail('표현', at(loc, s.path, `다른 회사의 서비스 이름("${svc[0]}")을 쓰지 않습니다. 무엇을 하는지로 바꿔 씁니다`));
     if (EMOJI.test(s.text)) sec.note('표현', at(loc, s.path, '이모지를 쓰지 않습니다 (14절)'));
+    // 곧은 따옴표는 알림이다. 출처 칸은 남의 자료 제목을 그대로 옮겨 적는 자리라 뺀다 (근거 구절 quote 는 글 뽑기에 들지 않는다).
+    const q = !isSourcePath(s.path) && straightQuotes(s.text);
+    if (q) {
+      const curly = q.marks.map((m) => (m === '"' ? '“ ”' : '‘ ’')).join(', ');
+      sec.note('표현', at(loc, s.path, `곧은 따옴표(${q.marks.join(' ')})를 ${curly} 로 바꿉니다: ${excerpt(q.fixed, q.at)}`));
+    }
   }
   // 교실에서 해 본 듯한 말은 교사가 읽는 글에서만 본다. 사실의 문장과 출처는 출처가 뒷받침하므로 뺀다.
   for (const s of c.teacherStrings(lesson)) {
