@@ -80,7 +80,7 @@ class QuizRunner extends HTMLElement {
     if (q.dataset.done) return;
     const input = q.querySelector<HTMLInputElement>('.short-input')!;
     if (!input.value.trim()) {
-      q.querySelector('[data-hint]')!.textContent = '답을 써 넣은 뒤에 확인해 봅시다.';
+      q.querySelector('[data-hint]')!.textContent = '답을 써넣은 뒤에 확인해 봅시다.';
       input.focus();
       return;
     }
@@ -120,7 +120,7 @@ class QuizRunner extends HTMLElement {
     const fb = q.querySelector<HTMLElement>('[data-feedback]')!;
     fb.classList.toggle('is-right', ok);
     fb.classList.toggle('is-wrong', !ok);
-    fb.querySelector('[data-verdict]')!.textContent = ok ? '맞았습니다.' : '다시 살펴봅시다.';
+    fb.querySelector('[data-verdict]')!.textContent = ok ? '맞았습니다.' : '정답과 풀이를 읽어 봅시다.';
     fb.querySelector<HTMLElement>('[data-correct]')!.hidden = ok;
     fb.hidden = false;
     // 풀이의 머리로 초점을 옮겨 화면 읽기가 결과를 바로 읽게 하고, 풀이와 '다음 문제'가 보이게 한다

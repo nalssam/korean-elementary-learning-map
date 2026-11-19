@@ -56,7 +56,7 @@ const words = WORDS[act.kind];
           <h2 class="tray-title" id="tray-title">{words.tray}</h2>
           <button type="button" class="tray-back" data-target="tray" data-back hidden>여기로 돌려놓기</button>
         </div>
-        <ul class="drop tray-drop" data-drop="tray">
+        <ul class="drop tray-drop" data-drop="tray" data-said="처음 자리로 돌려놓았습니다">
           {chips.map((c) => (
             <li class:list={['chip', { 'chip-media': c.media }]} data-item={String(c.key)} data-answer={c.answer}>
               {c.media && <Media lesson={lesson} id={c.media} caption={false} class="chip-picture" />}
@@ -74,7 +74,7 @@ const words = WORDS[act.kind];
           {act.bins.map((b) => (
             <section class="bin" data-target={b.id} aria-label={`${b.label} 상자`}>
               <h2 class="bin-title"><button type="button" class="bin-btn" data-target={b.id}>{b.label}<span class="visually-hidden"> 상자에 넣기</span></button></h2>
-              <ul class="drop bin-drop" data-drop={b.id}></ul>
+              <ul class="drop bin-drop" data-drop={b.id} data-said={`${b.label} 상자에 넣었습니다`}></ul>
             </section>
           ))}
         </div>
@@ -86,7 +86,7 @@ const words = WORDS[act.kind];
             <li class="pair">
               <p class="pair-left" id={`pair-${k}`}>{p.left}</p>
               <div class="slot" data-target={String(k)}>
-                <ul class="drop slot-drop" data-drop={String(k)}></ul>
+                <ul class="drop slot-drop" data-drop={String(k)} data-said={`‘${p.left}’ 옆 빈칸에 놓았습니다`}></ul>
                 <button type="button" class="slot-empty" data-target={String(k)} aria-describedby={`pair-${k}`}>빈칸<span class="visually-hidden">에 놓기</span></button>
               </div>
             </li>
@@ -100,7 +100,7 @@ const words = WORDS[act.kind];
             <li class="spot">
               <span class="spot-no" aria-hidden="true">{k + 1}</span>
               <div class="slot" data-target={String(k)}>
-                <ul class="drop slot-drop" data-drop={String(k)}></ul>
+                <ul class="drop slot-drop" data-drop={String(k)} data-said={`${k + 1}번 자리에 놓았습니다`}></ul>
                 <button type="button" class="slot-empty" data-target={String(k)}>빈칸<span class="visually-hidden">: {k + 1}번 자리에 놓기</span></button>
               </div>
             </li>

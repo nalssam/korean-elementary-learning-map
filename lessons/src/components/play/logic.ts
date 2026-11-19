@@ -1,9 +1,16 @@
 // 학생 페이지(확인 퀴즈·웹 활동)가 빌드할 때와 브라우저에서 함께 쓰는 작은 셈.
 // 파일을 읽지 않으므로 브라우저 스크립트도 가져다 쓸 수 있다. 시험(tests/play/)도 이 파일을 바로 부른다.
 
-/** 단답 채점용으로 글을 고른다: 앞뒤 공백을 떼고 안쪽 공백을 모두 없앤다 (docs/CONTRACT.md 9절). 그 밖의 것은 바꾸지 않는다. */
+/**
+ * 단답 채점용으로 글을 고른다 (docs/CONTRACT.md 9절). 앞뒤 공백을 떼고 안쪽 공백을 모두 없앤다.
+ * 끝에 붙은 . ! ? 를 떼고, 답 뒤에 붙은 '이요'·'입니다'도 뗀다 ('유물입니다.' 와 '유물' 은 같은 답).
+ * 떼고 나면 아무것도 남지 않을 때는 떼지 않는다. 그 밖의 것(글자 모양, 가운데 문장부호)은 바꾸지 않는다.
+ */
 export function normalizeShort(s: string): string {
-  return s.trim().replace(/\s+/g, '');
+  const cut = (t: string, re: RegExp) => { const r = t.replace(re, ''); return r ? r : t; };
+  let t = cut(s.replace(/\s+/g, ''), /[.!?]+$/);
+  t = cut(t, /(?:이요|입니다)$/);
+  return t;
 }
 
 /** 단답이 맞았는가. answer 와 accept 도 같은 규칙으로 고른 뒤 견준다. 빈 답은 늘 틀린다. */

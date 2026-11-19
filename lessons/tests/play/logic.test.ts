@@ -13,8 +13,24 @@ test('단답 채점: 앞뒤 공백을 떼고 안쪽 공백을 모두 없앤 뒤 
   assert.ok(!markShort('1393', '1392', ['1392년']));
   assert.ok(!markShort('   ', '1392'), '빈 답은 맞지 않는다');
   assert.ok(!markShort('', '', []), '빈 답은 정답이 비어 있어도 맞지 않는다');
-  // 9절이 정한 것 말고는 바꾸지 않는다 (문장부호, 글자 모양)
-  assert.ok(!markShort('1392.', '1392'));
+  // 끝에 붙은 . ! ? 와 답 뒤의 '이요'·'입니다'는 떼고 견준다 (9절)
+  assert.equal(normalizeShort('유물입니다.'), normalizeShort('유물'));
+  assert.equal(normalizeShort('유물.'), '유물');
+  assert.equal(normalizeShort('유물이요!'), '유물');
+  assert.equal(normalizeShort('유물 입니다 ?'), '유물');
+  assert.equal(normalizeShort('1392년?!'), '1392년');
+  assert.ok(markShort('유물.', '유물'));
+  assert.ok(markShort('고인돌이요', '고인돌'));
+  assert.ok(markShort('1392 입니다.', '1392'));
+  // 떼고 나면 빈 글이 되는 것은 그대로 둔다
+  assert.equal(normalizeShort('입니다'), '입니다');
+  assert.equal(normalizeShort('?'), '?');
+  assert.ok(!markShort('.', '', []), '문장부호만 쓴 답은 맞지 않는다');
+  // 9절이 정한 것 말고는 바꾸지 않는다 (가운데 문장부호, 끝이 아닌 '입니다', 글자 모양)
+  assert.ok(!markShort('13.92', '1392'));
+  assert.ok(!markShort('유물입니다만', '유물'));
+  assert.ok(!markShort('유물요', '유물'));
+  assert.ok(!markShort('ABC', 'abc'));
 });
 
 test('섞기: 씨앗이 같으면 늘 같은 차례이고, 모든 번호가 한 번씩 나오며, 처음 차례 그대로 나오지 않는다', () => {

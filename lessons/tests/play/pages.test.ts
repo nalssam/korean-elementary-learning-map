@@ -143,6 +143,15 @@ test('웹 활동: 네 가지가 모두 그려지고, 카드는 묶음 id 로 정
   assert.equal(fs.readFileSync(path.join(again, ORDER, 'play', 'index.html'), 'utf8').match(/<ol class="order-list"[\s\S]*?<\/ol>/)![0], order.match(/<ol class="order-list"[\s\S]*?<\/ol>/)![0]);
 });
 
+test('학생 화면 문구: 띄어 쓰지 않는 말, 다시 풀 수 없는 퀴즈에 \'다시 살펴봅시다\'를 쓰지 않는다', () => {
+  const dir = path.join(c.ROOT, 'src', 'components', 'play');
+  for (const f of fs.readdirSync(dir)) {
+    const src = fs.readFileSync(path.join(dir, f), 'utf8');
+    assert.ok(!src.includes('써 넣'), `${f}: '써넣다' 는 한 낱말입니다`);
+    assert.ok(!src.includes('다시 살펴봅시다'), `${f}: 퀴즈는 한 문항에 한 번 답하므로 다시 살펴볼 수 없습니다`);
+  }
+});
+
 // ─────────────── Chromium 으로 눌러 보기 ───────────────
 
 async function serve(dir: string): Promise<{ origin: string; close: () => void }> {
@@ -205,7 +214,8 @@ test('아이처럼 눌러 보기: 퀴즈·웹 활동 네 가지 (터치, 마우�
       assert.equal(await page.locator('.q').filter({ visible: true }).count(), 1, '한 번에 한 문제');
       await page.locator(`${current} .ox-btn[data-value="false"]`).tap();
       const fb = page.locator(`${current} [data-feedback]`);
-      assert.equal(await fb.locator('[data-verdict]').textContent(), '다시 살펴봅시다.');
+      // 다시 풀 수 없으므로 '다시 살펴봅시다' 가 아니라 정답과 풀이를 읽게 한다 (한 문항에 한 번)
+      assert.equal(await fb.locator('[data-verdict]').textContent(), '정답과 풀이를 읽어 봅시다.');
       assert.ok(await fb.locator('[data-correct]').isVisible());
       assert.equal(await page.locator(`${current} .ox-btn[data-value="true"] [data-tag]`).textContent(), '정답');
       assert.equal(await page.locator(`${current} .ox-btn[data-value="false"] [data-tag]`).textContent(), '고른 답');
@@ -219,7 +229,7 @@ test('아이처럼 눌러 보기: 퀴즈·웹 활동 네 가지 (터치, 마우�
       await page.locator(`${current} [data-next]`).tap();
       // 빈 답은 채점하지 않고 알려 준다
       await page.locator(`${current} .short-submit`).tap();
-      assert.match(await page.locator(`${current} [data-hint]`).textContent() ?? '', /답을 써 넣은 뒤에/);
+      assert.match(await page.locator(`${current} [data-hint]`).textContent() ?? '', /^답을 써넣은 뒤에 확인해 봅시다\.$/);
       assert.ok(!(await page.locator(`${current} [data-feedback]`).isVisible()));
       await page.locator(`${current} .short-input`).fill(' 13 92 ');
       await page.keyboard.press('Enter');
@@ -239,7 +249,7 @@ test('아이처럼 눌러 보기: 퀴즈·웹 활동 네 가지 (터치, 마우�
       assert.match(await page.locator(`${current} .q-count`).textContent() ?? '', /3차시/);
       await page.locator(`${current} .short-input`).fill('1392');
       await page.keyboard.press('Enter');
-      assert.equal(await page.locator(`${current} [data-verdict]`).textContent(), '다시 살펴봅시다.');
+      assert.equal(await page.locator(`${current} [data-verdict]`).textContent(), '정답과 풀이를 읽어 봅시다.');
       assert.match(await page.locator(`${current} [data-correct]`).textContent() ?? '', /1446/);
       await page.locator(`${current} [data-next]`).click();
       await page.locator(`${current} .ox-btn[data-value="false"]`).click();
@@ -270,14 +280,22 @@ test('아이처럼 눌러 보기: 퀴즈·웹 활동 네 가지 (터치, 마우�
     await t.test('분류하기를 키보드만으로: 카드 고르기 → 상자 고르기, 확인, 틀린 카드는 돌아오고 맞은 카드에 까닭', async () => {
       const { page, done } = await open(`/${SCORED}/play/`, { width: 1280 });
       const board = page.locator('play-board');
+      const status = board.locator('[data-status]');
       // 일부러 모두 '돌' 상자에 넣는다
       for (let n = 0; n < 4; n++) {
         await tabTo(page, '.tray .chip-btn');
         assert.ok(await focusVisible(page), '초점 표시가 보이지 않습니다');
+        const text = (await page.evaluate(() => document.activeElement!.textContent ?? '')).trim();
         await page.keyboard.press('Enter');
         assert.ok(await board.locator('[data-pickbar]').isVisible());
+        // 고른 일도 결과 줄(role=status)로 읽힌다. 눈에는 안내 줄에만 보인다 (같은 글이 두 번 보이지 않게)
+        assert.equal(await status.textContent(), `‘${text}’ 카드를 골랐습니다. 넣을 상자를 눌러 봅시다.`);
+        assert.ok((await status.boundingBox())!.width <= 1, '고르는 동안 결과 줄이 눈에 보입니다');
         await tabTo(page, '.bin-btn[data-target="stone"]');
         await page.keyboard.press('Enter');
+        // 놓은 일을 화면 읽기가 듣는다 (말없이 놓이지 않는다)
+        assert.equal(await status.textContent(), `‘${text}’ 카드를 돌 상자에 넣었습니다.`);
+        assert.ok(await status.isVisible());
       }
       await tabTo(page, '[data-check]');
       await page.keyboard.press('Enter');
@@ -289,6 +307,12 @@ test('아이처럼 눌러 보기: 퀴즈·웹 활동 네 가지 (터치, 마우�
       await page.keyboard.press('Enter');
       await page.keyboard.press('Escape');
       assert.ok(!(await board.locator('[data-pickbar]').isVisible()));
+      assert.equal(await status.textContent(), '고르기를 취소했습니다.');
+      // '고르기 취소' 단추로 풀면 '골랐습니다' 안내가 결과 줄에 남지 않는다
+      await tabTo(page, '.tray .chip-btn');
+      await page.keyboard.press('Enter');
+      await board.locator('[data-cancel]').click();
+      assert.equal(await status.textContent(), '');
       for (let n = 0; n < 2; n++) {
         await tabTo(page, '.tray .chip-btn');
         await page.keyboard.press('Enter');
@@ -316,9 +340,16 @@ test('아이처럼 눌러 보기: 퀴즈·웹 활동 네 가지 (터치, 마우�
       // 일부러 거꾸로 놓는다
       await page.locator('.chip', { hasText: '시작하는 곳' }).locator('.chip-btn').tap();
       await page.locator('.marker[data-target="1"]').tap();
+      assert.equal(await page.locator('[data-status]').textContent(), '‘시작하는 곳’ 이름표를 2번 자리에 놓았습니다.');
       await page.locator('.chip', { hasText: '끝나는 곳' }).locator('.chip-btn').tap();
       await page.locator('.marker[data-target="0"]').tap();
       assert.equal(await page.locator('.marker[data-target="0"]').getAttribute('aria-label'), '1번 자리: 끝나는 곳');
+      // 빈 자리의 점선은 --gray (바탕과 견줄 만큼 진하게)
+      const gray = await page.evaluate(() => { const d = document.createElement('div'); d.style.color = 'var(--gray)'; document.body.append(d); const c = getComputedStyle(d).color; d.remove(); return c; });
+      for (const sel of ['.slot-empty', '.tray']) {
+        const s = await page.locator(sel).first().evaluate((e) => { const c = getComputedStyle(e); return [c.borderTopStyle, c.borderTopColor]; });
+        assert.deepEqual(s, ['dashed', gray], `${sel} 의 점선`);
+      }
       await page.locator('[data-check]').tap();
       const status = await page.locator('[data-status]').textContent() ?? '';
       assert.ok(!/가운데/.test(status), `점수를 보여 주지 않는 차시에 점수가 있습니다: ${status}`);
@@ -350,7 +381,9 @@ test('아이처럼 눌러 보기: 퀴즈·웹 활동 네 가지 (터치, 마우�
       assert.equal(await page.locator('[data-drop="0"] .chip').textContent().then((s) => s?.trim()), '둘째로 지킬 것');
       // 끌어 놓은 뒤에 고른 상태가 남지 않는다
       assert.ok(!(await page.locator('[data-pickbar]').isVisible()));
+      assert.equal(await page.locator('[data-status]').textContent(), '‘둘째로 지킬 것’ 카드를 ‘규칙 하나’ 옆 빈칸에 놓았습니다.');
       await drag('첫째로 지킬 것', '.slot[data-target="0"]');
+      assert.equal(await page.locator('[data-status]').textContent(), '‘첫째로 지킬 것’ 카드를 ‘규칙 하나’ 옆 빈칸에 놓았습니다. 있던 ‘둘째로 지킬 것’ 카드는 처음 자리로 돌아갔습니다.');
       assert.equal(await page.locator('[data-drop="0"] .chip').count(), 1);
       assert.equal(await page.locator('.tray .chip', { hasText: '둘째로 지킬 것' }).count(), 1, '밀려난 카드는 처음 자리로 돌아간다');
       await drag('둘째로 지킬 것', '.slot[data-target="1"]');
@@ -375,6 +408,27 @@ test('아이처럼 눌러 보기: 퀴즈·웹 활동 네 가지 (터치, 마우�
       await page.keyboard.press('Enter');
       assert.equal(await page.locator('[data-status]').textContent(), '모두 알맞은 차례로 놓았습니다.');
       assert.equal(await page.locator('.row.is-ok').count(), 12);
+      await done();
+    });
+
+    await t.test('휴대폰(390x844)에서 그림 카드는 낮게, 첫 상자는 마지막 카드에서 한 화면 안에', async () => {
+      const { page, done } = await open(`/${SCORED}/play/`, { touch: true });
+      // 시험용 명세의 카드에는 그림이 없으므로 키 큰 그림 카드를 하나 끼워 넣어 잰다
+      await page.evaluate(() => {
+        const li = document.createElement('li');
+        li.className = 'chip chip-media';
+        li.innerHTML = '<figure class="media chip-picture"><img alt="" width="300" height="600" src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22600%22/%3E"></figure><button type="button" class="chip-btn">그림 카드</button>';
+        document.querySelector('.tray-drop')!.append(li);
+      });
+      const m = await page.evaluate(() => {
+        const img = document.querySelector('.chip-picture img')!.getBoundingClientRect();
+        const chips = [...document.querySelectorAll('.tray .chip')];
+        const last = chips[chips.length - 1].getBoundingClientRect();
+        const bin = document.querySelector('.bin')!.getBoundingClientRect();
+        return { img: img.height, gap: bin.top - last.bottom };
+      });
+      assert.ok(m.img <= 64.5, `휴대폰에서 그림 카드의 그림이 ${m.img}px 로 높습니다 (64px 까지)`);
+      assert.ok(m.gap >= 0 && m.gap < 844, `마지막 카드와 첫 상자 사이가 ${m.gap}px 입니다`);
       await done();
     });
 
