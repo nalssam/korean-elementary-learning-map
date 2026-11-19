@@ -7,6 +7,8 @@ class QuizRunner extends HTMLElement {
   private group = 0;
   private index = 0;
   private right = 0;
+  /** 이번에 틀린 문제의 차례(0부터). 끝 화면에 정답·풀이를 다시 보여 줄 때만 쓰고 어디에도 남기지 않는다. */
+  private missed: number[] = [];
 
   connectedCallback() {
     this.addEventListener('click', (e) => this.onClick(e));
@@ -41,6 +43,7 @@ class QuizRunner extends HTMLElement {
     this.group = group;
     this.index = 0;
     this.right = 0;
+    this.missed = [];
     for (const q of this.questions()) this.reset(q);
     this.show(this.questions()[0], focus);
   }
@@ -117,6 +120,7 @@ class QuizRunner extends HTMLElement {
   private finish(q: HTMLElement, ok: boolean) {
     q.dataset.done = '1';
     if (ok) this.right++;
+    else this.missed.push(Number(q.dataset.index));
     const fb = q.querySelector<HTMLElement>('[data-feedback]')!;
     fb.classList.toggle('is-right', ok);
     fb.classList.toggle('is-wrong', !ok);
@@ -135,7 +139,15 @@ class QuizRunner extends HTMLElement {
     if (this.index < qs.length) return this.show(qs[this.index]);
     const end = this.querySelector<HTMLElement>('[data-screen="end"]')!;
     const score = end.querySelector('[data-score]');
-    if (score) score.textContent = `${qs.length}문제 가운데 ${this.right}문제를 맞혔습니다.`;
+    // 하나도 맞히지 못했을 때 '0문제를 맞혔습니다'는 기를 꺾는다. 맞힌 것이 없다는 것과 다음에 할 일만 말한다.
+    if (score) {
+      score.textContent = this.right === qs.length ? `${qs.length}문제를 모두 맞혔습니다.`
+        : this.right === 0 ? '아직 맞힌 문제가 없습니다. 아래 풀이를 읽고 다시 풀어 봅시다.'
+        : `${qs.length}문제 가운데 ${this.right}문제를 맞혔습니다.`;
+    }
+    // 틀린 문제의 정답과 풀이 (지금 푼 차시의 것만)
+    for (const li of end.querySelectorAll<HTMLElement>('[data-review-for]')) li.hidden = !this.missed.includes(Number(li.dataset.reviewFor!.split('-')[1])) || li.dataset.reviewFor!.split('-')[0] !== String(this.group);
+    end.querySelector<HTMLElement>('[data-review]')!.hidden = this.missed.length === 0;
     // 다른 차시 문제로 가는 단추는 지금 푼 차시의 것만 숨긴다
     for (const b of end.querySelectorAll<HTMLElement>('[data-other]')) b.hidden = Number(b.dataset.start) === this.group;
     this.show(end);

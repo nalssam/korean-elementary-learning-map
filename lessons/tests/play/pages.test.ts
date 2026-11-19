@@ -34,6 +34,9 @@ const PICS = [
 const PIC_LICENCE = 'https://creativecommons.org/licenses/by-sa/4.0/';
 const QUOTED_Q = '돌탑을 보고 한 말 가운데 ‘눈으로 본 것’은 무엇인가요? ‘돌’과 ‘물’ 가운데 알맞은 것을 골라 봅시다.';
 const QUOTED_WHY = '‘작은 돌’은 자갈이라고 부릅니다.';
+const LONG_LABEL = '산기슭에 커다랗게 드러난 바위';
+// 가운데점으로 이은 낱말: 점이 줄 끝이나 줄 첫머리에 홀로 남지 않아야 한다 (keepParticle, 15절)
+const DOT_EXPLAIN = '그릇·도구 같은 물건은 유물, 무덤·집터처럼 자리에 남은 자취는 유적입니다. 1392년에 조선이 섰습니다.';
 
 /** 시험용 명세 복사본을 이 시험에 맞게 고친다. tmp.reset() 뒤에도 다시 부른다. */
 function prepare() {
@@ -51,6 +54,9 @@ function prepare() {
     const items = raw.assets.web_activity.activity.items;
     for (const p of PICS) items.find((it: { text: string }) => it.text === p.item).media = p.id;
     items.find((it: { text: string }) => it.text === '자갈').why = QUOTED_WHY;
+    // 그림 카드의 이름을 길게: 좁은 휴대폰에서 낱말 가운데가 갈리지 않는지 본다 (T3-play-01)
+    items.find((it: { text: string }) => it.text === '바위').text = LONG_LABEL;
+    raw.quiz.items[2].explain = DOT_EXPLAIN;
     raw.quiz.items[1].q = QUOTED_Q;
     raw.quiz.items[1].explain = '‘눈으로 본 것’은 손가락으로 가리킬 수 있습니다.';
   });
@@ -161,7 +167,7 @@ test('확인 퀴즈: 점수는 scored(lesson) 인 차시에만, 두 차시 묶�
 test('웹 활동: 네 가지가 모두 그려지고, 카드는 묶음 id 로 정한 차례로 섞인다', () => {
   const sort = html(`${SCORED}/play`);
   assert.deepEqual([attrs(sort, 'play-board')['data-kind'], attrs(sort, 'play-board')['data-scored']], ['sort', 'true']);
-  assert.ok(sort.includes('<p class="chip-why" data-why hidden>큰 돌입니다.</p>'), 'why 는 맞게 놓은 뒤에 보인다');
+  assert.ok(sort.includes('<span class="chip-why" data-why hidden>큰 돌입니다.</span>'), 'why 는 맞게 놓은 뒤에 보인다');
   assert.equal([...sort.matchAll(/class="bin"/g)].length, 2);
   const place = html(`${CARE}/play`);
   assert.deepEqual([attrs(place, 'play-board')['data-kind'], attrs(place, 'play-board')['data-scored']], ['place', 'false']);
@@ -172,7 +178,7 @@ test('웹 활동: 네 가지가 모두 그려지고, 카드는 묶음 id 로 정
   // 카드 그림: 출처는 카드마다 찍지 않고 아래에 한 줄로 모인다 (같은 출처 두 장 → '2장')
   assert.ok(sort.includes(`<li>사진 2장: 시험용 사진가, CC BY-SA 4.0 <a href="${PIC_LICENCE}"`), '카드 그림의 출처 목록');
   assert.equal(sort.match(/시험용 사진가/g)!.length, 1, '출처는 목록 한 줄에만 있어야 합니다 (카드에는 Media.astro 의 credit={false})');
-  assert.ok(sort.includes(`<p class="chip-why" data-why hidden>${keepParticle(QUOTED_WHY)}</p>`) && keepParticle(QUOTED_WHY) !== QUOTED_WHY, '카드의 까닭도 keepParticle() 을 거친다');
+  assert.ok(sort.includes(`<span class="chip-why" data-why hidden>${keepParticle(QUOTED_WHY)}</span>`) && keepParticle(QUOTED_WHY) !== QUOTED_WHY, '카드의 까닭도 keepParticle() 을 거친다');
   const match = html(`${NOPLAY}/play`);
   assert.deepEqual([attrs(match, 'play-board')['data-kind'], attrs(match, 'play-board')['data-scored']], ['match', 'false']);
   for (const p of MATCH) assert.ok(match.includes(`>${p.left}</p>`) && match.includes(`>${p.right}</button>`));
@@ -282,6 +288,13 @@ test('아이처럼 눌러 보기: 퀴즈·웹 활동 네 가지 (터치, 마우�
       assert.equal(await page.locator(`${current} [data-verdict]`).textContent(), '맞았습니다.');
       await page.locator(`${current} [data-next]`).tap();
       assert.equal(await page.locator('[data-score]').textContent(), '3문제 가운데 2문제를 맞혔습니다.');
+      // 끝 화면에 틀린 문제만 정답·풀이와 함께 다시 나온다 (처음부터 다시 풀지 않아도 읽을 수 있게)
+      const review = page.locator('[data-review]');
+      assert.ok(await review.isVisible());
+      assert.deepEqual(await review.locator('.review-item').filter({ visible: true }).evaluateAll((els) => els.map((e) => e.getAttribute('data-review-for'))), ['1-0']);
+      assert.ok((await review.locator('.review-item').filter({ visible: true }).innerText()).includes('돌을 쌓아 올려 만듭니다.'));
+      // 끝 화면에서 '다시 풀기' 단추는 다시 읽어 볼 문제 아래에 있다
+      assert.ok((await review.boundingBox())!.y < (await page.locator('[data-restart]').boundingBox())!.y);
       // 다시 풀면 처음부터
       await page.locator('[data-restart]').tap();
       assert.ok(await page.locator('.q[data-index="0"]').isVisible());
@@ -524,7 +537,7 @@ test('아이처럼 눌러 보기: 퀴즈·웹 활동 네 가지 (터치, 마우�
         const { page, done } = await open(`/${SCORED}/play/`, { touch: width < 600, width });
         const pics = await page.locator('.chip-picture img').evaluateAll((els) => els.map((e) => e.getBoundingClientRect()).map((r) => ({ w: r.width, h: r.height })));
         assert.equal(pics.length, PICS.length);
-        const min = width < 600 ? 96 : 120;
+        const min = 96;
         for (const p of pics) assert.ok(Math.min(p.w, p.h) >= min, `${width}px: 카드 그림의 짧은 변이 ${Math.min(p.w, p.h)}px 입니다 (${min}px 이상)`);
         // 그림은 찌그러지지 않는다 (키 큰 그림은 1:2, 넓은 그림은 3:1 그대로)
         assert.deepEqual(pics.map((p) => Math.round((p.w / p.h) * 100) / 100).sort(), [0.5, 3]);
@@ -589,6 +602,143 @@ test('아이처럼 눌러 보기: 퀴즈·웹 활동 네 가지 (터치, 마우�
       const answer = page.locator('.q.is-current [data-correct]');
       assert.equal((await answer.locator('.answer-mark').textContent())!.trim(), MARK.yes);
       assert.match(await answer.evaluate((e) => e.textContent ?? ''), new RegExp(MARK_LABEL.yes));
+      await done();
+    });
+
+    await t.test('퀴즈 끝 화면: 하나도 못 맞히면 기를 꺾지 않는 말과 틀린 문제의 정답·풀이, 모두 맞히면 그 목록이 없다 (T3-play-06)', async () => {
+      const { page, done } = await open(`/${SCORED}/quiz/`, { width: 360 });
+      const answerAll = async (right: boolean) => {
+        for (let k = 0; k < 3; k++) {
+          const q = page.locator(current);
+          const type = await q.getAttribute('data-type');
+          const ans = (await q.getAttribute('data-answer'))!;
+          if (type === 'short') { await q.locator('.short-input').fill(right ? '1392 이에요.' : '1393년'); await q.locator('.short-submit').click(); }
+          else await q.locator(right ? `.ans[data-value="${ans}"]` : `.ans:not([data-value="${ans}"])`).first().click();
+          assert.equal(await q.locator('[data-verdict]').textContent(), right ? '맞았습니다.' : '정답과 풀이를 읽어 봅시다.', `${k + 1}번 (${type})`);
+          await q.locator('[data-next]').click();
+        }
+      };
+      await answerAll(false);
+      const end = page.locator('[data-screen="end"]');
+      assert.equal(await page.locator('[data-score]').textContent(), '아직 맞힌 문제가 없습니다. 아래 풀이를 읽고 다시 풀어 봅시다.');
+      assert.ok(!(await end.innerText()).includes('0문제'), '0문제를 맞혔다고 말합니다');
+      const items = page.locator('[data-review] .review-item').filter({ visible: true });
+      assert.equal(await items.count(), 3);
+      for (const [k, item] of c.loadLesson(SCORED).quiz.items.entries()) {
+        const text = await items.nth(k).innerText();
+        assert.ok(text.startsWith(`${k + 1}번`), text);
+        assert.ok(text.includes(c.answerText(item).replace(/^\d+번 /, '')), `${k + 1}번의 정답이 없습니다: ${text}`);
+        assert.ok(text.replace(/⁠/g, '').includes(item.explain), `${k + 1}번의 풀이가 없습니다: ${text}`);
+      }
+      await page.locator('[data-restart]').click();
+      await answerAll(true);
+      assert.equal(await page.locator('[data-score]').textContent(), '3문제를 모두 맞혔습니다.');
+      assert.ok(!(await page.locator('[data-review]').isVisible()), '모두 맞혔는데 다시 읽어 볼 문제가 있습니다');
+      await done();
+    });
+
+    await t.test('OX 단추: 고른 답·정답 표가 ○·× 와 겹치지 않는다 (320·360·390·1280, T3-play-02)', async () => {
+      type R = { x: number; y: number; width: number; height: number };
+      const hit = (a: R, b: R) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+      for (const width of [320, 360, 390, 1280]) {
+        for (const right of [false, true]) {
+          const { page, done } = await open(`/${SCORED}/quiz/`, { width, touch: width < 600 });
+          await page.locator(`${current} .ox-btn[data-value="${right ? 'true' : 'false'}"]`).click();
+          const shown = await page.locator(`${current} .ox-btn`).evaluateAll((els) => els.map((b) => ({ tag: b.querySelector('.ans-tag')!.textContent, t: b.querySelector('.ans-tag')!.getBoundingClientRect().toJSON(), g: b.querySelector('.ox-mark')!.getBoundingClientRect().toJSON(), b: b.getBoundingClientRect().toJSON() })));
+          for (const o of shown.filter((x) => x.tag)) {
+            assert.ok(!hit(o.t, o.g), `${width}px: '${o.tag}' 표가 표시와 겹칩니다`);
+            assert.ok(o.t.x >= o.b.x && o.t.x + o.t.width <= o.b.x + o.b.width, `${width}px: '${o.tag}' 표가 단추 밖으로 나갑니다`);
+          }
+          assert.deepEqual(shown.map((x) => x.tag).filter(Boolean).sort(), right ? ['고른 답 · 정답'] : ['고른 답', '정답']);
+          await done();
+        }
+      }
+    });
+
+    await t.test('웹 활동 카드: 이름은 낱말 가운데에서 갈리지 않고, 표는 한 자리, 상자 안 카드는 같은 너비, 그림 카드는 같은 높이 (T3-play-01·03·04)', async () => {
+      const broken = (page: import('playwright').Page) => page.locator('.chip-btn').evaluateAll((els) => {
+        const out: string[] = [];
+        for (const el of els) {
+          if (!el.getClientRects().length) continue;
+          const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+          for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+            const s = n.textContent!;
+            const top = (i: number) => { const r = document.createRange(); r.setStart(n!, i); r.setEnd(n!, i + 1); return r.getBoundingClientRect().top; };
+            for (let i = 1; i < s.length; i++) if (/\S/.test(s[i]) && /\S/.test(s[i - 1]) && top(i) > top(i - 1) + 4) out.push(`${s.slice(0, i)}|${s.slice(i)}`);
+          }
+        }
+        return out;
+      });
+      const geometry = (page: import('playwright').Page) => page.locator('.drop').evaluateAll((drops) => drops.map((d) => ({
+        drop: (d as HTMLElement).dataset.drop,
+        cards: [...d.querySelectorAll<HTMLElement>(':scope > .chip')].map((c) => {
+          const r = c.getBoundingClientRect(); const m = c.querySelector('[data-mark]')!.getBoundingClientRect();
+          return { text: c.querySelector('.chip-btn')!.textContent!.trim(), w: Math.round(r.width), h: Math.round(r.height), x: Math.round(r.x), tagRight: Math.round(m.right - r.left), tag: c.querySelector('[data-mark]')!.textContent, pic: !!c.querySelector('img') };
+        }),
+      })));
+      for (const width of [320, 360, 390]) {
+        const { page, done } = await open(`/${SCORED}/play/`, { width, touch: true });
+        assert.deepEqual(await broken(page), [], `${width}px 처음: 낱말 가운데에서 줄이 갈렸습니다`);
+        // 처음 놓을 카드: 그림 카드는 모두 같은 높이
+        const tray = (await geometry(page)).find((g) => g.drop === 'tray')!;
+        const picH = new Set(tray.cards.filter((c) => c.pic).map((c) => c.h));
+        assert.equal(picH.size, 1, `${width}px: 그림 카드의 높이가 여럿입니다 (${[...picH].join(', ')})`);
+        // 고른 상태
+        await page.locator('.chip', { hasText: LONG_LABEL }).locator('.chip-btn').tap();
+        assert.deepEqual(await broken(page), [], `${width}px 고른 뒤`);
+        await page.locator('[data-cancel]').tap();
+        // 일부러 '바위'와 '구름'은 틀리게, 나머지는 맞게 놓는다
+        const wrongBin: Record<string, string> = { [LONG_LABEL]: 'other', 자갈: 'stone', 구름: 'stone', 강물: 'other' };
+        for (const [text, bin] of Object.entries(wrongBin)) {
+          await page.locator('.tray .chip', { hasText: text }).locator('.chip-btn').tap();
+          await page.locator(`[data-pickbar] .pick-to[data-target="${bin}"]`).tap();
+        }
+        assert.deepEqual(await broken(page), [], `${width}px 놓은 뒤`);
+        await page.locator('[data-check]').tap();
+        assert.deepEqual(await broken(page), [], `${width}px 확인한 뒤 (돌아온 카드)`);
+        const g = await geometry(page);
+        for (const d of g) {
+          if (!d.cards.length) continue;
+          assert.equal(new Set(d.cards.map((c) => c.w)).size, 1, `${width}px ${d.drop}: 카드 너비가 여럿입니다 ${JSON.stringify(d.cards)}`);
+          assert.equal(new Set(d.cards.map((c) => c.tagRight)).size, 1, `${width}px ${d.drop}: 표의 오른쪽 끝이 여럿입니다 ${JSON.stringify(d.cards)}`);
+          for (const c of d.cards) assert.equal(c.tag, d.drop === 'tray' ? '다시' : '맞음');
+        }
+        // 상자와 처음 자리의 표가 모두 같은 자리 (카드 왼쪽에서 같은 거리)
+        assert.equal(new Set(g.flatMap((d) => d.cards.map((c) => c.tagRight))).size, 1, `${width}px: 상자와 처음 자리의 표 자리가 다릅니다`);
+        assert.ok(g.find((d) => d.drop === 'tray')!.cards.some((c) => c.text === LONG_LABEL && c.pic), '돌아온 그림 카드가 있어야 합니다');
+        assert.ok(await page.evaluate((w) => document.documentElement.scrollWidth <= w, width), `${width}px: 가로 스크롤`);
+        await done();
+      }
+    });
+
+    await t.test('가운데점(·)은 줄 끝이나 줄 첫머리에 홀로 남지 않는다: 퀴즈 풀이를 여러 폭으로 (T3-play-07)', async () => {
+      const { page, done } = await open(`/${SCORED}/quiz/`, { width: 320 });
+      const bad = await page.evaluate(() => {
+        const out: string[] = [];
+        for (const q of document.querySelectorAll<HTMLElement>('.q')) { q.classList.add('is-current'); q.querySelector<HTMLElement>('[data-feedback]')!.hidden = false; }
+        const els = [...document.querySelectorAll<HTMLElement>('.q-text, .choice-text, .feedback-explain')];
+        for (let w = 288; w >= 140; w -= 2) {
+          for (const el of els) {
+            el.style.width = `${w}px`;
+            const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+            for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+              const s = n.textContent!;
+              const top = (i: number) => { const r = document.createRange(); r.setStart(n!, i); r.setEnd(n!, i + 1); return r.getBoundingClientRect().top; };
+              for (let i = 0; i < s.length; i++) {
+                if (s[i] !== '·') continue;
+                let a = i - 1; while (s[a] === '⁠') a--;
+                let b = i + 1; while (s[b] === '⁠') b++;
+                if (a >= 0 && top(i) > top(a) + 2) out.push(`${w}px 줄 첫머리: ${s.slice(Math.max(0, i - 4), i + 3)}`);
+                if (b < s.length && top(b) > top(i) + 2) out.push(`${w}px 줄 끝: ${s.slice(Math.max(0, i - 4), i + 3)}`);
+              }
+            }
+            el.style.width = '';
+          }
+        }
+        return [...new Set(out)];
+      });
+      assert.ok(await page.locator('.feedback-explain', { hasText: '무덤' }).count(), '시험용 풀이가 실리지 않았습니다');
+      assert.deepEqual(bad, []);
       await done();
     });
 

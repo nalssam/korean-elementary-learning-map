@@ -65,13 +65,15 @@ html:not(.js) .q { padding-bottom: var(--s6); margin-bottom: var(--s6); border-b
 .is-wrong > .ans-tag { color: var(--navy); }
 
 .ox { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
-/* 맞고 틀림의 표시는 MARK 의 글자 그대로 크게 찍는다 (그림으로 그리지 않는다). 아래에 읽는 말(MARK_LABEL)을 작게 붙인다. */
-.ox-btn { display: grid; place-content: center; justify-items: center; gap: var(--s1); height: 132px; }
-.ox-mark { font-size: 72px; font-weight: 400; line-height: 1; }
-.ox-say { font-size: var(--fs-sm); font-weight: 700; color: var(--gray); }
+/* 맞고 틀림의 표시는 MARK 의 글자 그대로 크게 찍는다 (그림으로 그리지 않는다). 아래에 읽는 말(MARK_LABEL)을 작게 붙인다.
+   '고른 답'·'정답' 표는 단추 위쪽의 제 띠에 둔다. 표시 위에 겹치지 않게, 답하기 전에도 띠의 자리는 비워 둔다 (답한 뒤 표시가 움직이지 않게). */
+.ox-btn { display: grid; grid-template-rows: 26px auto auto; justify-items: center; align-content: center; gap: var(--s1); min-height: 148px; padding: var(--s2) var(--s2) var(--s3); }
+.ox-btn .ans-tag { grid-row: 1; align-self: start; }
+.ox-btn .ans-tag:empty { display: block; visibility: hidden; padding: 0; border: 0; }
+.ox-mark { grid-row: 2; font-size: 72px; font-weight: 400; line-height: 1; }
+.ox-say { grid-row: 3; font-size: var(--fs-sm); font-weight: 700; color: var(--gray); }
 .ox-btn.is-dim .ox-mark { color: var(--gray); opacity: 0.6; }
-.ox-btn .ans-tag { position: absolute; top: var(--s2); right: var(--s2); }
-@media (min-width: 600px) { .ox-btn { height: 168px; } .ox-mark { font-size: 92px; } }
+@media (min-width: 600px) { .ox-btn { min-height: 184px; } .ox-mark { font-size: 92px; } }
 .answer-mark { font-size: var(--fs-xl); font-weight: 400; line-height: 1; }
 
 .choices { display: grid; gap: var(--s3); margin: 0; padding: 0; list-style: none; }
@@ -99,17 +101,25 @@ html:not(.js) .q { padding-bottom: var(--s6); margin-bottom: var(--s6); border-b
 .fb-right { stroke: var(--teal); }
 .fb-wrong { stroke: var(--navy); }
 .feedback.is-right .fb-wrong, .feedback.is-wrong .fb-right { display: none; }
-.feedback-answer { display: flex; align-items: center; gap: var(--s2); margin: 0 0 var(--s3); font-size: var(--fs-md); }
+.feedback-answer { display: flex; align-items: baseline; gap: var(--s2); margin: 0 0 var(--s3); font-size: var(--fs-md); }
 .answer-label { flex: none; padding: 0 var(--s2); border-radius: 999px; background: var(--teal-soft); color: var(--teal); font-size: var(--fs-xs); font-weight: 700; line-height: 22px; }
 .feedback-explain { margin: 0 0 var(--s5); font-size: var(--fs-md); line-height: 1.7; max-width: var(--measure); }
 .next-btn { width: 100%; }
 @media (min-width: 600px) { .next-btn { width: auto; min-width: 200px; } }
 
 .quiz-end { padding: var(--s6) var(--s5); border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
-.quiz-end-score { margin: 0 0 var(--s2); font-size: var(--fs-lg); font-weight: 700; }
-.quiz-end-note { margin: 0 0 var(--s5); color: var(--gray); }
+.quiz-end-score { margin: 0 0 var(--s5); font-size: var(--fs-lg); font-weight: 700; line-height: 1.5; text-wrap: pretty; }
 .quiz-end-actions { display: flex; flex-direction: column; gap: var(--s3); }
 @media (min-width: 600px) { .quiz-end-actions { flex-direction: row; flex-wrap: wrap; } }
+/* 끝 화면의 '다시 읽어 볼 문제': 틀린 문제의 물음, 정답, 풀이 */
+.review { margin: 0 0 var(--s6); }
+.review-title { margin: 0 0 var(--s3); font-size: var(--fs-md); font-weight: 800; }
+.review-list { display: grid; gap: var(--s3); margin: 0; padding: 0; list-style: none; }
+.review-item { padding: var(--s4); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg); }
+.review-q { margin: 0 0 var(--s3); font-size: var(--fs-md); font-weight: 700; line-height: 1.5; }
+.review-no { color: var(--teal); font-variant-numeric: tabular-nums; }
+.review-item .feedback-answer { margin-bottom: var(--s2); }
+.review-explain { margin: 0; font-size: var(--fs-md); line-height: 1.7; }
 
 /* ───────── 웹 활동 ───────── */
 .board { display: block; }
@@ -122,38 +132,48 @@ html:not(.js) .q { padding-bottom: var(--s6); margin-bottom: var(--s6); border-b
 /* 고르는 동안에는 같은 안내가 아래 안내 줄에 보이므로 결과 줄은 눈에서만 숨긴다 (화면 읽기는 그대로 읽는다) */
 .is-picking .board-status { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
-/* 카드 */
-.drop { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: flex-start; gap: var(--s2); margin: 0; padding: 0; list-style: none; }
-.chip { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; max-width: 100%; border: 2px solid var(--line); border-radius: var(--radius-sm); background: var(--card); cursor: grab; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
-.chip-btn { min-width: 0; min-height: 48px; padding: var(--s2) var(--s4); border: 0; border-radius: 6px; background: none; color: var(--navy); font: inherit; font-size: var(--fs-md); font-weight: 700; line-height: 1.35; text-align: left; cursor: inherit; }
+/* 카드
+   한 장은 [글 칸 | 그림 칸] 이다. 글 칸에는 이름(누르는 단추)과 그 아래 '상태 줄'(맞음·다시 표와 까닭)이 있다.
+   표는 그림이 있든 없든 늘 같은 자리(이름 바로 아래, 글 칸의 왼쪽 끝)에 같은 너비로 붙는다. 이름 옆에 두면 좁은 카드에서 이름이 갈린다.
+   이름은 낱말 가운데에서 줄을 바꾸지 않는다 (keep-all). */
+.drop { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: var(--s2); margin: 0; padding: 0; list-style: none; }
+.chip { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; min-width: 0; border: 2px solid var(--line); border-radius: var(--radius-sm); background: var(--card); cursor: grab; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+.chip-body { min-width: 0; padding: 0 var(--s4); }
+.chip-btn { display: block; width: 100%; min-width: 0; min-height: 48px; padding: var(--s2) 0; border: 0; border-radius: 6px; background: none; color: var(--navy); font: inherit; font-size: var(--fs-md); font-weight: 700; line-height: 1.35; text-align: left; word-break: keep-all; overflow-wrap: normal; cursor: inherit; }
 .chip:hover { border-color: var(--teal); }
 .chip.is-picked { border-color: var(--teal); background: var(--teal-soft); outline: 2px solid var(--teal); outline-offset: 2px; }
 .chip.is-dragging { opacity: 0.35; }
 .chip.is-ok { border-color: var(--teal); cursor: default; }
-.chip.is-ok .chip-btn { cursor: default; padding-right: var(--s2); }
+.chip.is-ok .chip-btn { cursor: default; }
 .chip.is-again { border-style: dashed; border-color: var(--navy); }
-.chip.is-again .chip-btn { padding-right: var(--s2); }
-.chip-mark:empty { display: none; }
-.chip-mark { flex: none; margin-right: var(--s3); padding: 0 var(--s2); border-radius: 999px; font-size: var(--fs-xs); font-weight: 700; line-height: 20px; border: 1px solid currentColor; }
+/* 상태 줄: 표 하나와 (맞았으면) 까닭. 까닭이 표 옆에 들어가지 않으면 표 아래로 내려간다. */
+.chip-state { display: none; flex-wrap: wrap; align-items: baseline; gap: var(--s1) var(--s2); margin: calc(-1 * var(--s1)) 0 0; padding: 0 0 var(--s3); }
+.chip.is-ok .chip-state, .chip.is-again .chip-state { display: flex; }
+.chip-mark { flex: none; box-sizing: border-box; min-width: 3.4em; padding: 0 var(--s2); border: 1px solid currentColor; border-radius: 999px; font-size: var(--fs-xs); font-weight: 700; line-height: 20px; text-align: center; }
 .chip.is-ok .chip-mark { color: #fff; background: var(--teal); border-color: var(--teal); }
-.chip.is-again .chip-mark { color: var(--navy); }
-.chip-why { grid-column: 1 / -1; margin: 0; padding: 0 var(--s4) var(--s3); font-size: var(--fs-sm); line-height: 1.5; color: var(--gray); }
-/* 그림 카드: 글은 왼쪽(글 카드의 글과 같은 줄에서 시작), 그림은 오른쪽. 그림은 짧은 변이 --pic 이 되게 그린다
-   (휴대폰 104px, 넓은 화면 128px. 9절은 390px 폭에서 96px 이상). --ar(가로÷세로)은 PlayPage.astro 가 그림 파일에서 읽어 카드에 적는다.
+.chip.is-again .chip-mark { color: var(--navy); background: var(--card); }
+.chip-why { flex: 1 1 11em; min-width: 0; font-size: var(--fs-sm); line-height: 1.5; color: var(--gray); word-break: keep-all; }
+/* 그림 카드: 글은 왼쪽(글 카드의 글과 같은 줄에서 시작), 그림은 오른쪽의 그림 칸. 그림 칸의 크기(너비 --box-w, 높이 --box-h)는
+   PlayPage.astro 가 이 페이지의 그림 비율에서 정해 board 에 적는다. 모든 그림 카드가 같은 칸을 가져 높이가 같다.
+   그림은 칸 안에 줄여 가운데 놓는다(자르지 않는다). --ar(가로÷세로)은 카드마다 적힌다.
    출처는 카드에 찍지 않고 활동 아래 '그림 출처'에 모은다. */
-.chip-media { --pic: 104px; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-rows: 1fr auto; }
-@media (min-width: 600px) { .chip-media { --pic: 128px; } }
-.chip-picture { grid-row: 1 / span 2; grid-column: 3; align-self: start; margin: 0; padding: var(--s2); pointer-events: none; }
-.chip-picture img { display: block; width: calc(var(--pic) * max(1, var(--ar, 1))); max-width: 100%; height: auto; aspect-ratio: var(--ar, 1); border-radius: 4px; background: var(--paper); }
-.chip-media .chip-btn { grid-row: 1; grid-column: 1; align-self: center; }
-.chip-media .chip-mark { grid-row: 1; grid-column: 2; }
-.chip-media .chip-why { grid-row: 2; grid-column: 1 / 3; }
-/* 아주 넓은 그림(가로가 세로의 1.7배 넘게)은 글 옆에 두면 휴대폰에서 낮아지므로 위에 넓게 놓고 글을 아래에 둔다 */
-.chip-wide { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto auto; }
-.chip-wide .chip-picture { grid-row: 1; grid-column: 1 / -1; padding-bottom: 0; }
-.chip-wide .chip-btn { grid-row: 2; }
-.chip-wide .chip-mark { grid-row: 2; grid-column: 2; }
-.chip-wide .chip-why { grid-row: 3; grid-column: 1 / -1; }
+.chip-media { grid-template-columns: minmax(0, 1fr) auto; }
+.chip-picture { display: flex; align-items: center; justify-content: center; width: var(--box-w); height: var(--box-h); margin: var(--s2) var(--s2) var(--s2) 0; pointer-events: none; }
+.chip-picture img { display: block; width: min(100%, calc(var(--box-h) * var(--ar, 1))); height: auto; aspect-ratio: var(--ar, 1); border-radius: 4px; }
+/* 아주 넓은 그림이 있는 페이지, 또는 카드가 아주 좁을 때(320px 휴대폰): 그림 칸을 글 아래에 카드 너비로 둔다.
+   글 옆에 두면 이름이 한 낱말씩 세 줄로 쌓인다. 칸의 높이는 그대로라 그림 카드끼리 높이가 같다. */
+.drop { container: drop / inline-size; }
+.board-stack .chip-media { grid-template-columns: minmax(0, 1fr); }
+.board-stack .chip-picture { width: auto; margin: 0 var(--s2) var(--s2); }
+@container drop (max-width: 280px) {
+  .chip-media { grid-template-columns: minmax(0, 1fr); }
+  .chip-picture { width: auto; margin: 0 var(--s2) var(--s2); }
+}
+/* 넓은 화면에서는 놓을 카드를 두 줄로 같은 너비로 늘어놓는다. 상자 안의 카드는 상자 너비를 다 쓴다. */
+@media (min-width: 600px) {
+  .tray-drop { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+  .tray-drop > .pick-slot { grid-column: 1 / -1; }
+}
 .ghost { position: fixed; z-index: 10; margin: 0; pointer-events: none; border-color: var(--teal); background: var(--teal-soft); opacity: 0.95; }
 
 /* 놓을 카드 자리 */
@@ -210,9 +230,7 @@ html:not(.js) .q { padding-bottom: var(--s6); margin-bottom: var(--s6); border-b
 
 /* 고른 카드 바로 아래에 펼치는 안내 칸. 화면에 떠 있지 않고 카드 목록 사이에 끼어들므로 어떤 카드도 가리지 않는다.
    놓을 곳(상자·빈칸·번호)을 단추로 늘어놓아, 상자가 화면 아래에 있어도 여기에서 고를 수 있다. */
-.pick-slot { flex: 0 0 100%; min-width: 0; list-style: none; }
-/* 휴대폰에서는 놓을 카드를 한 줄에 하나씩 같은 너비로 늘어놓는다 (그림 카드와 글 카드의 끝이 가지런하게) */
-@media (max-width: 599.98px) { .tray-drop .chip { flex: 1 1 100%; } }
+.pick-slot { min-width: 0; list-style: none; }
 .pickbar { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); margin: var(--s1) 0 var(--s2); padding: var(--s3); border: 2px solid var(--teal); border-radius: var(--radius-sm); background: var(--card); }
 /* 위의 고른 카드를 가리키는 작은 꼭지 */
 .pickbar::before { content: ''; position: absolute; top: -8px; left: var(--notch, var(--s5)); width: 12px; height: 12px; border-top: 2px solid var(--teal); border-left: 2px solid var(--teal); background: var(--card); transform: rotate(45deg); }

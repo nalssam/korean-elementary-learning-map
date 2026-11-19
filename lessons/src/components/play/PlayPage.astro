@@ -40,8 +40,18 @@ const credits = [...creditList(pictureIds.map((id) => getMedia(lesson, id)))
     return acc;
   }, new Map<string, { text: string; licenceUrl?: string; count: number }>())
   .values()].map((l) => ({ ...l, text: l.count > 1 ? l.text.replace(/^(\S+?): /, `$1 ${l.count}장: `) : l.text }));
-// 카드 그림의 가로세로 비율. play.css 가 이것으로 짧은 변의 길이를 맞춘다.
+// 카드 그림의 가로세로 비율. play.css 가 이것으로 그림의 크기를 정한다.
 const ratio = (id: string) => Math.round(pictureRatio(mediaFile(lesson, id)) * 1000) / 1000;
+// 그림 카드는 모두 같은 크기의 그림 칸을 갖는다 (카드 높이가 같아 놓을 카드가 한 목록으로 읽힌다).
+// 그림은 칸 안에 줄여 가운데 놓고(자르지 않는다), 어느 그림이든 짧은 변이 PIC_MIN 이상이 되게 칸의 크기를 이 페이지의 그림에서 정한다 (9절: 390px 폭에서 96px 이상).
+// 가장 키 큰 그림이 칸의 높이를, 가장 넓은 그림이 칸의 너비를 정한다. 칸이 너무 넓어 글 옆에 두면 글이 비좁아지는 페이지는
+// 그림 칸을 글 아래에 카드 너비로 둔다 (board-stack).
+const PIC_MIN = 100, SIDE_MAX = 160;
+const ratios = chips.flatMap((c) => (c.media ? [ratio(c.media)] : []));
+const boxH = ratios.length ? Math.ceil(PIC_MIN / Math.min(1, ...ratios)) : 0;
+const boxW = ratios.length ? Math.ceil(PIC_MIN * Math.max(1, ...ratios)) : 0;
+const stack = boxW > SIDE_MAX;
+const boardStyle = ratios.length ? `--box-w:${boxW}px;--box-h:${boxH}px` : undefined;
 
 // 카드를 부르는 이름과 고른 뒤의 안내. 활동마다 놓는 곳의 이름이 다르다.
 // ask 는 고른 카드 바로 아래에 펼치는 안내 칸의 물음이다 (고른 카드는 바로 위에 보이므로 카드 이름을 되풀이하지 않는다).
@@ -61,12 +71,12 @@ const targets: { id: string; label: string; sr: string }[] =
 ---
 <StudentLayout lesson={lesson} asset="web_activity" heading={wa.title} lead={wa.instructions}>
   {act.kind !== 'order' ? (
-    <play-board class:list={['board', `board-${act.kind}`]} data-kind={act.kind} data-scored={isScored} data-noun={words.noun} data-prompt={words.prompt} data-total={chips.length}>
+    <play-board class:list={['board', `board-${act.kind}`, { 'board-stack': stack }]} style={boardStyle} data-kind={act.kind} data-scored={isScored} data-noun={words.noun} data-prompt={words.prompt} data-total={chips.length}>
       <p class="board-how">{words.how}</p>
 
       {act.kind === 'place' && (
         <div class="place-pic">
-          <Media lesson={lesson} id={act.media} credit={false} />
+          <Media lesson={lesson} id={act.media} credit={false} frame={false} />
           <div class="place-layer" data-layer>
             {act.spots.map((s, k) => (
               <button type="button" class="marker" data-target={String(k)} style={`--x:${s.x}%;--y:${s.y}%`} aria-label={`${k + 1}번 자리에 놓기`}>
@@ -84,11 +94,12 @@ const targets: { id: string; label: string; sr: string }[] =
         </div>
         <ul class="drop tray-drop" data-drop="tray" data-said="처음 자리로 돌려놓았습니다">
           {chips.map((c) => (
-            <li class:list={['chip', { 'chip-media': c.media, 'chip-wide': c.media && ratio(c.media) > 1.7 }]} data-item={String(c.key)} data-answer={c.answer} style={c.media ? `--ar:${ratio(c.media)}` : undefined}>
-              {c.media && <Media lesson={lesson} id={c.media} caption={false} credit={false} class="chip-picture" />}
-              <button type="button" class="chip-btn">{kp(c.text)}</button>
-              <span class="chip-mark" data-mark aria-live="off"></span>
-              {c.why && <p class="chip-why" data-why hidden>{kp(c.why)}</p>}
+            <li class:list={['chip', { 'chip-media': c.media }]} data-item={String(c.key)} data-answer={c.answer} style={c.media ? `--ar:${ratio(c.media)}` : undefined}>
+              <div class="chip-body">
+                <button type="button" class="chip-btn">{kp(c.text)}</button>
+                <p class="chip-state"><span class="chip-mark" data-mark aria-live="off"></span>{c.why && <span class="chip-why" data-why hidden>{kp(c.why)}</span>}</p>
+              </div>
+              {c.media && <Media lesson={lesson} id={c.media} caption={false} credit={false} frame={false} class="chip-picture" />}
             </li>
           ))}
         </ul>
