@@ -65,7 +65,9 @@ test('차시표: 5학년 2학기는 3단원 32묶음 45차시', () => {
 });
 
 test('성취기준은 단원에 적혀 있고, 묶음은 단원의 것을 물려받는다', () => {
-  assert.deepEqual(c.bundleOf('5-2/1/01').standards, ['6사04-01', '6사04-02', '6사04-03']);
+  // 묶음에 standards 를 적으면 단원의 것 대신 그것을 쓴다 (5-2/1/01 은 6사04-01 만 적었다)
+  assert.deepEqual(c.bundleOf('5-2/1/01').standards, ['6사04-01']);
+  assert.deepEqual(c.bundleOf('5-2/1/02').standards, ['6사04-01', '6사04-02', '6사04-03']);
   assert.deepEqual(c.bundleOf('5-2/2/05').standards, ['6사05-01', '6사05-02']);
   assert.deepEqual(c.bundleOf('5-2/3/13').standards, ['6사06-01', '6사06-02']);
   assert.equal(c.standardsOf('5-2/3/01').length, 2);

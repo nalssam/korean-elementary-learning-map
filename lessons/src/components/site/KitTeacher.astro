@@ -82,7 +82,7 @@ const pictures = shownMedia(lesson).map((m) => ({ alt: m.alt, credit: creditFull
       </Fold>
     )}
     {pictures.length > 0 && (
-      <Fold title="그림 출처" count={`${pictures.length}장`}>
+      <Fold title="그림 출처" count={`${pictures.length}장`} id="credits">
         <ul class="sources">
           {pictures.map((p) => (
             <li>
