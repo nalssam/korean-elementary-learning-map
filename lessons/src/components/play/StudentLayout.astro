@@ -4,7 +4,7 @@
 // 사이트 밖으로 나가는 링크, 이름·번호 칸, 저장소(쿠키·localStorage 등)를 쓰지 않는다 (docs/CONTRACT.md 9절).
 import Base from '#src/layouts/Base.astro';
 import { bundleOf, lessonsLabel, semesterLabel } from '#lib/content.ts';
-import { ASSET_LABEL } from '#lib/site.ts';
+import { ASSET_LABEL, keepParticle } from '#lib/site.ts';
 import type { Lesson } from '#schema/lesson.ts';
 import './play.css';
 
@@ -27,8 +27,8 @@ const where = `${semesterLabel(ref.semester.id)} ${ref.unit.no}단원 ${lessonsL
   <div class="student">
     <header class="student-head">
       <p class="student-eyebrow"><span class="student-kind">{ASSET_LABEL[asset]}</span><span class="student-where">{where}</span></p>
-      <h1 class="student-title">{heading}</h1>
-      {lead && <p class="student-lead">{lead}</p>}
+      <h1 class="student-title">{keepParticle(heading)}</h1>
+      {lead && <p class="student-lead">{keepParticle(lead)}</p>}
     </header>
     <noscript><p class="student-noscript">이 화면은 브라우저의 자바스크립트가 켜져 있어야 풀 수 있습니다. 선생님께 알려 주세요.</p></noscript>
     <main class="student-main">

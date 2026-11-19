@@ -50,7 +50,7 @@ html:not(.js) .q { padding-bottom: var(--s6); margin-bottom: var(--s6); border-b
 .q-steps li { flex: 1; height: 6px; border-radius: 3px; background: var(--line); }
 .q-steps li.done, .q-steps li.now { background: var(--teal); }
 .q-steps li.now { opacity: 0.45; }
-.q-text { margin: 0 0 var(--s5); font-size: var(--fs-lg); line-height: 1.5; font-weight: 700; text-wrap: pretty; }
+.q-text { margin: 0 0 var(--s5); font-size: var(--fs-lg); line-height: 1.5; font-weight: 700; text-wrap: balance; }
 @media (min-width: 600px) { .q-text { font-size: var(--fs-xl); line-height: 1.45; } }
 
 .ans { position: relative; font: inherit; color: var(--navy); background: var(--card); border: 2px solid var(--line); border-radius: var(--radius); cursor: pointer; }
@@ -65,11 +65,14 @@ html:not(.js) .q { padding-bottom: var(--s6); margin-bottom: var(--s6); border-b
 .is-wrong > .ans-tag { color: var(--navy); }
 
 .ox { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
-.ox-btn { display: grid; place-items: center; height: 132px; }
-.ox-btn svg { width: 64px; height: 64px; fill: none; stroke: var(--navy); stroke-width: 6; stroke-linecap: round; }
-.ox-btn.is-dim svg { stroke: var(--gray); opacity: 0.6; }
+/* 맞고 틀림의 표시는 MARK 의 글자 그대로 크게 찍는다 (그림으로 그리지 않는다). 아래에 읽는 말(MARK_LABEL)을 작게 붙인다. */
+.ox-btn { display: grid; place-content: center; justify-items: center; gap: var(--s1); height: 132px; }
+.ox-mark { font-size: 72px; font-weight: 400; line-height: 1; }
+.ox-say { font-size: var(--fs-sm); font-weight: 700; color: var(--gray); }
+.ox-btn.is-dim .ox-mark { color: var(--gray); opacity: 0.6; }
 .ox-btn .ans-tag { position: absolute; top: var(--s2); right: var(--s2); }
-@media (min-width: 600px) { .ox-btn { height: 168px; } .ox-btn svg { width: 80px; height: 80px; } }
+@media (min-width: 600px) { .ox-btn { height: 168px; } .ox-mark { font-size: 92px; } }
+.answer-mark { font-size: var(--fs-xl); font-weight: 400; line-height: 1; }
 
 .choices { display: grid; gap: var(--s3); margin: 0; padding: 0; list-style: none; }
 .choice-btn { display: flex; align-items: center; gap: var(--s3); width: 100%; min-height: 60px; padding: var(--s3) var(--s4); text-align: left; font-size: var(--fs-md); line-height: 1.45; }
@@ -96,7 +99,7 @@ html:not(.js) .q { padding-bottom: var(--s6); margin-bottom: var(--s6); border-b
 .fb-right { stroke: var(--teal); }
 .fb-wrong { stroke: var(--navy); }
 .feedback.is-right .fb-wrong, .feedback.is-wrong .fb-right { display: none; }
-.feedback-answer { display: flex; align-items: baseline; gap: var(--s2); margin: 0 0 var(--s3); font-size: var(--fs-md); }
+.feedback-answer { display: flex; align-items: center; gap: var(--s2); margin: 0 0 var(--s3); font-size: var(--fs-md); }
 .answer-label { flex: none; padding: 0 var(--s2); border-radius: 999px; background: var(--teal-soft); color: var(--teal); font-size: var(--fs-xs); font-weight: 700; line-height: 22px; }
 .feedback-explain { margin: 0 0 var(--s5); font-size: var(--fs-md); line-height: 1.7; max-width: var(--measure); }
 .next-btn { width: 100%; }
@@ -135,11 +138,23 @@ html:not(.js) .q { padding-bottom: var(--s6); margin-bottom: var(--s6); border-b
 .chip.is-ok .chip-mark { color: #fff; background: var(--teal); border-color: var(--teal); }
 .chip.is-again .chip-mark { color: var(--navy); }
 .chip-why { grid-column: 1 / -1; margin: 0; padding: 0 var(--s4) var(--s3); font-size: var(--fs-sm); line-height: 1.5; color: var(--gray); }
-.chip-picture { grid-column: 1 / -1; padding: var(--s2) var(--s2) 0; pointer-events: none; }
-.chip-picture img { max-height: 96px; margin: 0 auto; }
-/* 휴대폰에서는 그림 카드를 낮춰 상자가 카드 바로 아래에 오게 한다 (390x844 에서 마지막 카드와 첫 상자가 한 화면에) */
-@media (max-width: 479.98px) { .chip-picture img { max-height: 64px; } }
-.chip-picture figcaption { justify-content: center; font-size: 11px; }
+/* 그림 카드: 글은 왼쪽(글 카드의 글과 같은 줄에서 시작), 그림은 오른쪽. 그림은 짧은 변이 --pic 이 되게 그린다
+   (휴대폰 104px, 넓은 화면 128px. 9절은 390px 폭에서 96px 이상). --ar(가로÷세로)은 PlayPage.astro 가 그림 파일에서 읽어 카드에 적는다.
+   출처는 카드에 찍지 않고 활동 아래 '그림 출처'에 모은다. */
+.chip-media { --pic: 104px; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-rows: 1fr auto; }
+@media (min-width: 600px) { .chip-media { --pic: 128px; } }
+.chip-picture { grid-row: 1 / span 2; grid-column: 3; align-self: start; margin: 0; padding: var(--s2); pointer-events: none; }
+.chip-picture img { display: block; width: calc(var(--pic) * max(1, var(--ar, 1))); max-width: 100%; height: auto; aspect-ratio: var(--ar, 1); border-radius: 4px; background: var(--paper); }
+.chip-picture figcaption { display: none; }
+.chip-media .chip-btn { grid-row: 1; grid-column: 1; align-self: center; }
+.chip-media .chip-mark { grid-row: 1; grid-column: 2; }
+.chip-media .chip-why { grid-row: 2; grid-column: 1 / 3; }
+/* 아주 넓은 그림(가로가 세로의 1.7배 넘게)은 글 옆에 두면 휴대폰에서 낮아지므로 위에 넓게 놓고 글을 아래에 둔다 */
+.chip-wide { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto auto; }
+.chip-wide .chip-picture { grid-row: 1; grid-column: 1 / -1; padding-bottom: 0; }
+.chip-wide .chip-btn { grid-row: 2; }
+.chip-wide .chip-mark { grid-row: 2; grid-column: 2; }
+.chip-wide .chip-why { grid-row: 3; grid-column: 1 / -1; }
 .ghost { position: fixed; z-index: 10; margin: 0; pointer-events: none; border-color: var(--teal); background: var(--teal-soft); opacity: 0.95; }
 
 /* 놓을 카드 자리 */
@@ -184,6 +199,7 @@ html:not(.js) .q { padding-bottom: var(--s6); margin-bottom: var(--s6); border-b
 .place-pic { position: relative; margin-bottom: var(--s4); }
 .place-pic .media img { width: 100%; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--card); }
 .place-pic .media figcaption { margin-top: var(--s1); }
+.place-pic .media-credit { display: none; }
 .place-layer { position: absolute; display: none; }
 .place-layer.is-ready { display: block; }
 .marker { position: absolute; left: clamp(22px, var(--x), calc(100% - 22px)); top: clamp(22px, var(--y), calc(100% - 22px)); display: grid; place-items: center; width: 44px; height: 44px; margin: -22px 0 0 -22px; padding: 0; border: 3px solid var(--navy); border-radius: 50%; background: var(--card); color: var(--navy); font: inherit; font-size: var(--fs-lg); font-weight: 800; font-variant-numeric: tabular-nums; cursor: pointer; }
@@ -194,11 +210,32 @@ html:not(.js) .q { padding-bottom: var(--s6); margin-bottom: var(--s6); border-b
 .spot { display: flex; align-items: flex-start; gap: var(--s3); }
 .spot-no { flex: none; display: grid; place-items: center; width: 36px; height: 36px; margin-top: 8px; border: 2px solid var(--navy); border-radius: 50%; font-weight: 800; font-variant-numeric: tabular-nums; }
 
-/* 고른 카드 안내 줄: 고르는 동안 화면 아래에 붙어 있다 */
-.pickbar { position: sticky; bottom: 0; z-index: 5; display: flex; align-items: center; gap: var(--s3); margin: var(--s4) calc(-1 * var(--s4)) 0; padding: var(--s3) var(--s4); border-top: 2px solid var(--teal); background: var(--card); }
+/* 고른 카드 바로 아래에 펼치는 안내 칸. 화면에 떠 있지 않고 카드 목록 사이에 끼어들므로 어떤 카드도 가리지 않는다.
+   놓을 곳(상자·빈칸·번호)을 단추로 늘어놓아, 상자가 화면 아래에 있어도 여기에서 고를 수 있다. */
+.pick-slot { flex: 0 0 100%; min-width: 0; list-style: none; }
+/* 휴대폰에서는 놓을 카드를 한 줄에 하나씩 같은 너비로 늘어놓는다 (그림 카드와 글 카드의 끝이 가지런하게) */
+@media (max-width: 599.98px) { .tray-drop .chip { flex: 1 1 100%; } }
+.pickbar { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); margin: var(--s1) 0 var(--s2); padding: var(--s3); border: 2px solid var(--teal); border-radius: var(--radius-sm); background: var(--card); }
+/* 위의 고른 카드를 가리키는 작은 꼭지 */
+.pickbar::before { content: ''; position: absolute; top: -8px; left: var(--notch, var(--s5)); width: 12px; height: 12px; border-top: 2px solid var(--teal); border-left: 2px solid var(--teal); background: var(--card); transform: rotate(45deg); }
 .pickbar[hidden] { display: none; }
-.pickbar-text { flex: 1; margin: 0; font-size: var(--fs-sm); font-weight: 600; line-height: 1.45; }
-.pickbar-cancel { flex: none; min-height: 44px; padding: 0 var(--s3); font-size: var(--fs-sm); }
+.pickbar-text { flex: 1 1 0; min-width: 0; margin: 0; font-size: var(--fs-md); font-weight: 700; line-height: 1.45; }
+.pickbar-targets { display: flex; flex-wrap: wrap; gap: var(--s2); flex: 1 0 100%; }
+.pickbar-targets .pick-to { flex: 1 1 88px; max-width: 220px; white-space: nowrap; }
+.pickbar-targets:not(:has(button:not([hidden]))) { display: none; }
+.pick-to { min-height: 48px; padding: 0 var(--s4); border: 2px solid var(--teal); border-radius: var(--radius-sm); background: var(--teal-soft); color: var(--navy); font: inherit; font-size: var(--fs-md); font-weight: 800; cursor: pointer; }
+.pick-to:hover { background: var(--card); }
+.pick-back { border-style: dashed; background: var(--card); font-weight: 700; }
+.pickbar-cancel { flex: none; min-height: 44px; margin: calc(-1 * var(--s2)) calc(-1 * var(--s2)) calc(-1 * var(--s2)) 0; padding: 0 var(--s2); border: 0; background: none; color: var(--gray); font: inherit; font-size: var(--fs-sm); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.pickbar-cancel:hover { color: var(--navy); }
+/* 차례 맞추기의 줄 사이에 끼면 줄과 같은 너비로 */
+.order-list .pick-slot .pickbar { margin: 0; }
+
+/* 활동에 실린 그림의 출처. 카드마다 찍지 않고 여기에 한 번 모은다 (9절) */
+.credits { margin-top: var(--s6); padding-top: var(--s4); border-top: 1px solid var(--line); }
+.credits-title { margin: 0 0 var(--s2); font-size: var(--fs-sm); font-weight: 700; color: var(--gray); }
+.credits-list { margin: 0; padding: 0; list-style: none; font-size: var(--fs-xs); line-height: 1.6; color: var(--gray); }
+.credits-list a { color: var(--teal); text-underline-offset: 2px; white-space: nowrap; }
 
 /* 차례 맞추기 */
 .order-end { margin: 0; font-size: var(--fs-xs); font-weight: 700; color: var(--gray); }

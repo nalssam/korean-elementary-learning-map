@@ -92,20 +92,54 @@ function enableDrag(root: HTMLElement, opts: {
   root.addEventListener('click', (e) => { if (suppressClick) { e.stopPropagation(); e.preventDefault(); suppressClick = false; } }, true);
 }
 
-/** 고른 카드 안내 줄, 확인하기·다시 해 보기, 결과 한 줄. 두 판이 같이 쓴다. */
+/**
+ * 고른 카드 아래의 안내 칸, 확인하기·다시 해 보기, 결과 한 줄. 두 판이 같이 쓴다.
+ * 안내 칸(data-pickbar)은 화면에 떠 있지 않고 고른 카드 바로 다음 자리에 끼어든다. 그래서 어떤 카드도 가리지 않고,
+ * 상자·빈칸이 화면 아래에 있어도 놓을 곳을 고른 카드 바로 아래에서 고를 수 있다 (휴대폰. docs/CONTRACT.md 9절).
+ */
 abstract class Board extends HTMLElement {
   protected picked: HTMLElement | null = null;
+  /** 안내 칸을 담아 카드 목록 사이에 끼우는 줄. 목록(ul·ol)의 자식이어야 해서 li 로 감싼다. */
+  private pickRow: HTMLLIElement | null = null;
+  /** 안내 칸이 쉬는 자리 (고르지 않을 때) */
+  private home: { parent: Node; next: Node | null } | null = null;
   protected get scored() { return this.dataset.scored === 'true'; }
   protected get total() { return Number(this.dataset.total); }
   protected $<T extends HTMLElement = HTMLElement>(sel: string) { return this.querySelector<T>(sel)!; }
 
   protected say(text: string) { this.$('[data-status]').textContent = text; }
 
-  protected pickbar(msg: string | null) {
+  /** 안내 칸을 고른 카드(after) 바로 다음에 펼치거나, 접어서 제자리로 돌려놓는다. */
+  protected pickbar(after: HTMLElement | null) {
     const bar = this.$('[data-pickbar]');
-    bar.hidden = msg === null;
-    if (msg !== null) this.$('[data-pickmsg]').textContent = msg;
-    this.classList.toggle('is-picking', msg !== null);
+    this.home ??= { parent: bar.parentNode!, next: bar.nextSibling };
+    if (after) {
+      if (!this.pickRow) {
+        this.pickRow = document.createElement('li');
+        this.pickRow.className = 'pick-slot';
+        this.pickRow.setAttribute('role', 'none');
+      }
+      this.pickRow.append(bar);
+      // 고른 카드와 같은 줄(눈에 보이는 줄)의 마지막 카드 뒤에 끼운다. 바로 뒤에 끼우면 옆 카드가 다음 줄로 밀려 자리가 바뀐다.
+      let anchor = after;
+      const top = after.getBoundingClientRect().top;
+      for (let n = after.nextElementSibling; n instanceof HTMLElement && n !== this.pickRow; n = n.nextElementSibling) {
+        if (Math.abs(n.getBoundingClientRect().top - top) > 2) break;
+        anchor = n;
+      }
+      anchor.after(this.pickRow);
+      bar.hidden = false;
+      // 꼭지가 고른 카드의 가운데 아래를 가리키게 한다 (카드가 좁으면 왼쪽 끝 가까이)
+      const a = after.getBoundingClientRect(), b = bar.getBoundingClientRect();
+      bar.style.setProperty('--notch', `${Math.max(16, Math.min(a.left + Math.min(a.width / 2, 48) - b.left - 8, b.width - 32))}px`);
+      // 고른 카드가 화면 맨 아래에 있었으면 안내 칸이 보이도록 조금 올린다
+      bar.scrollIntoView({ block: 'nearest' });
+    } else {
+      bar.hidden = true;
+      this.home.parent.insertBefore(bar, this.home.next);
+      this.pickRow?.remove();
+    }
+    this.classList.toggle('is-picking', after !== null);
   }
 
   /** 고르기를 푼다. 고른 카드가 있었다면 결과 줄에 남은 '골랐습니다' 안내도 지운다. */
@@ -119,16 +153,23 @@ abstract class Board extends HTMLElement {
   }
 
   /**
-   * 카드를 고른다. 안내는 화면 아래 안내 줄에 보이고, 화면 읽기에는 결과 줄(role=status)로 읽힌다.
-   * 고르는 동안 결과 줄은 눈에는 숨긴다 (같은 글이 두 번 보이지 않게. play.css 의 .is-picking .board-status).
+   * 카드를 고른다. 눈에는 고른 카드 바로 아래 안내 칸이 보이고, 화면 읽기에는 결과 줄(role=status)이 읽힌다.
+   * 고르는 동안 결과 줄은 눈에는 숨긴다 (안내 칸과 같은 일을 두 번 말하지 않게. play.css 의 .is-picking .board-status).
    */
   protected setPicked(el: HTMLElement, msg: string) {
     this.unpick();
     this.picked = el;
     el.classList.add('is-picked');
     el.querySelector('.chip-btn, .row-btn')?.setAttribute('aria-pressed', 'true');
-    this.pickbar(msg);
+    this.pickbar(el);
     this.say(msg);
+  }
+
+  /** '고르기 취소' 단추. 키보드로 눌렀으면 초점을 고른 카드로 돌려놓는다 (안내 칸이 접히면서 초점이 사라지지 않게). */
+  protected cancel(key: boolean) {
+    const btn = this.picked?.querySelector<HTMLElement>('.chip-btn, .row-btn');
+    this.unpick();
+    if (key) btn?.focus();
   }
 
   /** 다시 놓을 카드에 '다시'를 붙일까. 차례 맞추기는 줄마다 붙으면 어지러워서 맞은 줄에만 '맞음'을 붙이고 나머지는 점선으로만 둔다. */
@@ -162,7 +203,7 @@ class PlayBoard extends Board {
     this.initial = [...this.querySelectorAll<HTMLElement>('.chip')];
     for (const b of this.querySelectorAll('.chip-btn')) b.setAttribute('aria-pressed', 'false');
     this.addEventListener('click', (e) => this.onClick(e));
-    this.addEventListener('keydown', (e) => { if (e.key === 'Escape' && this.picked) { this.unpick(); this.say('고르기를 취소했습니다.'); } });
+    this.addEventListener('keydown', (e) => { if (e.key === 'Escape' && this.picked) { this.cancel(true); this.say('고르기를 취소했습니다.'); } });
     enableDrag(this, {
       grab: (t) => { const c = t.closest<HTMLElement>('.chip'); return c && !c.classList.contains('is-ok') ? c : null; },
       hover: (_, under) => {
@@ -191,9 +232,11 @@ class PlayBoard extends Board {
   private onClick(e: Event) {
     const t = e.target as HTMLElement;
     const key = byKeyboard(e);
-    if (t.closest('[data-cancel]')) { this.unpick(); return; }
+    if (t.closest('[data-cancel]')) return this.cancel(key);
     if (t.closest('[data-check]')) return this.check(key);
     if (t.closest('[data-again]')) return this.again(key);
+    // 안내 칸 안에서는 단추만 듣는다 (칸의 빈 곳을 누른 것을 그 칸이 끼어 있는 상자를 누른 것으로 읽지 않게)
+    if (t.closest('[data-pickbar]') && !t.closest('button')) return;
     const chip = t.closest<HTMLElement>('.chip');
     if (chip) {
       if (this.picked && this.picked !== chip && this.where(chip) !== 'tray') return this.place(this.picked, this.where(chip), key);
@@ -213,13 +256,12 @@ class PlayBoard extends Board {
   private pick(chip: HTMLElement) {
     if (chip.classList.contains('is-ok')) { this.say('이미 알맞게 놓은 것입니다.'); return; }
     this.setPicked(chip, `‘${textOf(chip)}’ ${this.dataset.noun}를 골랐습니다. ${this.dataset.prompt}`);
-    this.$('[data-back]').hidden = this.where(chip) === 'tray';
+    for (const b of this.querySelectorAll<HTMLElement>('[data-back]')) b.hidden = this.where(chip) === 'tray';
   }
 
   protected unpick() {
     super.unpick();
-    const back = this.querySelector<HTMLElement>('[data-back]');
-    if (back) back.hidden = true;
+    for (const b of this.querySelectorAll<HTMLElement>('[data-back]')) b.hidden = true;
   }
 
   private place(chip: HTMLElement, id: string, key: boolean) {
@@ -318,7 +360,7 @@ class OrderBoard extends Board {
     this.initial = this.rows();
     for (const b of this.querySelectorAll('.row-btn')) b.setAttribute('aria-pressed', 'false');
     this.addEventListener('click', (e) => this.onClick(e));
-    this.addEventListener('keydown', (e) => { if (e.key === 'Escape' && this.picked) { this.unpick(); this.say('고르기를 취소했습니다.'); } });
+    this.addEventListener('keydown', (e) => { if (e.key === 'Escape' && this.picked) { this.cancel(true); this.say('고르기를 취소했습니다.'); } });
     enableDrag(this, {
       grab: (t) => (t.closest('.row-arrow') ? null : t.closest<HTMLElement>('.row')),
       hover: (el, under) => {
@@ -339,7 +381,7 @@ class OrderBoard extends Board {
   private onClick(e: Event) {
     const t = e.target as HTMLElement;
     const key = byKeyboard(e);
-    if (t.closest('[data-cancel]')) { this.unpick(); return; }
+    if (t.closest('[data-cancel]')) return this.cancel(key);
     if (t.closest('[data-check]')) return this.check(key);
     if (t.closest('[data-again]')) return this.again(key);
     const row = t.closest<HTMLElement>('.row');
