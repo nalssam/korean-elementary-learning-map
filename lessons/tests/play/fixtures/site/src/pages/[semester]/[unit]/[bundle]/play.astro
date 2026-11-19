@@ -1,0 +1,9 @@
+---
+// 웹 활동 (학생용). 화면은 src/components/play/PlayPage.astro 가 그린다.
+// 웹 활동이 ready 인 차시만 주소가 생긴다.
+import PlayPage from '#src/components/play/PlayPage.astro';
+import { lessonPaths } from '#lib/content.ts';
+
+export function getStaticPaths() { return lessonPaths('web_activity'); }
+---
+<PlayPage id={Astro.props.id} />

@@ -1,0 +1,38 @@
+---
+// 학생 페이지(확인 퀴즈, 웹 활동)의 틀. Base.astro 를 kind="student" 로 감싼다.
+// QR 로 연 태블릿·휴대폰에서 아이가 바로 쓰는 화면이라, 머리에는 무엇을 하는 화면인지와 어느 차시인지만 둔다.
+// 사이트 밖으로 나가는 링크, 이름·번호 칸, 저장소(쿠키·localStorage 등)를 쓰지 않는다 (docs/CONTRACT.md 9절).
+import Base from '#src/layouts/Base.astro';
+import { bundleOf, lessonsLabel, semesterLabel } from '#lib/content.ts';
+import { ASSET_LABEL } from '#lib/site.ts';
+import type { Lesson } from '#schema/lesson.ts';
+import './play.css';
+
+interface Props {
+  lesson: Lesson;
+  /** 이 화면이 무엇인가. 머리의 작은 글과 <title> 에 쓴다. */
+  asset: 'quiz' | 'web_activity';
+  /** 큰 제목 */
+  heading: string;
+  /** 제목 아래 한 줄 (웹 활동의 instructions) */
+  lead?: string;
+}
+const { lesson, asset, heading, lead } = Astro.props;
+const ref = bundleOf(lesson);
+const where = `${semesterLabel(ref.semester.id)} ${ref.unit.no}단원 ${lessonsLabel(ref.lessons)}`;
+---
+<Base title={`${heading} · ${ASSET_LABEL[asset]}`} kind="student" lesson={lesson}>
+  <!-- 스크립트가 도는 화면에서만 한 문제씩 보여 준다. 스크립트가 없으면 안내 한 줄과 문제 전체가 보인다. -->
+  <script is:inline slot="head">document.documentElement.classList.add('js');</script>
+  <div class="student">
+    <header class="student-head">
+      <p class="student-eyebrow"><span class="student-kind">{ASSET_LABEL[asset]}</span><span class="student-where">{where}</span></p>
+      <h1 class="student-title">{heading}</h1>
+      {lead && <p class="student-lead">{lead}</p>}
+    </header>
+    <noscript><p class="student-noscript">이 화면은 브라우저의 자바스크립트가 켜져 있어야 풀 수 있습니다. 선생님께 알려 주세요.</p></noscript>
+    <main class="student-main">
+      <slot />
+    </main>
+  </div>
+</Base>
