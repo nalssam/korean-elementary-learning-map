@@ -1,6 +1,9 @@
 ---
 // 그림 한 장. 계약 파일. 그림을 넣는 모든 페이지가 이것만 쓴다 (대체 글과 출처 표시를 빠뜨리지 않으려고).
 // 인쇄 페이지가 PDF 로 찍히기 전에 그림을 기다릴 수 있도록 loading="lazy" 를 붙이지 않는다.
+//
+// 사진(kind: photo)에는 가는 테두리를 두른다 (화면 1px --line, 종이 0.5pt). 하늘이 옅은 사진이 바탕에 녹아 그림의 끝이 보이지 않아서다.
+// 테두리는 figure 가 아니라 그려진 그림을 감싼다 (아래 <style> 의 까닭). 도해·지도·그림(drawing)은 제 선이 있어 두르지 않는다.
 import { creditShort, getMedia, mediaRoute } from '#lib/content.ts';
 import type { Lesson } from '#schema/lesson.ts';
 import { href } from '#src/lib/url.ts';
@@ -13,12 +16,18 @@ interface Props {
   caption?: boolean;
   /** 출처 표시를 찍을지 (기본: 찍는다). false 는 같은 페이지의 다른 자리에 출처를 모아 찍을 때만 준다 (웹 활동의 '그림 출처'). */
   credit?: boolean;
+  /**
+   * 사진에 가는 테두리를 두를지 (기본: 두른다). 사진이 아니면 이 값과 관계없이 두르지 않는다.
+   * false 는 그림이 이미 테두리 있는 상자 안에 있는 자리에만 준다: 웹 활동의 카드, 작은 미리보기.
+   */
+  frame?: boolean;
   class?: string;
 }
-const { lesson, id, caption = true, credit = true, class: cls } = Astro.props;
+const { lesson, id, caption = true, credit = true, frame = true, class: cls } = Astro.props;
 const m = getMedia(lesson, id);
+const framed = frame && m.kind === 'photo';
 ---
-<figure class:list={['media', cls]}>
+<figure class:list={['media', cls]} data-frame={framed ? 'photo' : undefined}>
   <img src={href(mediaRoute(lesson, id))} alt={m.alt} decoding="async" />
   {(caption && m.caption || credit) && (
     <figcaption>
@@ -27,3 +36,32 @@ const m = getMedia(lesson, id);
     </figcaption>
   )}
 </figure>
+
+<style is:global>
+  /* 사진의 가는 테두리 (그림자가 아니라 선이다). 테두리는 <img> 상자가 아니라 그려진 그림을 따라간다.
+     그림을 놓는 쪽은 그림을 contain 으로 줄이므로 상자 옆에 빈 띠가 남을 수 있고, 상자에 border 를 그리면 그 띠까지 둘러진다. */
+
+  /* 화면: 번짐 없는 drop-shadow 네 개로 그려진 그림의 둘레에 1px 고리를 두른다. 상자의 치수는 바뀌지 않는다. */
+  @media screen {
+    .media[data-frame='photo'] img {
+      --frame: var(--line);
+      filter: drop-shadow(1px 0 0 var(--frame)) drop-shadow(-1px 0 0 var(--frame)) drop-shadow(0 1px 0 var(--frame)) drop-shadow(0 -1px 0 var(--frame));
+    }
+    /* 인쇄 페이지의 미리보기는 종이와 같은 색 */
+    body[data-kind='print'] .media[data-frame='photo'] img { --frame: var(--rule-soft); }
+  }
+
+  /* 종이: 0.5pt. 인쇄에서 filter 를 쓰면 Chromium 이 사진을 300dpi 그림으로 다시 찍어 PDF 가 몇 배로 커지므로 쓰지 않는다.
+     대신 <img> 에 0.5pt 의 안쪽 여백을 두고, 그 바탕에 그려진 그림보다 사방 0.5pt 큰 사각형을 깐다
+     (자리는 Base.astro 의 스크립트가 잰다. 그림마다 <script> 가 본문에 끼지 않게 페이지에 한 번만 둔다).
+     그림이 사각형의 가운데를 덮어 둘레의 0.5pt 만 선으로 남는다. 바탕은 벡터로 찍힌다.
+     --line 은 종이에서 거의 보이지 않아 인쇄용 옅은 선 색(--rule-soft)을 쓴다 (흑백으로 뽑아도 보인다). */
+  @media print {
+    .media[data-frame='photo'] img {
+      padding: 0.5pt;
+      background: linear-gradient(var(--rule-soft), var(--rule-soft)) no-repeat;
+      background-size: var(--frame-size, 0 0);
+      background-position: var(--frame-pos, 0 0);
+    }
+  }
+</style>

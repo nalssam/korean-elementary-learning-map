@@ -7,7 +7,7 @@ import type { Lesson } from '#schema/lesson.ts';
 import { href } from '#src/lib/url.ts';
 import { usedInFlow } from './data.ts';
 import Fold from './Fold.astro';
-import Qr from './Qr.astro';
+import Qr from '#src/components/Qr.astro';
 
 interface Props { lesson: Lesson }
 const { lesson } = Astro.props;

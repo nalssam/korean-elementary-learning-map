@@ -192,6 +192,9 @@ const cases: [string, string, (l: Raw) => void, string[]][] = [
   // ── 지어낸 그림과 사람이 나오는 그림을 쓸 수 없는 자리 ──
   ['지어낸 그림을 그림 한 장(picture)에', ONE, (l) => { Object.assign(l.media[0], { factual: false, ai_generated: true, file: 'media/stone.png', facts: [] }); l.worksheet.pages[0].blocks.shift(); l.assets.cards.cards[2].media = undefined; }, ['slides · 2번째 · media', '지어낸 그림(stone)은 수업 화면의 곁그림으로만 씁니다']],
   ['지어낸 그림을 견주기(compare) 장에', TWO, (l) => { Object.assign(l.media[2], scene); l.slides[3] = { layout: 'compare', title: '둘을 견주어 봅시다', left: { label: '왼쪽', points: ['하나'], media: 'sample' }, right: { label: '오른쪽', points: ['둘'] } }; }, ['slides · 4번째 · left · media', '지어낸 그림(sample)은 수업 화면의 곁그림으로만 씁니다', '견주기(compare)']],
+  ['지어낸 그림을 견주기 장의 함께 보는 그림(media)에', TWO, (l) => { Object.assign(l.media[2], scene); l.slides[3] = { layout: 'compare', title: '둘을 견주어 봅시다', media: 'sample', left: { label: '왼쪽', points: ['하나'] }, right: { label: '오른쪽', points: ['둘'] } }; }, ['slides · 4번째 · media', '지어낸 그림(sample)은 수업 화면의 곁그림으로만 씁니다']],
+  ['견주기 장의 함께 보는 그림과 쪽마다의 그림을 섞음', TWO, (l) => { l.slides[3] = { layout: 'compare', title: '둘을 견주어 봅시다', media: 'map', left: { label: '왼쪽', points: ['하나'], media: 'sample' }, right: { label: '오른쪽', points: ['둘'], media: 'map' } }; }, ['slides · 4번째 · left · media', 'slides · 4번째 · right · media', '함께 보는 그림(media)이 있으면 left.media 는 적지 않습니다', '쪽마다 그림이 따로 있으면 media 를 지웁니다']],
+  ['견주기 장의 함께 보는 그림이 없는 id', TWO, (l) => { l.slides[3] = { layout: 'compare', title: '둘을 견주어 봅시다', media: 'nothing', left: { label: '왼쪽', points: ['하나'] }, right: { label: '오른쪽', points: ['둘'] } }; }, ['slides · 4번째 · media', '없는 그림 id 입니다: nothing']],
   ['지어낸 그림을 단계(steps) 장에', TWO, (l) => { Object.assign(l.media[2], scene); l.slides[3] = { layout: 'steps', title: '차례를 봅시다', steps: [{ label: '하나', text: '먼저 봅니다.' }, { label: '둘', text: '다음에 놓습니다.', media: 'sample' }] }; }, ['slides · 4번째 · steps · 2번째 · media', '지어낸 그림(sample)']],
   ['지어낸 그림을 학습지 그림(figure)에', ONE, (l) => { Object.assign(l.media[0], { factual: false }); }, ['worksheet · pages · 1번째 · blocks · 1번째 · media', '지어낸 그림(stone)']],
   ['지어낸 그림을 본 것·짐작한 것 칸에', TWO, (l) => { l.media[0].factual = false; }, ['worksheet · pages · 1번째 · blocks · 4번째 · media', '지어낸 그림(map)']],
@@ -292,6 +295,8 @@ test('통과해야 한다: 손으로 쓰기 쉬운 여러 꼴', () => {
   passes(TWO, (l) => { Object.assign(l.media[2], scene); });
   // 실물 사진은 견주기·단계 장에 쓸 수 있다
   passes(TWO, (l) => { l.slides[3] = { layout: 'compare', title: '둘을 견주어 봅시다', left: { label: '왼쪽', points: ['하나'], media: 'sample' }, right: { label: '오른쪽', points: ['둘'], media: 'map' } }; });
+  // 두 쪽이 함께 보는 그림 한 장도 된다 (쪽마다의 그림은 없이)
+  passes(TWO, (l) => { l.slides[3] = { layout: 'compare', title: '둘을 견주어 봅시다', media: 'sample', left: { label: '왼쪽', points: ['하나'] }, right: { label: '오른쪽', points: ['둘'] } }; });
   // 직접 찍은 사진은 누가 언제 어디에서 찍었는지 적으면 original 로 둘 수 있다
   passes(ONE, (l) => { l.media.push({ id: 'mine', kind: 'photo', file: 'media/mine.jpg', alt: '시험용 사진', credit: { holder: '몽당분필 날쌤', licence: 'original', note: '날쌤이 2026년 5월 강화도에서 찍음' } }); });
   // 학습지에만 싣는 읽기 자료는 문단 6개 × 120자까지 쓸 수 있다

@@ -71,6 +71,12 @@ test('미리 보기 빌드 (SHOW_DRAFTS=1, 하위 경로 없음)', () => {
   const two = read(out, '5-2/1/02-03/index.html');
   assert.ok(two.includes('그림: 몽당분필 날쌤 · 시험용 박물관 자료를 본떠 그림 (공공누리 제1유형)'));
   assert.ok(two.includes('사진: 시험용 사진가 · CC BY-SA 3.0'));
+  // 사진에는 가는 테두리가 붙고(data-frame="photo"), 지도·그림에는 붙지 않는다. frame={false} 로 부른 작은 미리보기에도 붙지 않는다.
+  const [main, rest] = two.split('<div id="thumbs">');
+  const thumbs = rest.slice(0, rest.indexOf('</div>'));
+  assert.match(main, /<figure class="media" data-frame="photo"><img src="\/media\/5-2\/1\/02-03\/sample\.png"/);
+  assert.match(main, /<figure class="media"><img src="\/media\/5-2\/1\/02-03\/map\.svg"/);
+  assert.ok(thumbs.includes('sample.png') && !thumbs.includes('data-frame'), '작은 미리보기에 테두리가 붙었습니다');
 
   // 인쇄 페이지: 맨 아래 문구는 Base 가 아니라 바닥글이 맡는다. 설명은 끄고 출처 표시는 남긴다.
   const coloring = read(out, '5-2/1/02-03/coloring/index.html');

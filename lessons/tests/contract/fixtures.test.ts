@@ -40,6 +40,15 @@ test('keepParticle: 닫는 따옴표와 뒤의 조사 사이에만 U+2060 을 �
   // 두 번 불러도 더 바뀌지 않는다
   const once = keepParticle('‘눈으로 본 것’은 ‘짐작’과 다릅니다');
   assert.equal(keepParticle(once), once);
+  // 빈칸 없이 낱말을 잇는 가운뎃점은 양쪽 낱말과 묶는다 (점 앞이나 뒤에서 줄이 갈리지 않는다)
+  assert.equal(keepParticle('무덤·집터처럼'), `무덤${WJ}·${WJ}집터처럼`);
+  assert.equal(keepParticle('3·1 운동, A·B'), `3${WJ}·${WJ}1 운동, A${WJ}·${WJ}B`);
+  assert.equal(keepParticle('‘무덤·집터’는'), `‘무덤${WJ}·${WJ}집터’${WJ}는`);
+  const dotted = keepParticle('무덤·집터·제단처럼');
+  assert.equal(dotted, `무덤${WJ}·${WJ}집터${WJ}·${WJ}제단처럼`);
+  assert.equal(keepParticle(dotted), dotted);
+  // 앞이나 뒤에 빈칸이 있는 점, 문장부호 옆의 점은 그대로 둔다
+  for (const s of ['가 · 나', '가 ·나', '가· 나', '·가', '가·', '(가)·(나)']) assert.equal(keepParticle(s), s);
   assert.equal([...once].filter((ch) => ch === WJ).length, 2);
 });
 
@@ -265,15 +274,16 @@ test("shownMedia: 안내 페이지의 '출처'와 PPTX 마지막 장에 올릴 �
   const ids = (ms: c.ResolvedMedia[]) => ms.map((m) => `${m.lessonId}#${m.id}`);
   // 단원 정리 묶음은 제 그림이 없다. 빌려 온 그림과 단원 덱에 모은 카드의 그림이 나온다 (겹치지 않게, 처음 나오는 차례로).
   assert.equal(review().media.length, 0);
-  assert.deepEqual(ids(c.shownMedia(review())), ['5-2/1/01#stone']);
-  assert.deepEqual(ids(c.shownMedia(review(), 'slides')), ['5-2/1/01#stone']);
+  // 견주기 장의 함께 보는 그림(compare.media, 앞 묶음에서 빌려 온 지도)도 수업 화면의 그림이라 PPTX 출처 장에 오른다
+  assert.deepEqual(ids(c.shownMedia(review())), ['5-2/1/01#stone', '5-2/1/02-03#map']);
+  assert.deepEqual(ids(c.shownMedia(review(), 'slides')), ['5-2/1/01#stone', '5-2/1/02-03#map']);
   // 수업 화면에 실리는 그림만 / 화면·인쇄물에 실리는 그림 전부
   assert.deepEqual(ids(c.shownMedia(two(), 'slides')), ['5-2/1/02-03#sample']);
   assert.deepEqual(ids(c.shownMedia(two())), ['5-2/1/02-03#sample', '5-2/1/02-03#map', '5-2/1/02-03#stone-line']);
   assert.deepEqual(ids(c.shownMedia(one())), ['5-2/1/01#stone']);
   assert.deepEqual(c.shownMedia(heavy()), []);
   // 출처 표시는 이 목록에서 만든다
-  assert.deepEqual(c.shownMedia(review()).map((m) => c.creditFull(m).text), ['그림: 시험용 그린이, CC BY-NC-SA 4.0']);
+  assert.deepEqual(c.shownMedia(review()).map((m) => c.creditFull(m).text), ['그림: 시험용 그린이, CC BY-NC-SA 4.0', '지도: 시험용 그린이, CC BY-NC-SA 4.0']);
 });
 
 test('초안의 맨 아래 문구와 지문', () => {

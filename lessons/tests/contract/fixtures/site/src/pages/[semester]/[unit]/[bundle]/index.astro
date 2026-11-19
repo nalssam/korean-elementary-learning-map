@@ -18,6 +18,8 @@ const games = cards.state === 'ready' ? cards.games : [];
   <main data-pagefind-body>
     <h1>{lesson.title}</h1>
     {refs.map((ref) => <Media lesson={lesson} id={ref} />)}
+    {/* 작은 미리보기: 사진이어도 테두리를 두르지 않는다 (frame={false}) */}
+    <div id="thumbs">{refs.map((ref) => <Media lesson={lesson} id={ref} caption={false} credit={false} frame={false} />)}</div>
     <ul id="jobs">{printJobs(lesson).map((j) => (
       <li>
         <a href={href(j.route)}>{j.label}</a> <a href={href(j.file)} download={j.download}>PDF</a>

@@ -117,6 +117,11 @@ test('어디에서도 쓰지 않는 그림은 걸린다 (쓰지 않아도 사이
     // 쓰는 자리가 생기면 걸리지 않는다
     t.edit('5-2/1/02-03', (x) => { x.slides[3].media = 'extra'; });
     assert.deepEqual(sourceIssues(c.loadLesson('5-2/1/02-03')), []);
+    // 견주기 장의 함께 보는 그림(compare.media)도 쓰는 자리다
+    t.edit('5-2/1/02-03', (x) => { delete x.slides[3].media; x.slides[3] = { layout: 'compare', title: '둘을 견주어 봅시다', media: 'extra', left: { label: '왼쪽', points: ['하나'] }, right: { label: '오른쪽', points: ['둘'] }, facts: ['f1'] }; });
+    const l2 = c.loadLesson('5-2/1/02-03');
+    assert.deepEqual(sourceIssues(l2), []);
+    assert.ok(c.shownMedia(l2, 'slides').some((m) => m.id === 'extra'));
   } finally {
     t.cleanup();
     delete process.env.SHOW_DRAFTS;

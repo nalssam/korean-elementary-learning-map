@@ -23,14 +23,14 @@ flow:
     do:
       - 카드를 차례대로 놓게 합니다.
     uses: [cards, web_activity, slides]
-    slides: [2, 2]
+    slides: [2, 3]
   - phase: 정리
     minutes: 15
     title: 단원 정리지 쓰기
     do:
       - 정리지를 혼자 쓰게 합니다.
     uses: [worksheet, quiz, slides]
-    slides: [3, 3]
+    slides: [4, 4]
 
 slides:
   - layout: title
@@ -39,6 +39,18 @@ slides:
     title: 이 그림을 기억하나요?
     media: 01/stone
     facts: [01/f1]
+  # 두 쪽이 함께 보는 그림 한 장(media)을 실은 견주기 장. 앞 묶음의 그림을 빌려 온다.
+  # 이름표 상자 둘이 왼쪽에 쌓이고 그림이 오른쪽에 온다.
+  - layout: compare
+    title: 길의 두 끝을 견주어 봅시다
+    media: 02-03/map
+    left:
+      label: 서쪽 끝
+      points: [길이 곧게 뻗습니다., 마을에서 시작합니다.]
+    right:
+      label: 동쪽 끝
+      points: [길이 굽어 있습니다., 강가에서 끝납니다.]
+    facts: [02-03/f1]
   - layout: closing
     title: 가장 기억에 남는 것을 말해 봅시다
 

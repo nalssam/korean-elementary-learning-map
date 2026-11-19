@@ -1,5 +1,6 @@
 ---
 // QR 코드 한 개. 빌드할 때 SVG 로 그린다 (브라우저에서 만들지 않고, 바깥 서비스를 부르지 않는다).
+// 함께 쓰는 컴포넌트다 (계약). 차시 안내 페이지와 수업 화면의 QR 창이 같이 쓴다. 크기는 부르는 쪽이 .qr 에 정한다.
 // 주소는 부르는 쪽이 absoluteUrl() 로 만들어 준다. 종이에 박히는 주소라서 브라우저의 location 으로 만들지 않는다 (docs/CONTRACT.md 3절).
 import QRCode from 'qrcode';
 
@@ -32,3 +33,9 @@ const box = size + QUIET * 2;
   <rect class="qr-ground" width={box} height={box} />
   <path class="qr-ink" d={d} />
 </svg>
+
+<style is:global>
+  /* 바탕은 늘 밝게, 칸은 늘 짙게 (읽는 기계가 어두운 칸을 찾는다). 부르는 쪽의 CSS 가 없어도 읽히는 QR 이 나오게 여기에 둔다. */
+  .qr-ground { fill: var(--card); }
+  .qr-ink { fill: var(--navy); }
+</style>

@@ -198,11 +198,16 @@ export const Slide = z.discriminatedUnion('layout', [
   so({ layout: z.literal('picture'), title: T(30), media: MediaRef, caption: T(40).optional(), ...slideBase }),
   /** 짧은 항목 2~4개 */
   so({ layout: z.literal('points'), title: T(30), points: z.array(T(40)).min(2).max(4), media: MediaRef.optional(), ...slideBase }),
-  /** 둘을 나란히 견주기 */
+  /**
+   * 둘을 나란히 견주기. 그림은 둘 가운데 한 가지로 싣는다:
+   * 두 쪽이 저마다 그림을 하나씩(left.media, right.media), 또는 두 쪽이 함께 보는 그림 한 장(media).
+   * 함께 보는 그림이 있으면 제목 아래가 두 단이 된다 (왼쪽에 두 이름표 상자를 쌓고, 오른쪽에 그림).
+   */
   so({
     layout: z.literal('compare'), title: T(30),
     left: so({ label: T(12), points: z.array(T(30)).min(1).max(4), media: MediaRef.optional() }),
     right: so({ label: T(12), points: z.array(T(30)).min(1).max(4), media: MediaRef.optional() }),
+    media: MediaRef.optional(),
     ...slideBase,
   }),
   /** 차례가 있는 단계 2~5개 */
@@ -551,7 +556,11 @@ export function mediaUses(l: LessonData): RefAt<MediaUse>[] {
     if (s.layout === 'picture') add([...at, 'media'], s.media, 'picture');
     else if (s.layout === 'question' || s.layout === 'points') add([...at, 'media'], s.media, 'slide');
     // 견주기와 단계의 그림은 아이가 보고 견주거나 차례를 읽어 내는 자료다. 곁그림이 아니므로 그림 한 장과 같이 다룬다.
-    else if (s.layout === 'compare') { add([...at, 'left', 'media'], s.left.media, 'picture'); add([...at, 'right', 'media'], s.right.media, 'picture'); }
+    else if (s.layout === 'compare') {
+      add([...at, 'media'], s.media, 'picture');
+      add([...at, 'left', 'media'], s.left.media, 'picture');
+      add([...at, 'right', 'media'], s.right.media, 'picture');
+    }
     else if (s.layout === 'steps') s.steps.forEach((st, si) => add([...at, 'steps', si, 'media'], st.media, 'picture'));
   });
   for (const { path, block } of leafBlocksOf(l.worksheet)) {
@@ -679,6 +688,13 @@ export const Lesson = LessonShape.superRefine((l, ctx) => {
 
   // 낱말 풀이는 terms.new 한 곳에만 적는다
   const terms = new Map(l.terms.new.map((t) => [t.term, t]));
+  // 견주기 장의 그림은 함께 보는 한 장이거나 쪽마다 한 장이다. 둘을 섞으면 그림 셋이 한 장에 들어가 어느 그림이 어느 쪽인지 흐려진다.
+  l.slides.forEach((s, i) => {
+    if (s.layout !== 'compare' || !s.media) return;
+    for (const side of ['left', 'right'] as const) {
+      if (s[side].media) issue(['slides', i, side, 'media'], `견주기 장에 함께 보는 그림(media)이 있으면 ${side}.media 는 적지 않습니다. 두 쪽이 한 그림을 함께 보면 media 만 남기고, 쪽마다 그림이 따로 있으면 media 를 지웁니다`);
+    }
+  });
   l.slides.forEach((s, i) => { if (s.layout === 'term' && !terms.has(s.term)) issue(['slides', i, 'term'], `terms.new 에 "${s.term}" 이 없습니다. 풀이를 terms.new 에 적습니다`); });
 
   // 퀴즈 문항을 가리키는 번호

@@ -196,7 +196,7 @@ test('피해를 담은 사실을 그린 그림은 다른 묶음에서도 놀이 
     failsWith(() => c.loadLesson(REVIEW), 'assets · cards · cards · 1번째 · media: 피해를 담은 사실을 그린 그림(04/harm)은 카드·컬러링·웹 활동에 쓰지 않습니다. 수업 화면과 학습지에서만 씁니다');
     // 같은 그림을 수업 화면에 싣는 것은 된다
     t.edit(REVIEW, (l) => { delete l.assets.cards.cards; l.slides[1] = { layout: 'picture', title: '그림을 봅시다', media: '04/harm' }; });
-    assert.deepEqual(c.shownMedia(c.loadLesson(REVIEW), 'slides').map((m) => m.id), ['harm']);
+    assert.deepEqual(c.shownMedia(c.loadLesson(REVIEW), 'slides').map((m) => m.id), ['harm', 'map']);
   } finally { t.reset(); }
   // ② 이 묶음의 그림이 앞 묶음의 피해를 담은 사실을 그린 것 → 이 묶음의 카드에 쓸 수 없다
   withPicture(REVIEW);

@@ -116,6 +116,13 @@ test('인쇄 페이지: 인쇄 모양으로 재어 일곱 조건을 모두 채�
     await page.goto(site.origin + BASE + job.route, { waitUntil: 'load' });
     const measure = () => page.evaluate(sheetProblems, job.pages);
     assert.deepEqual(await measure(), []);
+    // 틀의 글(머리의 학기·단원·차시 줄, 반·이름 칸, 바닥글과 쪽 번호)은 8pt 이상이다. 공개된 차시의 긴 바닥글이 두 줄로 접혀도 6mm 안에 든다 (위의 조건 2).
+    const frame = await page.evaluate(() => [...document.querySelectorAll('.sheet-head *, .sheet-foot')]
+      .filter((el) => [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent!.trim()))
+      .map((el) => ({ what: el.className || el.tagName, pt: (parseFloat(getComputedStyle(el).fontSize) * 72) / 96, lines: Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)) })));
+    assert.ok(frame.length >= 3, `틀의 글을 찾지 못했습니다: ${JSON.stringify(frame)}`);
+    for (const f of frame) assert.ok(f.pt >= 8 - 0.01, `틀의 글 ${f.what} 이 ${f.pt}pt 입니다 (8pt 이상)`);
+    assert.equal(frame.find((f) => f.what === 'sheet-foot')?.lines, 2, '시험용 공개 바닥글은 두 줄로 접혀야 이 시험이 두 줄의 높이를 잽니다');
     // 세로로 긴 도안(190 × 249)도 본문을 넘기지 않고, 그림은 '찾아볼 것'과 출처 표시를 뺀 높이를 거의 다 쓴다
     const size = await page.evaluate(() => {
       const mm = (px: number) => (px * 25.4) / 96;

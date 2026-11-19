@@ -377,6 +377,13 @@ test('앞 묶음에서 빌려 온 사실·그림·카드를 고치면 뒤 묶음
     fs.writeFileSync(svg, fs.readFileSync(svg, 'utf8').replace('#132c3d', '#000000'));
     t.touch(svg);
   });
+  // 견주기 장이 함께 보는 그림으로 빌려 온 그림(02-03/map)도 뒤 묶음의 지문에 든다
+  {
+    const before = c.sealsOf(REVIEW).lesson;
+    t.edit(TWO, (l) => { l.media.find((m: { id: string }) => m.id === 'map').credit.holder = '다른 그린이'; });
+    assert.notEqual(c.sealsOf(REVIEW).lesson, before);
+    t.reset();
+  }
   // 빌려 온 적 없는 것을 고치면 뒤 묶음의 지문은 그대로다
   sign(ONE); sign(TWO); sign(REVIEW);
   const before = c.sealsOf(REVIEW).lesson;

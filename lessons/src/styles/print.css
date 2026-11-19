@@ -17,7 +17,9 @@ body[data-kind='print'] { background: var(--line); }
 .sheet-head { flex: none; height: var(--sheet-head); }
 .sheet-body { flex: none; position: relative; height: calc(297mm - 2 * var(--page-margin) - var(--sheet-head) - var(--sheet-foot)); }
 .sheet[data-orientation='landscape'] .sheet-body { height: calc(210mm - 2 * var(--page-margin) - var(--sheet-head) - var(--sheet-foot)); }
-.sheet-foot { flex: none; height: var(--sheet-foot); font-size: 7pt; line-height: 1.2; color: var(--ink-dim); }
+/* 바닥글은 틀의 글이라 8pt 이상이다 (9pt 는 아이가 읽고 쓰는 글의 하한). 공개된 차시의 바닥글(주소가 든 긴 한 줄)은 두 줄로 접히므로
+   두 줄이 6mm 안에 들도록 줄 간격을 좁게 둔다 (8pt × 1.05 × 2 = 5.9mm). */
+.sheet-foot { flex: none; height: var(--sheet-foot); font-size: 8pt; line-height: 1.05; color: var(--ink-dim); }
 
 /* HTML 상자에 쓰는 선. 전개도 SVG 의 선은 모듈이 SVG 안에 직접 그린다 (SVG 안에서는 mm 가 아니라 SVG 단위로 굵기를 적는다). */
 .cut { border: 2px solid var(--ink); } /* 0.53mm. Chromium 은 테두리를 px 아래로 버려 그린다 (0.5mm 는 1px) */
