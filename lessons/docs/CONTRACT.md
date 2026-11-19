@@ -11,7 +11,7 @@
 이 프로젝트는 `nalssam/korean-elementary-learning-map` 저장소의 `lessons/` 폴더에 놓입니다. 그 저장소의 나머지(학습 지도 데이터와 온톨로지)는 고치지 않습니다.
 
 - 이 문서에서 "저장소 뿌리"는 `lessons/` 폴더입니다. 경로는 모두 이 폴더에서 잽니다. 명령도 이 폴더에서 돌립니다 (`cd lessons && npm ci`).
-- git 뿌리에 두는 것은 `.github/` 하나입니다 (GitHub 이 거기에서만 읽습니다). 워크플로 파일 이름은 `lessons-` 로 시작하고, `defaults.run.working-directory: lessons` 로 돌며, `lessons/**` 가 바뀔 때만 돕니다. `CODEOWNERS` 의 경로에는 `/lessons/` 를 붙입니다. 이미 있는 워크플로(`ontology-release.yml`)는 고치지 않습니다.
+- git 뿌리에 두는 것은 `.github/` 하나입니다 (GitHub 이 거기에서만 읽습니다). 워크플로 파일 이름은 `lessons-` 로 시작하고, `defaults.run.working-directory: lessons` 로 돌며, `lessons/**` 가 바뀔 때만 돕니다. `CODEOWNERS` 의 경로에는 `/lessons/` 를 붙입니다. 이미 있는 워크플로(`ontology-release.yml`)는 고치지 않습니다. 예외는 그 CI 가 다시 돌게 하는 고침입니다 (러너 판 고정, 잠금 파일의 보안 고침). 그런 고침은 `lessons/` 의 일과 섞지 않고 따로 커밋합니다.
 - `.githooks/` 는 `lessons/.githooks/` 에 둡니다. 훅은 git 뿌리에서 불리므로 먼저 `lessons/` 로 들어간 뒤에 일합니다.
 - 라이선스 파일(`LICENSE`, `LICENSE-CONTENT.md`)과 `NOTICE.md`, `README.md`, `CONTRIBUTING.md` 는 `lessons/` 안에 둡니다. git 뿌리의 같은 이름 파일은 학습 지도 프로젝트의 것이라 고치지 않습니다.
 

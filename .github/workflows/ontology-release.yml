@@ -42,7 +42,9 @@ jobs:
           git diff --exit-code
 
   pinned-python-standards-gate:
-    runs-on: ubuntu-latest
+    # Python 3.14.3 is pinned for this gate and is not built for the ubuntu-26.04 image,
+    # so the runner image is pinned too.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
