@@ -1,0 +1,27 @@
+---
+// 학습지 인쇄 페이지 (/<id>/worksheet/). 명세의 worksheet.pages 한 묶음이 종이 한 쪽이다.
+// 첫 쪽 머리에 반·번호·이름 칸이 들어가고, 번호는 쪽이 바뀌어도 이어 센다 (docs/CONTRACT.md 7절).
+// 블록이 한 쪽에 다 들어가지 않으면 render-pdf 가 어느 쪽 몇째 블록부터 넘치는지 알리고 빌드를 멈춘다.
+import PrintLayout from '#src/components/print/PrintLayout.astro';
+import Sheet from '#src/components/print/Sheet.astro';
+import WorksheetBlocks from '#src/components/print/WorksheetBlocks.astro';
+import '#src/components/print/worksheet.css';
+import { placeWorksheet } from '#src/components/print/layout.ts';
+import { lessonPaths, loadLesson, printJobs } from '#lib/content.ts';
+
+export function getStaticPaths() { return lessonPaths(); }
+const lesson = loadLesson(Astro.props.id);
+const job = printJobs(lesson).find((j) => j.kind === 'worksheet')!;
+const worksheet = lesson.worksheet;
+const pages = placeWorksheet(lesson);
+---
+<PrintLayout lesson={lesson} job={job}>
+  {pages.map((page, i) => (
+    <Sheet lesson={lesson} job={job} no={i + 1} title={worksheet.title} sub={worksheet.subtitle} name={i === 0 ? 'student' : 'none'}>
+      <div class="ws">
+        {page.heading && <h2 class="ws-heading">{page.heading}</h2>}
+        <WorksheetBlocks lesson={lesson} items={page.items} />
+      </div>
+    </Sheet>
+  ))}
+</PrintLayout>

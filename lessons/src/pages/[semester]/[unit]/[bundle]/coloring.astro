@@ -1,0 +1,30 @@
+---
+// 컬러링 도안 인쇄 페이지 (/<id>/coloring/). 컬러링이 ready 인 차시에만 생긴다. 한 쪽이다.
+// 머리에 제목, 본문에 선 그림을 크게, 그 아래 '찾아볼 것'(look_for)을 짧은 할 일 목록으로 찍는다 (docs/CONTRACT.md 7절).
+// 도안의 가로세로 비는 정해져 있지 않다. 그림은 본문에서 '찾아볼 것'과 출처 표시를 뺀 높이에 맞춰 줄인다.
+import Media from '#src/components/Media.astro';
+import PrintLayout from '#src/components/print/PrintLayout.astro';
+import Sheet from '#src/components/print/Sheet.astro';
+import '#src/components/print/coloring.css';
+import { lessonPaths, loadLesson, printJobs } from '#lib/content.ts';
+
+export function getStaticPaths() { return lessonPaths('coloring'); }
+const lesson = loadLesson(Astro.props.id);
+const job = printJobs(lesson).find((j) => j.kind === 'coloring')!;
+const coloring = lesson.assets.coloring;
+---
+<PrintLayout lesson={lesson} job={job}>
+  {coloring.state === 'ready' && (
+    <Sheet lesson={lesson} job={job} no={1} title={coloring.title} name="student">
+      <div class="coloring">
+        <Media lesson={lesson} id={coloring.media} caption={false} class="coloring-picture" />
+        {coloring.look_for.length > 0 && (
+          <div class="coloring-look">
+            <p class="coloring-look-title">찾아볼 것</p>
+            <ul class="coloring-tasks">{coloring.look_for.map((task) => <li>{task}</li>)}</ul>
+          </div>
+        )}
+      </div>
+    </Sheet>
+  )}
+</PrintLayout>
