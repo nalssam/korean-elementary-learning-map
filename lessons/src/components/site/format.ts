@@ -8,3 +8,12 @@ export function koDate(date: string): string {
 
 /** 성취기준 코드를 흔히 적는 꼴로. "6사04-01" → "[6사04-01]" */
 export const standardCode = (code: string) => `[${code}]`;
+
+/**
+ * 출처 제목을 「」로 감싼다. 제목에 이미 낫표가 있으면(사전의 뜻 번호 「1」 같은 것) 감싸지 않고 그대로 둔다.
+ * 「유물4 (遺物) 「1」」처럼 낫표가 겹치면 어디까지가 제목인지 읽기 어렵다.
+ * "유적8 (遺跡)" → "「유적8 (遺跡)」", "유물4 (遺物) 「1」" → "유물4 (遺物) 「1」"
+ */
+export function quoteTitle(title: string): string {
+  return /[「」『』]/.test(title) ? title : `「${title}」`;
+}

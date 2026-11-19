@@ -4,7 +4,9 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { MARK, MARK_LABEL } from '#lib/site.ts';
 import { prepareNote, uniqueSources } from '#src/components/site/data.ts';
+import { quoteTitle } from '#src/components/site/format.ts';
 import type { PrintRow } from '#src/components/site/data.ts';
 import { buildSite, tempContent } from '../contract/helpers.ts';
 
@@ -21,6 +23,10 @@ before(() => {
     // 같은 문서의 다른 구절을 출처 둘로 적었다
     const f1 = l.facts.find((f: { id: string }) => f.id === 'f1');
     f1.sources.push({ ...f1.sources[0], quote: '시험용 근거 구절 하나의 다른 대목', accessed: '2026-11-19' });
+    // 제목에 이미 낫표가 든 출처 (사전의 뜻 번호)
+    f1.sources.push({ ...f1.sources[0], title: '돌탑3 (돌塔) 「1」', url: 'https://example.org/fact/1-dict' });
+    // 맞다(○)와 아니다(×) 문항이 하나씩 있게 한다
+    l.quiz.items.push({ ...l.quiz.items.find((q: { type: string }) => q.type === 'ox'), q: '돌탑은 나무로 만든다.', answer: false });
     // 웹 활동을 흐름에서 뺀다 ('더 해 볼 자료'가 된다)
     for (const s of l.flow) s.uses = s.uses.filter((u: string) => u !== 'web_activity');
   });
@@ -44,6 +50,23 @@ test('사실과 출처: 이름·제목·주소가 같은 출처는 한 번만, �
   assert.ok(box.includes('2026-11-19'));
 });
 
+test('출처 제목: 낫표를 겹치지 않는다', () => {
+  assert.ok(html.includes('시험용 출처, 「시험용 문서」'));
+  assert.ok(html.includes('시험용 출처, 돌탑3 (돌塔) 「1」</a>'));
+  assert.ok(!/「[^」<]*「/.test(html), '「…「…」」 처럼 낫표가 겹쳤습니다');
+  assert.equal(quoteTitle('유적8 (遺跡)'), '「유적8 (遺跡)」');
+  assert.equal(quoteTitle('유물4 (遺物) 「1」'), '유물4 (遺物) 「1」');
+  assert.equal(quoteTitle('『삼국유사』 권1'), '『삼국유사』 권1');
+});
+
+test('OX 문항의 정답: lib 의 ○·× 를 보여 주고, 화면 읽기 프로그램에는 말로 읽힌다', () => {
+  const answers = [...html.matchAll(/<p class="quiz-a"><strong>정답<\/strong> (.*?)<\/p>/g)].map((m) => m[1]);
+  for (const [mark, label] of [[MARK.yes, MARK_LABEL.yes], [MARK.no, MARK_LABEL.no]]) {
+    assert.ok(answers.includes(`<span class="quiz-mark" aria-hidden="true">${mark}</span><span class="sr-only" data-pagefind-ignore>${label}</span>`), `${mark} 정답이 없습니다: ${answers.join(' | ')}`);
+  }
+  for (const a of answers) assert.ok(!/(^|[^A-Za-z])[OX]([^A-Za-z]|$)/.test(a.replace(/<[^>]+>/g, '')), `정답에 라틴 글자 O·X 가 있습니다: ${a}`);
+});
+
 test('흐름 밖의 웹 활동: QR 카드에 한 번, 제목 밖의 표시', () => {
   assert.equal(html.match(/<h3 class="qr-title">웹 활동<\/h3>/g)?.length, 1);
   assert.match(html, /<h3 class="qr-title">웹 활동<\/h3><p class="qr-tag"[^>]*><span class="chip chip-plain">더 해 볼 자료<\/span><\/p>/);
@@ -65,4 +88,14 @@ test('uniqueSources: 차례는 처음 나온 차례', () => {
   assert.deepEqual(uniqueSources([a, b, { ...a, accessed: '2026-02-01' }]).map((s) => [s.name, s.accessed]), [['A', '2026-02-01'], ['B', '2026-01-01']]);
   // 제목이 다르면 다른 출처다
   assert.equal(uniqueSources([a, { ...a, title: '다른 문서' }]).length, 2);
+});
+
+test('사이트 화면의 소스에 OX 표시를 손으로 적지 않는다 (lib 의 MARK 를 쓴다)', () => {
+  const dirs = ['src/components/site', 'src/pages', 'src/layouts'].map((d) => path.join(import.meta.dirname, '..', '..', d));
+  const files = dirs.flatMap((d) => (fs.readdirSync(d, { recursive: true }) as string[]).map((f) => path.join(d, f))).filter((f) => /\.(astro|ts)$/.test(f));
+  for (const f of files) {
+    const src = fs.readFileSync(f, 'utf8').split('\n').filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line)).join('\n');
+    assert.ok(!/[○×]/.test(src), `${f}: ○·× 를 손으로 적었습니다`);
+    assert.ok(!/['"`>][OX]['"`<]/.test(src), `${f}: O·X 를 손으로 적었습니다`);
+  }
 });
