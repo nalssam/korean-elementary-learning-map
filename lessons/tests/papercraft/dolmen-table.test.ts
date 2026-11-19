@@ -6,15 +6,21 @@ import { xmlText } from '#lib/content.ts';
 import mod, * as dolmen from '../../generators/papercraft/modules/dolmen-table.ts';
 import { analyse, bbox, len, BODY_H, BODY_W, LEGEND_H, MIN_TEXT, RULE, SVG_OPEN, textWidth, type Piece, type Plan, type Pt, type Seg } from '../../generators/papercraft/net.ts';
 
-const TEXTS = ['받침돌을 세웁니다.', '흙과 돌을 쌓아 비탈을 만듭니다.', '통나무를 깔고 덮개돌을 끌어 올립니다.', '흙을 걷어 냅니다.'];
-/** 검수 담당이 정한 만드는 법 (R11). 인쇄된 조각은 모두 이 단계 어딘가에서 이름으로 불린다. */
+/** 수업 화면 10번 장의 네 단계 글과 같은 차례 카드 (R21) */
+const TEXTS = ['받침돌을 세웁니다.', '흙을 쌓아 비탈을 만듭니다.', '덮개돌을 비탈 위로 끌어 올립니다.', '흙을 걷어 냅니다.'];
+/** 검수 담당이 정한 만드는 법 (R21) */
 const STEPS = [
   '자르는 선을 따라 조각과 차례 카드를 오립니다.',
   '자를 대고 볼펜으로 접는 선을 꾹 눌러 금을 긋습니다.',
   '그림이 찍힌 쪽이 바깥으로 오게 접는 선을 접습니다.',
-  '빗금 친 풀칠 칸에 풀을 바르고 같은 글자끼리 붙여 덮개돌, 받침돌 두 개, 흙 비탈을 만듭니다.',
-  '통나무 세 개는 둥글게 말아 같은 글자끼리 붙입니다.',
+  '빗금 친 풀칠 칸에 풀을 바릅니다. 풀칠 칸을 안으로 접어 넣고, 같은 글자가 찍힌 면의 뒤쪽에 붙입니다.',
   '조각은 바닥판에 붙이지 않습니다. 수업 때 바닥판에 찍힌 자리에 올려놓습니다.',
+];
+const TRY_IT = [
+  '바닥판의 받침돌 자리에 받침돌 두 개를 세우고 덮개돌을 얹어 봅시다.',
+  '차례 카드 네 장을 섞은 뒤 모둠이 생각한 차례로 놓아 봅시다.',
+  '카드를 놓은 차례대로 조각을 움직여 봅시다. 받침돌이 쓰러지지 않게 한 사람이 잡아 줍시다.',
+  '그 차례로 놓은 까닭을 한 문장으로 말해 봅시다.',
 ];
 const EPS = 0.01;
 const key = (p: readonly [number, number]) => `${Math.round(p[0] * 100) / 100},${Math.round(p[1] * 100) / 100}`;
@@ -112,17 +118,28 @@ const piece = (name: string, texts = TEXTS): Piece => dolmen.plans(texts).flatMa
 const size = (pts: readonly Pt[]) => [Math.max(...pts.map((p) => p[0])) - Math.min(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1])) - Math.min(...pts.map((p) => p[1]))];
 const near = (a: number, b: number) => Math.abs(a - b) < EPS;
 
-test('조각 목록 (R11): 덮개돌 1 · 받침돌 2 · 바닥판 1 · 흙 비탈 1 · 통나무 3 · 차례 카드 4, 쪽 머리의 부제가 그 목록과 같다', () => {
+test('조각 목록 (R21): 덮개돌 1 · 받침돌 2 · 바닥판 1 · 흙 비탈 1 · 차례 카드 4, 쪽 머리의 부제가 그 목록과 같다', () => {
   const plans = dolmen.plans(TEXTS);
   const names = plans.map((p) => p.pieces.map((pc) => pc.name.replace(/ \d+$/, '')));
   const count = (list: string[]) => [...new Set(list)].map((n) => `${n} ${list.filter((x) => x === n).length}`);
-  assert.deepEqual(names.flat().sort(), ['덮개돌', '바닥판', '받침돌', '받침돌', '차례 카드', '차례 카드', '차례 카드', '차례 카드', '통나무', '통나무', '통나무', '흙 비탈'].sort());
+  assert.deepEqual(names.flat().sort(), ['덮개돌', '바닥판', '받침돌', '받침돌', '차례 카드', '차례 카드', '차례 카드', '차례 카드', '흙 비탈'].sort());
   const sheets = mod.sheets(TEXTS);
   plans.forEach((p, i) => assert.deepEqual(sheets[i].sub.split(' · ').sort(), count(names[i]).sort(), `${i + 1}쪽 부제`));
-  assert.deepEqual(sheets.map((s) => s.sub), ['덮개돌 1 · 받침돌 2 · 통나무 3', '바닥판 1 · 흙 비탈 1 · 차례 카드 4']);
-  // 인쇄된 조각은 모두 만드는 법의 단계에서 이름으로 불린다 (7절)
-  const steps = STEPS.join(' ');
-  for (const n of new Set(names.flat())) assert.ok(steps.includes(n), `만드는 법에 "${n}" 가 나오지 않습니다`);
+  assert.deepEqual(sheets.map((s) => s.sub), ['덮개돌 1 · 받침돌 2', '바닥판 1 · 흙 비탈 1 · 차례 카드 4']);
+  // 인쇄된 조각은 모두 이름으로 불린다 (7절): 만드는 법의 단계나 해 보기에서, 아니면 그 조각 위에 굵게 찍힌 이름으로.
+  // R21 의 다섯 단계는 '조각'이라고만 부르므로 덮개돌·받침돌·흙 비탈은 조각 위의 이름과 해 보기가 부른다.
+  const said = [...STEPS, ...TRY_IT].join(' ');
+  for (const pc of dolmen.plans(TEXTS).flatMap((p) => p.pieces)) {
+    const n = pc.name.replace(/ \d+$/, '');
+    const printed = pc.art.some((a) => new RegExp(`font-weight="700"[^>]*>${n}</text>`).test(a));
+    assert.ok(said.includes(n) || printed, `"${n}" 는 만드는 법에도 조각 위에도 이름이 없습니다`);
+  }
+});
+
+test('통나무가 없다 (R21): 조각에도, 쪽 머리에도, 그림과 그 설명에도', () => {
+  for (const s of mod.sheets(TEXTS)) assert.doesNotMatch(s.title + s.sub + s.svg, /통나무|굴림/);
+  assert.doesNotMatch(mod.preview(), /통나무|굴림/);
+  assert.ok(!('logs' in dolmen.figureLayout().panels[0]));
 });
 
 test('바닥판에는 놓는 자리만 찍는다: 풀칠 탭도, 붙일 자리 글자도, 맞닿는 변도 없다 (R11)', () => {
@@ -141,16 +158,16 @@ test('바닥판에는 놓는 자리만 찍는다: 풀칠 탭도, 붙일 자리 �
   assert.ok(!shown.includes('앞'), "무엇의 앞인지 알 수 없는 '앞' 은 찍지 않습니다");
 });
 
-test('접은 크기: 받침돌·흙 비탈·덮개돌·통나무를 전개도에서 재어 맞물리는지 본다', () => {
+test('접은 크기: 받침돌·흙 비탈·덮개돌을 전개도에서 재어 맞물리는지 본다', () => {
   const d = dolmen;
-  const cap = piece('덮개돌'), sup = piece('받침돌 1'), ramp = piece('흙 비탈'), lg = piece('통나무 1');
+  const cap = piece('덮개돌'), sup = piece('받침돌 1'), ramp = piece('흙 비탈');
   // 받침돌: 띠의 네 면 (두께, 너비, 두께, 너비) × 높이
   const [s0, s1] = [size(sup.faces[0].pts), size(sup.faces[1].pts)];
   const supportH = s0[1], supportW = s0[0], supportD = s1[0];
   assert.deepEqual([supportW, supportD, supportH], [d.SW, d.SD, d.SH]);
   // 덮개돌: 윗면과 밑면이 같고, 옆면 높이가 CH
   const [top, , , bottom] = cap.faces.map((f) => size(f.pts));
-  assert.deepEqual(top, bottom, '덮개돌의 밑면이 윗면과 같아야 상자가 닫힙니다');
+  assert.ok(near(top[0], bottom[0]) && near(top[1], bottom[1]), '덮개돌의 밑면이 윗면과 같아야 상자가 닫힙니다');
   const capL = top[0], capW = top[1];
   // 흙 비탈: 빗면(너비 × 빗변), 높은 쪽 면(너비 × 높이), 옆면 세모 둘
   const [slope, high] = [size(ramp.faces[0].pts), size(ramp.faces[1].pts)];
@@ -178,10 +195,6 @@ test('접은 크기: 받침돌·흙 비탈·덮개돌·통나무를 전개도에
   for (const f of [d.FOOT.left, d.FOOT.right]) assert.ok(inside(f, d.CAP, 2), '덮개돌이 받침돌을 다 덮지 않습니다');
   const mid = d.CAP.y + capW / 2;
   assert.ok(d.FOOT.left.y + 5 <= mid && mid <= d.FOOT.left.y + supportD - 5, '덮개돌이 앞뒤로 기웁니다');
-  // 통나무: 종이 폭이 둘레이고, 빗면 위에 눕고 덮개돌 밑에 든다
-  const [logC, logL] = size(lg.faces[0].pts);
-  assert.ok(near(logC, Math.PI * d.LOG_D));
-  assert.ok(logL <= slope[0] && logL <= capW, `통나무(${logL}mm)가 빗면이나 덮개돌보다 깁니다`);
 });
 
 test('조립 표시: 한 글자는 두 쪽을 통틀어 한 곳의 붙임만 뜻하고, 탭에 진하게 한 번, 붙일 자리에 옅게 한 번 찍힌다', () => {
@@ -226,19 +239,19 @@ test('아이가 읽는 글: 도안과 그림에 덮개돌·받침돌 말고 다�
       assert.doesNotMatch(shown(s.svg), words, `${label} · ${s.title}`);
     }
   }
-  assert.deepEqual(mod.sheets(TEXTS).map((s) => s.title), ['종이 고인돌 · 돌과 통나무', '종이 고인돌 · 바닥판과 흙 비탈']);
+  assert.deepEqual(mod.sheets(TEXTS).map((s) => s.title), ['종이 고인돌 · 덮개돌과 받침돌', '종이 고인돌 · 바닥판과 흙 비탈']);
   const pv = mod.preview();
   assert.doesNotMatch(shown(pv) + pv.match(/aria-label="([^"]*)"/)![1], words);
   // 그림의 이름표는 R1 의 낱말과 그림 이름뿐이다
   const L = dolmen.figureLayout();
-  const allowed = new Set(['덮개돌', '받침돌', '바닥판', '흙 비탈', '통나무', '흙 비탈 자리', '덮개돌을 끌어 올리는 모습', '여러 짐작 가운데 하나', '흙 비탈을 치운 모습']);
+  const allowed = new Set(['덮개돌', '받침돌', '바닥판', '흙 비탈', '흙 비탈 자리', '덮개돌을 끌어 올리는 모습', '여러 짐작 가운데 하나', '흙 비탈을 치운 모습']);
   for (const p of L.panels) for (const l of p.labels) assert.ok(allowed.has(l.text), `그림에 "${l.text}" 가 있습니다`);
   // 끌어 올리는 그림 바로 밑에 '여러 짐작 가운데 하나' 를 적는다 (R2)
   const first = L.panels[0].labels.map((l) => l.text);
   assert.ok(first.indexOf('여러 짐작 가운데 하나') === first.indexOf('덮개돌을 끌어 올리는 모습') + 1);
 });
 
-test('그림 둘: 그린 조각이 전개도와 같은 크기이고, 끌어 올리는 그림의 덮개돌이 통나무 위에, 통나무가 빗면 위에 있다', () => {
+test('그림 둘: 그린 조각이 전개도와 같은 크기이고, 끌어 올리는 그림의 덮개돌은 앞 끝이 빗면에, 뒤 끝이 땅에 닿는다', () => {
   const d = dolmen;
   const L = d.figureLayout();
   assert.equal(L.panels.length, 2);
@@ -254,18 +267,22 @@ test('그림 둘: 그린 조각이 전개도와 같은 크기이고, 끌어 올�
   const [ramp] = sol(0, '흙 비탈');
   assert.deepEqual([ramp.x0, ramp.y0, ramp.x1 - ramp.x0, ramp.y1 - ramp.y0, ramp.z1], [d.FOOT.ramp.x, d.FOOT.ramp.y, d.RL, d.RW, d.SH]);
   assert.equal(sol(0, '덮개돌').length, 0);
-  assert.equal(L.panels[0].logs.length, 3, '통나무는 셋입니다');
-  // 통나무 중심은 빗면에서 반지름만큼 떠 있고, 덮개돌의 밑면은 빗면에서 지름만큼 떠 있다 (onSlope 의 n)
-  for (const u of d.PULL.logs) assert.ok(u - d.LOG_D / 2 >= 0 && u + d.LOG_D / 2 <= d.RS, '통나무가 빗면 밖에 있습니다');
-  for (const u of d.PULL.logs) assert.ok(u >= d.PULL.lead - d.CL && u <= d.PULL.lead, '통나무가 덮개돌 밑에 있지 않습니다');
-  assert.ok(d.PULL.lead < d.RS, '덮개돌이 아직 비탈 위에 있어야 합니다 (끌어 올리는 중)');
-  const [tailX, tailZ] = d.onSlope(d.PULL.lead - d.CL, d.LOG_D);
-  assert.ok(tailZ > 0, `덮개돌 뒤끝(${tailX.toFixed(1)}, ${tailZ.toFixed(1)})이 땅에 박힙니다`);
-  const [headX] = d.onSlope(d.PULL.lead, d.LOG_D + d.CH);
-  assert.ok(headX < d.FOOT.left.x, '덮개돌 앞끝이 받침돌에 박힙니다');
+  // 덮개돌(길이 CL, 두께 CH): 앞 아래 모서리는 빗면 위, 뒤 아래 모서리는 땅 위에 있다. 아직 비탈 꼭대기에 닿지 않았다.
+  const { at, angle } = d.pulled();
+  const slopeZ = (x: number) => (x - d.FOOT.ramp.x) * (d.RH / d.RL);
+  const [fx, fz] = at(d.CL, 0), [tx, tz] = at(0, 0);
+  assert.ok(Math.abs(fz - slopeZ(fx)) < EPS && fx > d.FOOT.ramp.x && fx < d.FOOT.ramp.x + d.RL, '덮개돌 앞 끝이 빗면에 닿지 않습니다');
+  assert.ok(Math.abs(tz) < EPS, '덮개돌 뒤 끝이 땅에 닿지 않습니다');
+  assert.ok(Math.abs(Math.hypot(fx - tx, fz - tz) - d.CL) < EPS);
+  assert.ok(angle > 0 && angle < Math.atan2(d.RH, d.RL), '덮개돌이 빗면보다 가파르면 빗면에 박힙니다');
+  // 밑면 어디도 빗면이나 땅 아래로 들어가지 않고, 덮개돌 어디도 받침돌에 닿지 않는다
+  for (let a = 0; a <= d.CL; a += 1) {
+    const [x, z] = at(a, 0);
+    assert.ok(z >= -EPS && (x < d.FOOT.ramp.x || z >= slopeZ(x) - EPS), `덮개돌 밑면(${x.toFixed(1)}, ${z.toFixed(1)})이 흙 비탈에 박힙니다`);
+    for (const n of [0, d.CH]) assert.ok(at(a, n)[0] < d.FOOT.left.x, '덮개돌이 받침돌에 박힙니다');
+  }
   // 오른쪽: 흙 비탈은 없고, 덮개돌이 받침돌 꼭대기에 얹혀 있다
   assert.equal(sol(1, '흙 비탈').length, 0);
-  assert.equal(L.panels[1].logs.length, 0);
   const [cap] = sol(1, '덮개돌');
   assert.deepEqual([cap.x0, cap.y0, cap.x1 - cap.x0, cap.y1 - cap.y0, cap.z0, cap.z1 - cap.z0], [d.CAP.x, d.CAP.y, d.CL, d.CW, d.SH, d.CH]);
 });
@@ -285,10 +302,6 @@ test('그림의 이름표: 어떤 선도 이름표를 지나가지 않고, 이�
   for (const p of L.panels) {
     const segs: [Pt, Pt][] = [
       ...p.faces.flatMap((f) => f.pts.map((q, i) => [q, f.pts[(i + 1) % f.pts.length]] as [Pt, Pt])),
-      ...p.logs.flatMap((g) => [g.back, g.front].flatMap((c) => Array.from({ length: 24 }, (_, i) => {
-        const t = (i / 24) * 2 * Math.PI, u = ((i + 1) / 24) * 2 * Math.PI;
-        return [[c[0] + g.r * Math.cos(t), c[1] + g.r * Math.sin(t)], [c[0] + g.r * Math.cos(u), c[1] + g.r * Math.sin(u)]] as [Pt, Pt];
-      }))),
       ...p.leaders,
     ];
     for (const l of p.labels) {
@@ -367,4 +380,63 @@ test('차례 카드: 명세의 글을 한 장에 하나씩, 차례를 섞어 찍
   dolmen.cardOrder(4).forEach((t, k) => assert.equal(lines(k + 1).join(' '), TEXTS[t]));
   // 한 줄에 한 글자만 남는 줄이 없다
   for (let k = 1; k <= 4; k++) for (const l of lines(k)) assert.ok([...l.replace(/[.\s]/g, '')].length >= 2, `"${l}"`);
+});
+
+/** 점이 다각형 안에 드는가 */
+function insidePoly(p: Pt, poly: readonly Pt[]): boolean {
+  let hit = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if ((yi > p[1]) !== (yj > p[1]) && p[0] < ((xj - xi) * (p[1] - yi)) / (yj - yi) + xi) hit = !hit;
+  }
+  return hit;
+}
+/** SVG 조각에 찍힌 글 한 줄의 가운데 점과 상자 (net.ts 의 text() 와 같은 셈) */
+function textsOf(svg: string) {
+  return [...svg.matchAll(/<text x="([\d.-]+)" y="([\d.-]+)" font-size="([\d.]+)" text-anchor="(\w+)"[^>]*>([^<]*)<\/text>/g)].map((m) => {
+    const size = Number(m[3]), x = Number(m[1]), y = Number(m[2]) - size * 0.36, w = textWidth(m[5], size);
+    const x0 = m[4] === 'start' ? x : m[4] === 'end' ? x - w : x - w / 2;
+    return { s: m[5], at: [x, y] as Pt, box: [x0, y - size * 0.6, x0 + w, y + size * 0.6] as [number, number, number, number] };
+  });
+}
+
+test('면 이름: 조각의 모든 면(풀칠 탭 말고)에 이름이 찍혀 있다. 덮개돌의 짧은 옆면 둘도 옆면이다', () => {
+  for (const plan of dolmen.plans(TEXTS)) for (const pc of plan.pieces) {
+    if (pc.name.startsWith('차례 카드')) continue;
+    const ts = textsOf(pc.art.join('')).filter((t) => !/^[가-하]$/.test(t.s));
+    pc.faces.forEach((f, i) => {
+      if (f.glue) return;
+      const names = ts.filter((t) => insidePoly(t.at, f.pts)).map((t) => t.s);
+      assert.ok(names.length > 0, `${pc.name}: ${i + 1}번째 면에 이름이 없습니다`);
+    });
+  }
+  const cap = piece('덮개돌');
+  const names = textsOf(cap.art.join('')).map((t) => t.s);
+  assert.equal(names.filter((n) => n === '옆면').length, 4, '덮개돌의 옆면 넷 모두에 이름을 찍습니다');
+});
+
+test('결(꾸밈 선)은 어떤 글자나 조립 표시도 지나지 않고 닿지도 않는다', () => {
+  for (const [label, texts] of Object.entries(CASES)) {
+    for (const [i, s] of mod.sheets(texts).entries()) {
+      const boxes = [
+        ...textsOf(s.svg).map((t) => ({ s: t.s, box: t.box })),
+        ...[...s.svg.matchAll(/<circle cx="([\d.-]+)" cy="([\d.-]+)" r="([\d.]+)"/g)].map((m) => {
+          const [x, y, r] = [Number(m[1]), Number(m[2]), Number(m[3])];
+          return { s: '조립 표시', box: [x - r, y - r, x + r, y + r] as [number, number, number, number] };
+        }),
+      ];
+      const grains = [...s.svg.matchAll(/<path d="([^"]+)" fill="none" stroke="#c9c9c9"/g)].map((m) => m[1]);
+      assert.ok(grains.length > 0);
+      for (const d of grains) {
+        assert.doesNotMatch(d, /[qtQTcC]/, '결은 점으로 찍은 꺾은선이어야 이름표 둘레에서 끊을 수 있습니다');
+        for (const run of d.split('M').filter(Boolean)) {
+          const pts = run.trim().split(/\s*L\s*/).map((q) => q.split(',').map(Number) as unknown as Pt);
+          for (let k = 1; k < pts.length; k++) for (const b of boxes) {
+            const [x0, y0, x1, y1] = b.box;
+            assert.ok(!hits(pts[k - 1], pts[k], [x0 - 0.3, y0 - 0.3, x1 + 0.3, y1 + 0.3]), `${label} · ${i + 1}쪽: 결이 "${b.s}" 에 닿습니다`);
+          }
+        }
+      }
+    }
+  }
 });

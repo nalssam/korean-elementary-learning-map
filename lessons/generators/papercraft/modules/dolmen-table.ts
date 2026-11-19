@@ -1,36 +1,39 @@
 // 종이 고인돌 전개도 (docs/CONTRACT.md 7절의 전개도 모듈)
 //
-// 몸으로 해 보는 모형이다 (R11). 모둠이 차례 카드 네 장을 놓은 차례대로 조각을 움직인다:
-// 받침돌을 세우고, 흙 비탈을 받침돌에 대고, 통나무를 깔아 덮개돌을 끌어 올리고, 흙 비탈을 치운다.
+// 몸으로 해 보는 모형이다 (R11, R21). 모둠이 차례 카드 네 장을 놓은 차례대로 조각을 움직인다:
+// 받침돌을 세우고, 흙 비탈을 받침돌에 대고, 덮개돌을 비탈 위로 끌어 올리고, 흙 비탈을 치운다.
 // 그래서 어느 조각도 바닥판에 붙이지 않는다. 바닥판에는 받침돌 둘과 흙 비탈이 놓일 자리만 찍는다.
+// 비탈 위에 까는 통나무는 조각으로 만들지도, 그림에 그리지도 않는다 (R21: 공개 출처가 굴림대를 말하는 것은
+// 덮개돌을 땅 위로 옮길 때뿐이고, 고창 고인돌 박물관이 밝힌 차례에는 비탈 위의 굴림대가 없다).
 //
-// 조각: 덮개돌(닫힌 납작한 상자) 1 · 받침돌(밑이 열린 판돌) 2 · 통나무(말아 붙인 종이) 3 — 1쪽
+// 조각: 덮개돌(닫힌 납작한 상자) 1 · 받침돌(밑이 열린 판돌) 2 — 1쪽
 //       바닥판 1 · 흙 비탈(한 조각으로 서는 쐐기) 1 · 차례 카드(명세의 texts 개수) — 2쪽
 // 만드는 법 쪽(3쪽)은 페이지가 명세의 steps·try_it·reflect 로 만들고, 그림 둘은 이 파일의 preview() 가 그린다.
 //
 // 맞춘 크기 (아래 값으로 접은 크기를 tests/papercraft/dolmen-table.test.ts 가 잰다):
 // - 흙 비탈의 높은 쪽 높이 = 받침돌 높이. 덮개돌이 비탈 꼭대기에서 받침돌 위로 그대로 미끄러져 넘어간다.
 // - 흙 비탈의 윗면 너비(RW) ≥ 덮개돌 너비(CW). 덮개돌이 비탈 위에서 옆으로 걸치지 않는다.
-// - 덮개돌은 밑면까지 닫힌 상자다. 밑면이 평평해야 비탈과 통나무 위에서도, 받침돌 위에서도 같은 면으로 얹힌다.
+// - 덮개돌은 밑면까지 닫힌 상자다. 밑면이 평평해야 비탈 위에서도, 받침돌 위에서도 같은 면으로 얹힌다.
 // - 바닥판에서 흙 비탈 자리의 높은 끝은 왼쪽 받침돌 자리에 맞닿는다.
 // 흙 비탈로 끌어 올렸다는 것은 여러 짐작 가운데 하나다 (15절). 그림에 그렇게 적는다.
 //
 // 이 파일에 적는 글은 조각 이름, 조립 표시, 그림의 이름표뿐이다. 아이가 읽는 문장(차례 카드)은 명세의 texts 에서 받는다.
 import {
   BODY_H, BODY_W, FONT_FAMILY, INK, INK_DIM, LEGEND_H, RULE, SPOT_DASH,
-  fit, grain, mark, rect, render, spot, tab, text, textWidth,
-  type Join, type Piece, type Plan, type Pt, type Seg,
+  fit, grainAround, mark, markBox, rect, render, spot, tab, text, textBox, textWidth, wave,
+  type Join, type Piece, type Plan, type Pt, type Seg, type TextOpts,
 } from '../net.ts';
 
 // ── 크기 (mm) ──
-/** 덮개돌: 윗면 CL × CW, 옆면 높이 CH. 밑면도 CL × CW 로 닫는다. 맨 위 닫는 탭의 깊이 CTAB */
-export const CL = 96, CW = 60, CH = 10, CTAB = 6;
+/**
+ * 덮개돌: 윗면 CL × CW, 옆면 높이(두께) CH. 밑면도 CL × CW 로 닫는다. 맨 위 닫는 탭의 깊이 CTAB.
+ * 두께는 받침돌 높이의 0.4 남짓으로 둔다. 1쪽에 통나무가 빠져 남는 높이를 쓰고, 납작한 판보다 무거운 돌처럼 보이며 손으로 밀기 쉽다.
+ */
+export const CL = 96, CW = 60, CH = 14, CTAB = 6;
 /** 받침돌: 두께 SW (좌우), 너비 SD (앞뒤), 높이 SH */
 export const SW = 12, SD = 30, SH = 36;
 /** 받침돌 옆 탭의 폭, 윗면 탭의 깊이 */
 export const TAB = 6, TOP_TAB = 6;
-/** 통나무: 지름 LOG_D, 길이 LOG_L. 종이 폭은 둘레다. */
-export const LOG_D = 14, LOG_L = 50, LOG_C = Math.PI * LOG_D, LOG_TAB = 5.5;
 /** 흙 비탈(쐐기): 바닥 길이 RL, 너비 RW, 높은 쪽 높이 RH (= SH). 빗면의 길이 RS, 옆면 세모의 높이(빗면에서 잰) RT */
 export const RL = 78, RW = 62, RH = SH;
 export const RS = Math.hypot(RL, RH);
@@ -56,8 +59,26 @@ export const FOOT = {
 const GAP = 4;
 const seg = (a: Pt, b: Pt): Seg => [a, b];
 
-// 조립 표시 글자. 두 쪽에 걸쳐 이어 쓴다: 한 글자는 한 곳의 붙임만 뜻한다.
-const MARKS = ['가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카', '타', '파', '하'];
+// 조립 표시 글자. 두 쪽에 걸쳐 빈자리 없이 이어 쓴다 (덮개돌 가~마, 받침돌 바~자, 흙 비탈 차·카): 한 글자는 한 곳의 붙임만 뜻한다.
+const MARKS = ['가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카'];
+
+// ── 조각 위의 글과 꾸밈 ──
+type Label = { x: number; y: number; s: string; o: TextOpts };
+type MarkAt = { x: number; y: number; s: string; role: 'tab' | 'target' };
+/**
+ * 조각 위의 그림: 결(꾸밈 선) → 이름표 → 조립 표시 차례로 그린다.
+ * 결은 이름표와 조립 표시 둘레에서 끊는다. 어떤 결도 글자를 지나거나 글자에 닿지 않는다.
+ */
+function dress(waves: Pt[][], labels: Label[], marks: MarkAt[]): string[] {
+  const avoid = [...labels.map((l) => textBox(l.x, l.y, l.s, l.o)), ...marks.map((m) => markBox(m.x, m.y, m.role))];
+  return [
+    ...waves.map((w) => grainAround(w, avoid)).filter(Boolean),
+    ...labels.map((l) => text(l.x, l.y, l.s, l.o)),
+    ...marks.map((m) => mark(m.x, m.y, m.s, m.role)),
+  ];
+}
+/** 면 이름 (옅은 작은 글) */
+const faceName = (x: number, y: number, s: string): Label => ({ x, y, s, o: { size: 3.2, weight: 500, fill: INK_DIM } });
 
 // ── 덮개돌: 닫힌 납작한 상자 ──
 // 위에서부터: 닫는 탭 · 뒤 옆면 · 윗면(양옆에 왼·오른 옆면) · 앞 옆면 · 밑면.
@@ -87,23 +108,25 @@ function capstone(ox: number, oy: number, marks: string[]): Piece {
     // 접으면 맞닿는 변: 밑면의 옆 변 = 왼·오른 옆면의 아래 변
     { what: '덮개돌 밑면 왼변 = 왼 옆면 바깥 변', kind: 'meet', a: seg([x0, yf], [x0, ye]), b: seg([ox, y0], [ox, y1]) },
   ];
-  const art: string[] = [];
-  for (let i = 1; i <= 4; i++) {
-    const yy = y0 + (CW * i) / 5;
-    art.push(grain(`M${x0 + 8},${yy} q${CL * 0.22},${i % 2 ? -2.4 : 2.4} ${CL * 0.42},0 t${CL * 0.4},0`));
-  }
-  art.push(text(x0 + CL / 2, y0 + CW / 2 - 3, '덮개돌', { size: 6, weight: 700, halo: true }));
-  art.push(text(x0 + CL / 2, y0 + CW / 2 + 4.5, '윗면', { size: 3.4, weight: 500, fill: INK_DIM, halo: true }));
-  art.push(text(x0 + CL / 2, yf + CW / 2, '밑면', { size: 3.4, weight: 500, fill: INK_DIM }));
-  for (const [x, y] of [[x0 + CL / 2, yb + CH / 2], [x0 + CL / 2, y1 + CH / 2]] as const) art.push(text(x, y, '옆면', { size: 3.2, weight: 500, fill: INK_DIM }));
+  // 돌결은 윗면에만: 위에서 보이는 면이다
+  const waves = [1, 2, 3, 4].map((i) => wave(x0 + 8, y0 + (CW * i) / 5, CL * 0.22, i % 2 ? -2.4 : 2.4, CL * 0.42, CL * 0.4));
+  const labels: Label[] = [
+    { x: x0 + CL / 2, y: y0 + CW / 2 - 3, s: '덮개돌', o: { size: 6, weight: 700 } },
+    { x: x0 + CL / 2, y: y0 + CW / 2 + 4.5, s: '윗면', o: { size: 3.4, weight: 500, fill: INK_DIM } },
+    { x: x0 + CL / 2, y: yf + CW / 2, s: '밑면', o: { size: 3.4, weight: 500, fill: INK_DIM } },
+    // 네 옆면: 뒤·앞(긴 띠)과 왼·오른(짧은 띠)
+    faceName(x0 + CL / 2, yb + CH / 2, '옆면'), faceName(x0 + CL / 2, y1 + CH / 2, '옆면'),
+    faceName(ox + CH / 2, y0 + CW / 2, '옆면'), faceName(x1 + CH / 2, y0 + CW / 2, '옆면'),
+  ];
   // 탭에는 진한 글자, 붙일 자리(완성하면 겉으로 보이는 면)에는 옅은 글자
-  const m = (tx: number, ty: number, gx: number, gy: number, i: number) => art.push(mark(tx, ty, marks[i]), mark(gx, gy, marks[i], 'target'));
+  const ms: MarkAt[] = [];
+  const m = (tx: number, ty: number, gx: number, gy: number, i: number) => ms.push({ x: tx, y: ty, s: marks[i], role: 'tab' }, { x: gx, y: gy, s: marks[i], role: 'target' });
   m(ox + CH / 2, yb + CH / 2 + 1, x0 + 3.6, yb + CH / 2, 0);
   m(ox + CH / 2, y1 + CH / 2 - 1, x0 + 3.6, y1 + CH / 2, 1);
   m(x1 + CH / 2, yb + CH / 2 + 1, x1 - 3.6, yb + CH / 2, 2);
   m(x1 + CH / 2, y1 + CH / 2 - 1, x1 - 3.6, y1 + CH / 2, 3);
   m(x0 + CL / 2, oy + CTAB / 2 + 0.3, x0 + CL / 2, ye - 3.6, 4);
-  return { name: '덮개돌', faces, art, joins };
+  return { name: '덮개돌', faces, art: dress(waves, labels, ms), joins };
 }
 
 // ── 받침돌: 네 면을 둘러 판돌을 만든다. 밑면은 열어 둔다. ──
@@ -126,33 +149,19 @@ function support(ox: number, oy: number, no: number, marks: [string, string]): P
     { what: `${name} 윗면 왼변 = 첫째 면 윗변`, kind: 'meet', a: seg([xs[1], yT], [xs[1], yB]), b: seg([xs[0], yB], [xs[1], yB]) },
     { what: `${name} 윗면 오른변 = 셋째 면 윗변`, kind: 'meet', a: seg([xs[2], yT], [xs[2], yB]), b: seg([xs[2], yB], [xs[3], yB]) },
   ];
-  const art: string[] = [];
-  for (let i = 1; i <= 4; i++) {
-    const yy = yB + (h * i) / 5;
-    art.push(grain(`M${ox + 3},${yy} q${(xe - ox) * 0.25},${i % 2 ? -2 : 2} ${(xe - ox) * 0.5},0 t${(xe - ox) * 0.5 - 6},0`));
-  }
-  art.push(text(xs[1] + d / 2, yB + h / 2, '받침돌', { size: 4.6, weight: 700, halo: true }));
-  art.push(text(xs[1] + d / 2, yT + w / 2, '윗면', { size: 3.2, weight: 500, fill: INK_DIM }));
-  art.push(mark(xe + TAB / 2, yB + h / 2, marks[0]), mark(ox + 3.6, yB + h - 5, marks[0], 'target'));
-  art.push(mark((xs[1] + xs[2]) / 2, oy + TOP_TAB / 2 + 0.3, marks[1]), mark((xs[3] + xs[4]) / 2, yB + 3.8, marks[1], 'target'));
-  return { name, faces, art, joins };
-}
-
-// ── 통나무: 둥글게 말아 오른쪽 탭을 왼쪽 끝 안쪽에 붙인다. ──
-function log(ox: number, oy: number, n: number, m: string): Piece {
-  const art: string[] = [];
-  for (let i = 1; i <= 3; i++) {
-    const x = ox + (LOG_C * i) / 4;
-    art.push(grain(`M${x},${oy + 4} L${x},${oy + LOG_L - 4}`));
-  }
-  art.push(text(ox + LOG_C / 2, oy + LOG_L / 2, '통나무', { size: 3.6, weight: 700, halo: true }));
-  art.push(mark(ox + LOG_C + LOG_TAB / 2, oy + LOG_L / 2, m), mark(ox + 3.6, oy + 6, m, 'target'));
-  return {
-    name: `통나무 ${n}`,
-    faces: [{ pts: rect(ox, oy, LOG_C, LOG_L) }, tab([ox + LOG_C, oy], [ox + LOG_C, oy + LOG_L], LOG_TAB)],
-    art,
-    joins: [{ what: `통나무 ${n} 탭 → 왼쪽 끝`, kind: 'glue', a: seg([ox + LOG_C, oy], [ox + LOG_C, oy + LOG_L]), b: seg([ox, oy], [ox, oy + LOG_L]), depth: LOG_TAB, room: LOG_C, mark: m }],
-  };
+  const waves = [1, 2, 3, 4].map((i) => wave(ox + 3, yB + (h * i) / 5, (xe - ox) * 0.25, i % 2 ? -2 : 2, (xe - ox) * 0.5, (xe - ox) * 0.5 - 6));
+  // 네 옆면과 윗면. 이름(받침돌)은 둘째 면에 크게 찍고, 면 이름은 그 아래에 작게 찍는다.
+  const labels: Label[] = [
+    { x: xs[1] + d / 2, y: yB + h / 2 - 2.6, s: '받침돌', o: { size: 4.6, weight: 700 } },
+    faceName(xs[1] + d / 2, yB + h / 2 + 3.6, '옆면'),
+    faceName(xs[0] + w / 2, yB + h / 2, '옆면'), faceName(xs[2] + w / 2, yB + h / 2, '옆면'), faceName(xs[3] + d / 2, yB + h / 2, '옆면'),
+    faceName(xs[1] + d / 2, yT + w / 2, '윗면'),
+  ];
+  const ms: MarkAt[] = [
+    { x: xe + TAB / 2, y: yB + h / 2, s: marks[0], role: 'tab' }, { x: ox + 3.6, y: yB + h - 5, s: marks[0], role: 'target' },
+    { x: (xs[1] + xs[2]) / 2, y: oy + TOP_TAB / 2 + 0.3, s: marks[1], role: 'tab' }, { x: (xs[3] + xs[4]) / 2, y: yB + 3.8, s: marks[1], role: 'target' },
+  ];
+  return { name, faces, art: dress(waves, labels, ms), joins };
 }
 
 // ── 흙 비탈: 혼자 서는 쐐기 (밑은 열려 있다) ──
@@ -175,27 +184,27 @@ function ramp(ox: number, oy: number, marks: [string, string]): Piece {
     { what: '흙 비탈 왼 탭 → 왼 옆면의 세운 변', kind: 'glue', a: seg([sx0, ys], [sx0, oy]), b: seg([sx0, ys], [ox, apexY]), depth: TAB, room: RL, mark: marks[0] },
     { what: '흙 비탈 오른 탭 → 오른 옆면의 세운 변', kind: 'glue', a: seg([sx1, oy], [sx1, ys]), b: seg([sx1, ys], [sx1 + RT, apexY]), depth: TAB, room: RL, mark: marks[1] },
   ];
-  const art: string[] = [];
-  // 흙의 결: 빗면을 가로지르는 옅은 물결
-  for (let i = 1; i <= 5; i++) {
-    const yy = ys + (RS * i) / 6;
-    art.push(grain(`M${sx0 + 5},${yy} q${RW * 0.22},${i % 2 ? -1.8 : 1.8} ${RW * 0.44},0 t${RW * 0.44},0`));
-  }
-  art.push(text(sx0 + RW / 2, ys + RS / 2, '흙 비탈', { size: 6, weight: 700, halo: true }));
-  art.push(text(sx0 + RW / 2, oy + RH / 2, '높은 쪽', { size: 3.6, weight: 600, fill: INK_DIM }));
+  // 흙의 결: 빗면(윗면)을 가로지르는 옅은 물결
+  const waves = [1, 2, 3, 4, 5].map((i) => wave(sx0 + 5, ys + (RS * i) / 6, RW * 0.22, i % 2 ? -1.8 : 1.8, RW * 0.44, RW * 0.44));
   // 옆면 이름은 세모의 무게중심에
   const cy = (ys + ye + apexY) / 3;
-  art.push(text((sx0 + sx0 + ox) / 3 + 1, cy, '옆면', { size: 3.2, weight: 500, fill: INK_DIM }));
-  art.push(text((sx1 + sx1 + sx1 + RT) / 3 - 1, cy, '옆면', { size: 3.2, weight: 500, fill: INK_DIM }));
+  const labels: Label[] = [
+    { x: sx0 + RW / 2, y: ys + RS / 2 - 3, s: '흙 비탈', o: { size: 6, weight: 700 } },
+    { x: sx0 + RW / 2, y: ys + RS / 2 + 4.5, s: '윗면', o: { size: 3.4, weight: 500, fill: INK_DIM } },
+    { x: sx0 + RW / 2, y: oy + RH / 2, s: '높은 쪽', o: { size: 3.6, weight: 600, fill: INK_DIM } },
+    faceName((sx0 + sx0 + ox) / 3 + 1, cy, '옆면'), faceName((sx1 + sx1 + sx1 + RT) / 3 - 1, cy, '옆면'),
+  ];
   // 탭 글자와, 옆면의 세운 변 곁(겉면)에 붙일 자리 글자
   const along = (k: number, a: Pt, b: Pt, off: number): Pt => {
     const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy);
     return [a[0] + dx * k + (dy / l) * off, a[1] + dy * k - (dx / l) * off];
   };
   const lt = along(0.5, [sx0, ys], [ox, apexY], 4.2), rt = along(0.5, [sx1, ys], [sx1 + RT, apexY], -4.2);
-  art.push(mark(sx0 - TAB / 2, oy + RH / 2, marks[0]), mark(lt[0], lt[1], marks[0], 'target'));
-  art.push(mark(sx1 + TAB / 2, oy + RH / 2, marks[1]), mark(rt[0], rt[1], marks[1], 'target'));
-  return { name: '흙 비탈', faces, art, joins };
+  const ms: MarkAt[] = [
+    { x: sx0 - TAB / 2, y: oy + RH / 2, s: marks[0], role: 'tab' }, { x: lt[0], y: lt[1], s: marks[0], role: 'target' },
+    { x: sx1 + TAB / 2, y: oy + RH / 2, s: marks[1], role: 'tab' }, { x: rt[0], y: rt[1], s: marks[1], role: 'target' },
+  ];
+  return { name: '흙 비탈', faces, art: dress(waves, labels, ms), joins };
 }
 
 // ── 바닥판: 접지도 붙이지도 않는다. 받침돌 둘과 흙 비탈이 놓일 자리만 점으로 찍는다. ──
@@ -250,20 +259,27 @@ function card(ox: number, oy: number, w: number, h: number, s: string, no: numbe
 }
 
 // ── 쪽 배치 ──
-/** 1쪽: 덮개돌 · 통나무 셋(오른쪽 단) · 받침돌 둘(아래 줄) */
+/**
+ * 1쪽: 덮개돌(위 가운데) · 받침돌 둘(아래 줄).
+ * 남는 높이는 덮개돌과 받침돌 사이를 가장 넓게(두 줄이 다른 조각임이 한눈에 보이게) 두고, 나머지를 위아래에 반씩 나눈다.
+ * 한쪽에만 큰 빈 띠가 남지 않는다.
+ */
 function sheet1(): Plan {
   const capW = CL + 2 * CH, capH = CTAB + 2 * CH + 2 * CW;
-  const logW = LOG_C + LOG_TAB, colGap = 8;
-  const top = LEGEND_H + 3;
-  const cx = (BODY_W - capW - colGap - logW) / 2;
-  const pieces: Piece[] = [capstone(cx, top, MARKS.slice(0, 5))];
-  [0, 1, 2].forEach((i) => pieces.push(log(cx + capW + colGap, top + i * (LOG_L + GAP), i + 1, MARKS[5 + i])));
-  const sW = 2 * SW + 2 * SD + TAB, sGap = 6;
-  const sy = Math.max(top + capH, top + 3 * LOG_L + 2 * GAP) + GAP + 1;
+  const sW = 2 * SW + 2 * SD + TAB, sH = TOP_TAB + SW + SH, sGap = 6;
+  const top = LEGEND_H + 3, bottom = BODY_H - 0.5;
+  const free = bottom - top - capH - sH;
+  const between = Math.min(14, free * 0.45), pad = (free - between) / 2;
+  const cy = top + pad, sy = cy + capH + between;
   const sx = (BODY_W - 2 * sW - sGap) / 2;
-  pieces.push(support(sx, sy, 1, [MARKS[8], MARKS[9]]), support(sx + sW + sGap, sy, 2, [MARKS[10], MARKS[11]]));
-  return { title: '종이 고인돌 · 돌과 통나무', sub: '덮개돌 1 · 받침돌 2 · 통나무 3', pieces, art: [], joins: [] };
+  const pieces: Piece[] = [
+    capstone((BODY_W - capW) / 2, cy, MARKS.slice(0, 5)),
+    support(sx, sy, 1, [MARKS[5], MARKS[6]]),
+    support(sx + sW + sGap, sy, 2, [MARKS[7], MARKS[8]]),
+  ];
+  return { title: '종이 고인돌 · 덮개돌과 받침돌', sub: '덮개돌 1 · 받침돌 2', pieces, art: [], joins: [] };
 }
+
 
 /** 2쪽: 바닥판 · 흙 비탈 · 차례 카드 (넷까지는 아래 줄, 그보다 많으면 흙 비탈 오른쪽 단에도) */
 function sheet2(texts: string[]): Plan {
@@ -274,7 +290,7 @@ function sheet2(texts: string[]): Plan {
   const [rw, rh] = RAMP_NET;
   const rY = bpY + BPH + GAP + 1;
   const rX = n > 4 ? 2 : (BODY_W - rw) / 2;
-  pieces.push(ramp(rX, rY, [MARKS[12], MARKS[13]]));
+  pieces.push(ramp(rX, rY, [MARKS[9], MARKS[10]]));
 
   // 카드 칸: 아래 줄(넷까지)과, 다섯째부터 흙 비탈 오른쪽 단
   const cg = 3;
@@ -312,19 +328,29 @@ export function plans(texts: string[]): Plan[] {
 export function sheets(texts: string[]): { title: string; sub: string; svg: string }[] {
   return plans(texts).map((p, i) => ({ title: p.title, sub: p.sub, svg: render(p, i + 1) }));
 }
-
 // ───────────────────────────── 만드는 법 쪽의 그림 둘 ─────────────────────────────
-// 왼쪽: 흙 비탈 위에 통나무 셋을 깔고 덮개돌을 끌어 올리는 모습 (여러 짐작 가운데 하나). 받침돌 둘은 이미 서 있다.
+// 왼쪽: 받침돌 둘이 서 있고, 그 옆 흙 비탈 위로 덮개돌을 끌어 올리는 모습 (여러 짐작 가운데 하나).
+//   통나무는 그리지 않는다 (R21). 덮개돌이 비탈보다 길어서, 앞 아래 모서리는 빗면에 걸치고 뒤 아래 모서리는 아직 땅에 닿아 있다.
 // 오른쪽: 흙 비탈을 치운 모습. 덮개돌이 받침돌 위에 얹혀 있고, 바닥판에는 흙 비탈 자리가 비어 있다.
 // 모델 좌표는 바닥판의 것이다: X 좌우(0~BPW), Y 깊이(0 = 뒤 … BPH = 앞), Z 높이. 빗각 투영으로 그린다.
 
 /** 비탈의 기울기 */
 const TH = Math.atan2(RH, RL);
-/** 끌어 올리는 그림에서 덮개돌 앞 끝이 빗면을 따라 올라간 거리, 통나무 셋이 놓인 곳 (빗면 아래 끝에서 잰 거리) */
-export const PULL = { lead: 72, logs: [14, 38, 62] } as const;
+/** 끌어 올리는 그림에서 덮개돌 앞 아래 모서리가 빗면을 따라 올라간 거리 (빗면 아래 끝에서 잰 거리) */
+export const PULL = { front: 62 } as const;
 /** 빗면 좌표(u: 빗면을 따라, n: 빗면에서 수직으로 뜬 높이)를 바닥판의 X, Z 로 */
 export function onSlope(u: number, n: number): [number, number] {
   return [FOOT.ramp.x + u * Math.cos(TH) - n * Math.sin(TH), u * Math.sin(TH) + n * Math.cos(TH)];
+}
+/**
+ * 끌어 올리는 중인 덮개돌의 옆모습 (X, Z). 앞 아래 모서리는 빗면 위(PULL.front), 뒤 아래 모서리는 땅(Z = 0) 위다.
+ * at(a, n): 뒤 끝에서 덮개돌 길이를 따라 a, 밑면에서 n 만큼 뜬 점.
+ */
+export function pulled(): { angle: number; at: (a: number, n: number) => [number, number] } {
+  const [xf, zf] = onSlope(PULL.front, 0);
+  const xt = xf - Math.sqrt(CL * CL - zf * zf);
+  const d: [number, number] = [(xf - xt) / CL, zf / CL];
+  return { angle: Math.atan2(d[1], d[0]), at: (a, n) => [xt + a * d[0] - n * d[1], a * d[1] + n * d[0]] };
 }
 
 /** 그림 글의 크기 (SVG 단위). 페이지가 이 크기와 viewBox 로 그림 칸의 높이를 정해 9pt 아래로 줄지 않게 한다. */
@@ -334,15 +360,13 @@ export interface FigLabel { text: string; x: number; y: number; size: number; an
 export interface FigPanel {
   /** 그린 면 (투영한 다각형). 그리는 차례대로. fill 은 색이고, dash 이면 점선 자리다. */
   faces: { pts: Pt[]; fill: string; sw: number; dash?: boolean }[];
-  /** 통나무 (몸통과 앞뒤 원). 이름표 시험이 쓰도록 원은 다각형으로도 준다. */
-  logs: { back: Pt; front: Pt; r: number }[];
   labels: FigLabel[];
   leaders: [Pt, Pt][];
 }
 export interface FigLayout {
   viewBox: [number, number, number, number];
   panels: FigPanel[];
-  /** 그림에 그린 상자 (바닥판 좌표, mm). 시험이 전개도의 크기와 견준다. */
+  /** 그림에 그린 상자 (바닥판 좌표, mm). 시험이 전개도의 크기와 견준다. 끌어 올리는 덮개돌은 기울어 있어 상자가 아니므로 넣지 않는다. */
   solids: { panel: number; name: string; x0: number; x1: number; y0: number; y1: number; z0: number; z1: number }[];
 }
 
@@ -351,16 +375,16 @@ const DX = 0.45, DY = 0.3;
 /** 두 그림의 배치. preview() 가 그리고, 시험이 이름표와 선이 겹치지 않는지 잰다. */
 export function figureLayout(): FigLayout {
   const panelW = BPW + DX * BPH;
-  const PANEL_GAP = 18;
+  const PANEL_GAP = 10;
   const top = 74, labelRow = 8;
   const panels: FigPanel[] = [];
   const solids: FigLayout['solids'] = [];
+  // 왼쪽 그림의 덮개돌 뒤 끝은 바닥판 왼쪽 밖(탁자 위)까지 나간다. viewBox 가 그만큼 왼쪽으로 넓어진다.
 
   for (const k of [0, 1]) {
     const OX = k * (panelW + PANEL_GAP), OY = top + 2 * labelRow;
     const P = (X: number, Y: number, Z: number): Pt => [OX + X + DX * (BPH - Y), OY - Z - DY * (BPH - Y)];
     const faces: FigPanel['faces'] = [];
-    const logs: FigPanel['logs'] = [];
     const labels: FigLabel[] = [];
     const leaders: [Pt, Pt][] = [];
     const face = (pts: Pt[], fill: string, sw = 0.5, dash = false) => faces.push({ pts, fill, sw, dash });
@@ -400,30 +424,22 @@ export function figureLayout(): FigLayout {
       face([P(xh, r.y, 0), P(xh, r.y + RW, 0), P(xh, r.y + RW, RH), P(xh, r.y, RH)], RULE);
       face([P(r.x, r.y, 0), P(xh, r.y, RH), P(xh, r.y + RW, RH), P(r.x, r.y + RW, 0)], '#ffffff');
       face([P(r.x, r.y + RW, 0), P(xh, r.y + RW, 0), P(xh, r.y + RW, RH)], '#e6e6e6');
-      // 통나무 셋: 빗면에 닿아 누운 원기둥
-      const ly0 = (BPH - LOG_L) / 2, ly1 = ly0 + LOG_L;
-      for (const u of PULL.logs) {
-        const [X, Z] = onSlope(u, LOG_D / 2);
-        logs.push({ back: P(X, ly0, Z), front: P(X, ly1, Z), r: LOG_D / 2 });
-      }
-      // 덮개돌: 통나무 위에 빗면과 나란히 얹힌 상자. 보이는 면은 앞 끝(위쪽), 윗면, 앞면
-      const u0 = PULL.lead - CL, u1 = PULL.lead, n0 = LOG_D, n1 = LOG_D + CH;
-      const Q = (u: number, n: number, Y: number) => { const [X, Z] = onSlope(u, n); return P(X, Y, Z); };
-      face([Q(u1, n0, capY0), Q(u1, n0, capY1), Q(u1, n1, capY1), Q(u1, n1, capY0)], RULE, 0.6);
-      face([Q(u0, n1, capY0), Q(u1, n1, capY0), Q(u1, n1, capY1), Q(u0, n1, capY1)], '#ffffff', 0.6);
-      face([Q(u0, n0, capY1), Q(u1, n0, capY1), Q(u1, n1, capY1), Q(u0, n1, capY1)], '#ffffff', 0.6);
-      // 받침돌 둘 (덮개돌보다 앞에 보인다)
+      // 덮개돌: 앞 끝은 빗면에 걸치고 뒤 끝은 땅에 닿은 채 기운 상자. 보이는 면은 앞 끝(위쪽), 윗면, 앞면
+      const { at } = pulled();
+      const Q = (a: number, n: number, Y: number) => { const [X, Z] = at(a, n); return P(X, Y, Z); };
+      face([Q(CL, 0, capY0), Q(CL, 0, capY1), Q(CL, CH, capY1), Q(CL, CH, capY0)], RULE, 0.6);
+      face([Q(0, CH, capY0), Q(CL, CH, capY0), Q(CL, CH, capY1), Q(0, CH, capY1)], '#ffffff', 0.6);
+      face([Q(0, 0, capY1), Q(CL, 0, capY1), Q(CL, CH, capY1), Q(0, CH, capY1)], '#ffffff', 0.6);
+      // 받침돌 둘 (덮개돌보다 오른쪽 뒤에 있어 덮개돌 위에 그린다)
       box('받침돌', FOOT.left.x, FOOT.left.x + SW, FOOT.left.y, FOOT.left.y + SD, 0, SH);
       box('받침돌', FOOT.right.x, FOOT.right.x + SW, FOOT.right.y, FOOT.right.y + SD, 0, SH);
 
-      // 이름표: 위 줄에 덮개돌·받침돌, 아래 줄에 통나무·흙 비탈·바닥판
-      const capFront = Q(PULL.lead - CL * 0.55, (n0 + n1) / 2, capY1);
-      lead(capFront, label('덮개돌', capFront[0] + 14, topRow));
+      // 이름표: 위 줄에 덮개돌·받침돌, 아래 줄에 흙 비탈·바닥판
+      const capFront = Q(CL * 0.4, CH / 2, capY1);
+      lead(capFront, label('덮개돌', capFront[0] + 4, topRow));
       const st = [P(FOOT.left.x + SW / 2, FOOT.left.y + SD / 2, SH), P(FOOT.right.x + SW / 2, FOOT.right.y + SD / 2, SH)];
       const ls = label('받침돌', (st[0][0] + st[1][0]) / 2, topRow);
       leaders.push([st[0], [ls.box[0] - 0.8, ls.y]], [st[1], [ls.box[2] + 0.8, ls.y]]);
-      const lg = logs[0];
-      lead([lg.front[0], lg.front[1] + lg.r * 0.4], label('통나무', OX + 16, bottomRow));
       const tri = P(r.x + RL * 0.68, r.y + RW, RH * 0.24);
       lead(tri, label('흙 비탈', tri[0] + 6, bottomRow));
     } else {
@@ -452,12 +468,11 @@ export function figureLayout(): FigLayout {
     } else {
       label('흙 비탈을 치운 모습', cx, capRow);
     }
-    panels.push({ faces, logs, labels, leaders });
+    panels.push({ faces, labels, leaders });
   }
 
   const pts: Pt[] = panels.flatMap((p) => [
     ...p.faces.flatMap((f) => f.pts),
-    ...p.logs.flatMap((l) => [[l.back[0] - l.r, l.back[1] - l.r], [l.front[0] + l.r, l.front[1] + l.r]] as Pt[]),
     ...p.labels.flatMap((l) => [[l.box[0], l.box[1]], [l.box[2], l.box[3]]] as Pt[]),
   ]);
   const minX = Math.min(...pts.map((p) => p[0])) - 1.5, maxX = Math.max(...pts.map((p) => p[0])) + 1.5;
@@ -472,31 +487,17 @@ export function preview(): string {
   const pts = (ps: readonly Pt[]) => ps.map((p) => `${n2(p[0])},${n2(p[1])}`).join(' ');
   const g: string[] = [];
   for (const p of L.panels) {
-    // 통나무는 흙 비탈 다음, 덮개돌 앞에 그린다 (얼굴 목록에서 흙 비탈의 마지막 면 다음)
-    const logAt = p.logs.length ? 6 : -1;
-    p.faces.forEach((f, i) => {
-      if (i === logAt) g.push(...p.logs.map(logSvg));
+    for (const f of p.faces) {
       g.push(f.dash
         ? `<polygon points="${pts(f.pts)}" fill="none" stroke="${INK_DIM}" stroke-width="${f.sw}" stroke-linecap="round" stroke-dasharray="${SPOT_DASH}"/>`
         : `<polygon points="${pts(f.pts)}" fill="${f.fill}" stroke="${INK}" stroke-width="${f.sw}" stroke-linejoin="round"/>`);
-    });
+    }
     for (const [a, b] of p.leaders) g.push(`<line x1="${n2(a[0])}" y1="${n2(a[1])}" x2="${n2(b[0])}" y2="${n2(b[1])}" stroke="${INK_DIM}" stroke-width="0.35"/><circle cx="${n2(a[0])}" cy="${n2(a[1])}" r="0.9" fill="${INK}"/>`);
     for (const l of p.labels) g.push(text(l.x, l.y, l.text, { size: l.size, weight: l.weight, anchor: l.anchor, fill: l.dim ? INK_DIM : INK }));
   }
   const vb = L.viewBox.map(n2).join(' ');
-  const aria = '왼쪽 그림: 받침돌 두 개가 서 있고, 그 옆에 놓은 흙 비탈 위에 통나무 셋을 깔고 덮개돌을 끌어 올리는 모습. 여러 짐작 가운데 하나다. 오른쪽 그림: 흙 비탈을 치우고 받침돌 두 개 위에 덮개돌이 얹힌 모습.';
+  const aria = '왼쪽 그림: 받침돌 두 개가 서 있고, 그 옆에 놓은 흙 비탈 위로 덮개돌을 끌어 올리는 모습. 덮개돌의 앞 끝은 비탈에 걸치고 뒤 끝은 아직 땅에 닿아 있다. 여러 짐작 가운데 하나다. 오른쪽 그림: 흙 비탈을 치우고 받침돌 두 개 위에 덮개돌이 얹힌 모습.';
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" role="img" aria-label="${aria}" style="display:block;width:100%;height:100%"><g font-family="${FONT_FAMILY}">${g.join('')}</g></svg>`;
-
-  function logSvg(c: FigPanel['logs'][number]): string {
-    const { back: b, front: fr, r } = c;
-    const v = [b[0] - fr[0], b[1] - fr[1]], len = Math.hypot(v[0], v[1]);
-    const nn = [-v[1] / len * r, v[0] / len * r];
-    return `<circle cx="${n2(b[0])}" cy="${n2(b[1])}" r="${r}" fill="#ffffff" stroke="${INK}" stroke-width="0.45"/>`
-      + `<polygon points="${pts([[b[0] + nn[0], b[1] + nn[1]], [fr[0] + nn[0], fr[1] + nn[1]], [fr[0] - nn[0], fr[1] - nn[1]], [b[0] - nn[0], b[1] - nn[1]]])}" fill="#ffffff" stroke="none"/>`
-      + `<line x1="${n2(b[0] + nn[0])}" y1="${n2(b[1] + nn[1])}" x2="${n2(fr[0] + nn[0])}" y2="${n2(fr[1] + nn[1])}" stroke="${INK}" stroke-width="0.45"/>`
-      + `<line x1="${n2(b[0] - nn[0])}" y1="${n2(b[1] - nn[1])}" x2="${n2(fr[0] - nn[0])}" y2="${n2(fr[1] - nn[1])}" stroke="${INK}" stroke-width="0.45"/>`
-      + `<circle cx="${n2(fr[0])}" cy="${n2(fr[1])}" r="${r}" fill="#ffffff" stroke="${INK}" stroke-width="0.5"/><circle cx="${n2(fr[0])}" cy="${n2(fr[1])}" r="${r * 0.45}" fill="none" stroke="${RULE}" stroke-width="0.35"/>`;
-  }
 }
 
 export default { sheets, preview };

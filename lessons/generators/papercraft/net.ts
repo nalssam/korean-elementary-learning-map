@@ -298,6 +298,72 @@ export function grain(d: string): string {
   return `<path d="${d}" fill="none" stroke="${RULE_SOFT}" stroke-width="0.3" stroke-linecap="round"/>`;
 }
 
+/** 사각형 [x0, y0, x1, y1] */
+export type Rect = [number, number, number, number];
+
+/** text() 로 찍는 글 한 줄이 차지하는 사각형 (halo 바탕과 같은 크기). 꾸밈 선이 비켜 갈 자리를 잡는 데 쓴다. */
+export function textBox(x: number, y: number, s: string, o: TextOpts = {}): Rect {
+  const size = o.size ?? 3.6;
+  const w = textWidth(s, size) + 1.2, h = size * 1.2;
+  const anchor = o.anchor ?? 'middle';
+  const x0 = anchor === 'start' ? x - 0.6 : anchor === 'end' ? x - w + 0.6 : x - w / 2;
+  return [x0, y - h / 2, x0 + w, y + h / 2];
+}
+
+/** mark() 의 동그라미가 차지하는 사각형 */
+export function markBox(x: number, y: number, role: 'tab' | 'target' = 'tab'): Rect {
+  const r = role === 'target' ? MARK_R.target : MARK_R.tab;
+  return [x - r, y - r, x + r, y + r];
+}
+
+/**
+ * 물결 꾸밈 선의 점들. SVG 의 `M x,y q c,±a e,0 t f,0` 과 같은 꼴(두 마디의 2차 곡선)을 점으로 찍는다.
+ * 점으로 찍어 두어야 이름표 둘레에서 선을 끊을 수 있다 (grainAround).
+ */
+export function wave(x: number, y: number, c: number, a: number, e: number, f: number, steps = 24): Pt[] {
+  const q = (p0: Pt, p1: Pt, p2: Pt, t: number): Pt => [
+    (1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0],
+    (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1],
+  ];
+  const p0: Pt = [x, y], c1: Pt = [x + c, y + a], p1: Pt = [x + e, y];
+  const c2: Pt = [2 * p1[0] - c1[0], 2 * p1[1] - c1[1]], p2: Pt = [x + e + f, y];
+  const out: Pt[] = [];
+  for (let i = 0; i <= steps; i++) out.push(q(p0, c1, p1, i / steps));
+  for (let i = 1; i <= steps; i++) out.push(q(p1, c2, p2, i / steps));
+  return out;
+}
+
+/** 점 p 가 사각형 r 을 pad 만큼 넓힌 곳 안에 드는가 */
+const within = (p: Pt, r: Rect, pad: number) => p[0] >= r[0] - pad && p[0] <= r[2] + pad && p[1] >= r[1] - pad && p[1] <= r[3] + pad;
+
+/**
+ * 꾸밈 선을 이름표와 조립 표시 둘레(pad 만큼 띄운 곳)에서 끊어 그린다. 선이 글자를 지나거나 글자에 닿지 않는다.
+ * 점 사이를 잘게 나눠, 끊는 자리가 이름표 가장자리에서 pad 안쪽으로 들어오지 않게 한다.
+ */
+export function grainAround(pts: Pt[], avoid: Rect[], pad = 0.9): string {
+  const fine: Pt[] = [];
+  pts.forEach((p, i) => {
+    if (i === 0) { fine.push(p); return; }
+    const a = pts[i - 1], n = Math.max(1, Math.ceil(Math.hypot(p[0] - a[0], p[1] - a[1]) / 0.25));
+    for (let k = 1; k <= n; k++) fine.push([a[0] + ((p[0] - a[0]) * k) / n, a[1] + ((p[1] - a[1]) * k) / n]);
+  });
+  const runs: Pt[][] = [];
+  let run: Pt[] = [];
+  for (const p of fine) {
+    if (avoid.some((r) => within(p, r, pad))) { if (run.length > 1) runs.push(run); run = []; } else run.push(p);
+  }
+  if (run.length > 1) runs.push(run);
+  // 너무 짧게 남은 토막(1.5mm 아래)은 지저분해 보이므로 버린다
+  const long = runs.filter((r) => Math.hypot(r[r.length - 1][0] - r[0][0], r[r.length - 1][1] - r[0][1]) >= 1.5);
+  if (!long.length) return '';
+  const d = long.map((r) => {
+    // 점을 솎아 낸다: 1mm 남짓마다 하나, 끝점은 그대로
+    const kept = r.filter((_, i) => i === 0 || i === r.length - 1 || i % 4 === 0);
+    return `M${kept.map((p) => `${fmt(p[0])},${fmt(p[1])}`).join(' L')}`;
+  }).join(' ');
+  return grain(d);
+}
+
 // ───────────────────────────── 쪽 ─────────────────────────────
 
 /** 쪽마다 맨 위에 두는 선 안내와 5cm 자. 쪽을 따로 나눠 줘도 선을 읽을 수 있고, 실제 크기로 찍혔는지 자로 잴 수 있다. */
