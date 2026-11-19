@@ -5,7 +5,9 @@
 //    출처 표시가 모두 같으면 줄 아래에 한 번만, 다르면 그림마다 찍는다.
 //  - 맞고 틀림 문항의 표시는 lib 의 MARK(○ ×)이다.
 //  - 닫는 따옴표와 뒤의 조사(’은)는 좁은 단에서도 갈리지 않는다. 같은 폭에서 keepParticle 을 거치지 않은 글은 갈린다.
+//    줄 전체의 출처 표시는 줄의 왼쪽 끝에서 시작한다 (가운데 그림 하나의 것으로 읽히지 않게).
 //  - 카드 앞면의 자르는 선은 300dpi 로 그려 보아 모두 같은 굵기다 (가운데 선만 두 겹으로 굵어지지 않는다).
+//  - 카드는 덱마다 한 높이로 본문을 바닥글 앞의 틈까지 채우고, 그림이 든 줄도 낱말이 한 기준선에 선다. 뒷면은 긴 변으로 뒤집으면 앞면과 겹친다.
 // 만든 것은 .cache/tests/print-blocks-<pid>/ 아래에만 둔다. Chromium 이 없으면 건너뛴다 (16절).
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,6 +18,7 @@ import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 import * as c from '#lib/content.ts';
 import { MARK } from '#lib/site.ts';
+import { cardHeight, footReserve } from '#src/components/print/layout.ts';
 import { buildSite, noChromium, tempContent } from '../contract/helpers.ts';
 
 const skip = await noChromium();
@@ -214,6 +217,13 @@ test('학습지 보기·그림 줄·○× 표시·조사 붙이기, 카드의 �
         captionTops: cells.map((cell) => Math.round(cell.querySelector('.ws-fig-caption')!.getBoundingClientRect().top)),
         creditTops: cells.map((cell) => cell.querySelector('.media-credit')!).filter(visible).map((el) => Math.round(el.getBoundingClientRect().top)),
         rowCredit: row.querySelector('.ws-figrow-credit')?.textContent ?? null,
+        creditLeft: (() => {
+          const credit = row.querySelector('.ws-figrow-credit');
+          if (!credit) return null;
+          const range = document.createRange();
+          range.selectNodeContents(credit);
+          return Math.round(range.getClientRects()[0].left - row.getBoundingClientRect().left);
+        })(),
       };
     }));
     assert.equal(rows.length, 2);
@@ -225,10 +235,71 @@ test('학습지 보기·그림 줄·○× 표시·조사 붙이기, 카드의 �
     // 같은 출처: 그림마다 찍지 않고 줄 아래에 한 번, 몇 장의 것인지 밝혀서
     assert.deepEqual(rows[0].creditTops, []);
     assert.match(rows[0].rowCredit ?? '', /^그림 3장: 시험용 그린이/);
+    assert.ok(Math.abs(rows[0].creditLeft ?? 99) <= 1, `줄의 출처 표시가 줄의 왼쪽 끝에서 시작하지 않습니다 (${rows[0].creditLeft}px)`);
     // 다른 출처: 그림마다, 같은 높이에
     assert.equal(rows[1].rowCredit, null);
     assert.equal(rows[1].creditTops.length, 3);
     assert.equal(new Set(rows[1].creditTops).size, 1, `출처 표시가 다른 높이에 있습니다: ${rows[1].creditTops}`);
+
+    // ── 카드의 크기·낱말의 기준선·양면 맞춤 ──
+    for (const id of ['5-2/1/01', '5-2/1/05']) {
+      const lesson = c.loadLesson(id);
+      const job = c.printJobs(lesson).find((j) => j.kind === 'cards')!;
+      await page.goto(site.origin + job.route, { waitUntil: 'load' });
+      await page.evaluate(() => document.fonts.ready);
+      const sheets = await page.evaluate(() => [...document.querySelectorAll('.sheet')].map((sheet) => {
+        const s = sheet.getBoundingClientRect();
+        const mm = (px: number) => (px * 25.4) / 96;
+        const range = document.createRange();
+        range.selectNodeContents(sheet.querySelector('.sheet-foot')!);
+        const footTop = Math.min(...[...range.getClientRects()].map((q) => q.top));
+        return [...sheet.querySelectorAll('.cards > .card')].map((card) => {
+          const q = card.getBoundingClientRect();
+          const word = card.querySelector('.card-word');
+          let baseline: number | null = null;
+          if (word) {
+            // 낱말 줄 끝에 크기 없는 inline-block 을 붙이면 그 아래끝이 기준선에 선다
+            const probe = document.createElement('span');
+            probe.style.cssText = 'display:inline-block;width:0;height:0';
+            word.append(probe);
+            baseline = mm(probe.getBoundingClientRect().bottom - s.top);
+            probe.remove();
+          }
+          return {
+            empty: card.classList.contains('card-empty'),
+            front: card.classList.contains('card-front'),
+            text: (word ?? card.querySelector('.card-meaning'))?.textContent ?? '',
+            picture: !!card.querySelector('img'),
+            left: mm(q.left - s.left), right: mm(q.right - s.left), top: mm(q.top - s.top), height: mm(q.height),
+            baseline, gap: mm(footTop - q.bottom),
+          };
+        });
+      }));
+      const deck = c.deckCards(lesson);
+      const want = cardHeight(deck.length, footReserve(`${c.sheetFooter(lesson)} · ${job.pages}/${job.pages}`));
+      for (const [si, cells] of sheets.entries()) {
+        const filled = cells.filter((x) => !x.empty);
+        for (const x of filled) assert.ok(Math.abs(x.height - want) < 0.3, `${id} ${si + 1}쪽: 카드 높이 ${x.height.toFixed(1)}mm (덱의 높이 ${want}mm)`);
+        // 바닥글 앞의 틈 (R29)
+        for (const x of filled) assert.ok(x.gap >= 6 - 0.05, `${id} ${si + 1}쪽: 카드와 바닥글 사이 ${x.gap.toFixed(1)}mm`);
+        if (si % 2 === 1) continue;
+        // 앞면: 한 줄의 낱말은 그림이 있든 없든 같은 기준선에 선다
+        for (let i = 0; i + 1 < cells.length; i += 2) {
+          const [a, b] = [cells[i], cells[i + 1]];
+          if (a.empty || b.empty) continue;
+          assert.ok(Math.abs(a.baseline! - b.baseline!) < 0.2, `${id} ${si + 1}쪽 ${i / 2 + 1}째 줄: 낱말 기준선 ${a.baseline!.toFixed(1)} / ${b.baseline!.toFixed(1)}mm (${a.text} · ${b.text})`);
+        }
+        // 뒷면: 긴 변으로 뒤집으면 앞면의 카드 자리와 겹친다 (왼쪽 ↔ 오른쪽, 같은 높이)
+        const backs = sheets[si + 1];
+        filled.forEach((f, i) => {
+          const back = backs[i % 2 === 0 ? i + 1 : i - 1];
+          assert.ok(back && !back.empty, `${id} ${si + 2}쪽: ${f.text} 의 뒷면 자리가 비었습니다`);
+          assert.ok(Math.abs(f.left - (210 - back.right)) < 0.2 && Math.abs(f.top - back.top) < 0.2 && Math.abs(f.height - back.height) < 0.2,
+            `${id} ${si + 1}쪽 ${f.text}: 앞면 (${f.left.toFixed(1)}, ${f.top.toFixed(1)}) 뒷면을 뒤집은 자리 (${(210 - back.right).toFixed(1)}, ${back.top.toFixed(1)})`);
+        });
+      }
+      if (id === '5-2/1/01') assert.ok(sheets[0].some((x) => x.picture), '시험이 쓸모없습니다: 그림이 든 카드가 없습니다');
+    }
 
     // ── 카드의 자르는 선: 300dpi 에서 모두 같은 굵기 ──
     const dpi = (mm: number) => Math.round((mm / 25.4) * 300);
@@ -245,7 +316,8 @@ test('학습지 보기·그림 줄·○× 표시·조사 붙이기, 카드의 �
         const rowsOnSheet = Math.ceil(onSheet / 2);
         // 본문은 왼쪽 10mm, 위 32mm(여백 10 + 머리 22)에서 시작한다. 카드 안쪽 1.5mm 를 지나는 줄을 따라 선을 센다.
         const across = darkRuns(Array.from({ length: img.w }, (_, x) => img.at(x, dpi(32 + 1.5))));
-        const down = darkRuns(Array.from({ length: dpi(62 * rowsOnSheet + 2) }, (_, y) => img.at(dpi(10 + 1.5), dpi(31) + y)));
+        const cardH = cardHeight(cards, footReserve(`${c.sheetFooter(lesson)} · ${job.pages}/${job.pages}`));
+        const down = darkRuns(Array.from({ length: dpi(cardH * rowsOnSheet + 2) }, (_, y) => img.at(dpi(10 + 1.5), dpi(31) + y)));
         assert.equal(across.length, onSheet > 1 ? 3 : 2, `${id} ${sheet * 2 + 1}쪽: 세로 선 ${across.length}개`);
         assert.equal(down.length, rowsOnSheet + 1, `${id} ${sheet * 2 + 1}쪽: 가로 선 ${down.length}개`);
         const widths = [...across, ...down].map(([, w]) => w);

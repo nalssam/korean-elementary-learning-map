@@ -1,6 +1,8 @@
 ---
 // 카드 인쇄 페이지 (/<id>/cards/). 카드가 ready 인 차시에만 생긴다.
-// A4 세로 한 면에 8장(2열 × 4행, 한 장 95 × 62mm)을 본문의 왼쪽 위부터 채운다.
+// A4 세로 한 면에 8장까지(2열 × 4행)를 본문의 왼쪽 위부터 채운다. 카드의 폭은 95mm 이고, 높이는 덱마다 하나다:
+// 가장 많이 든 쪽의 줄이 본문 높이(바닥글 앞의 틈을 뺀)를 나누어 갖는다 (8장이면 61mm 남짓, 6장이면 82mm 남짓, 85mm 까지. layout.ts 의 cardHeight).
+// 그림이 든 카드가 있는 줄은 모든 카드가 같은 높이의 그림 자리를 두고 그 아래 같은 자리에 낱말을 찍는다 (낱말이 한 줄에 선다).
 // 앞면 쪽 다음에 그 뒷면 쪽이 온다. 뒷면 쪽은 좌우 열을 바꿔 놓아서, 긴 변으로 뒤집어 양면 인쇄하면 앞뒤가 맞는다.
 // 앞면에는 자르는 선(.cut)을 그리고, 뒷면에는 선 없이 안쪽 여백을 넉넉히 둔다 (양면 맞춤이 몇 mm 어긋나도 글이 잘리지 않는다).
 // 앞뒤의 글은 keepParticle() 을 거친다 (닫는 따옴표와 조사가 줄 끝에서 갈리지 않는다).
@@ -9,24 +11,33 @@ import Media from '#src/components/Media.astro';
 import PrintLayout from '#src/components/print/PrintLayout.astro';
 import Sheet from '#src/components/print/Sheet.astro';
 import '#src/components/print/cards.css';
-import { cardSheets, frontSize } from '#src/components/print/layout.ts';
-import { deckCards, lessonPaths, loadLesson, printJobs } from '#lib/content.ts';
+import { cardHeight, cardRows, cardSheets, footReserve, frontSize, pictureRows } from '#src/components/print/layout.ts';
+import { deckCards, lessonPaths, loadLesson, printJobs, sheetFooter } from '#lib/content.ts';
 import { keepParticle as k } from '#lib/site.ts';
 
 export function getStaticPaths() { return lessonPaths('cards'); }
 const lesson = loadLesson(Astro.props.id);
 const job = printJobs(lesson).find((j) => j.kind === 'cards')!;
 const cards = lesson.assets.cards;
-const sheets = cardSheets(deckCards(lesson));
+const deck = deckCards(lesson);
+const sheets = cardSheets(deck);
+// 바닥글 앞의 틈(6mm, R29)을 남기고 남은 높이를 줄이 나누어 갖는다
+// 쪽마다 덱의 줄 수만큼만 자리를 둔다 (8장보다 적은 덱의 빈 줄은 찍지 않는다)
+const cellsPerSheet = cardRows(deck.length) * 2;
+const height = cardHeight(deck.length, footReserve(`${sheetFooter(lesson)} · ${job.pages}/${job.pages}`));
 ---
 <PrintLayout lesson={lesson} job={job}>
   {cards.state === 'ready' && sheets.map((sheet, i) => (
     <Sheet lesson={lesson} job={job} no={i + 1} title={k(cards.title)} sub={sheet.side === 'front' ? '앞면 · 선을 따라 오려 봅시다' : '뒷면'}>
-      <div class="cards" data-side={sheet.side}>
-        {sheet.cells.map((card) => !card ? <div class="card card-empty"></div> : sheet.side === 'front' ? (
-          <div class="card card-front cut">
+      <div class="cards" data-side={sheet.side} style={`--card-h:${height}mm`}>
+        {sheet.cells.slice(0, cellsPerSheet).map((card, ci) => !card ? <div class="card card-empty"></div> : sheet.side === 'front' ? (
+          <div class="card card-front cut" data-picture-row={pictureRows(sheet.cells)[ci] ? '' : undefined}>
             {card.label && <span class="card-label">{card.label}</span>}
-            {card.media && <Media lesson={card.lesson} id={card.media} caption={false} class="card-picture" />}
+            {pictureRows(sheet.cells)[ci] && (
+              <div class="card-picture-slot">
+                {card.media && <Media lesson={card.lesson} id={card.media} caption={false} class="card-picture" />}
+              </div>
+            )}
             <p class="card-word" data-size={frontSize(card.front)}>{k(card.front)}</p>
           </div>
         ) : (

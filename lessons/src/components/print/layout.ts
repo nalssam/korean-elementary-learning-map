@@ -273,3 +273,53 @@ export function frontSize(front: string): 'xl' | 'lg' | 'md' | 'sm' {
   if (n <= 11) return 'md';
   return 'sm';
 }
+
+// ───────────────────────────── 바닥글 앞의 틈 ─────────────────────────────
+
+/** 본문(.sheet-body)의 높이(mm). src/styles/print.css 와 docs/CONTRACT.md 7절의 값이다. */
+export const BODY_MM = { portrait: 249, landscape: 162 } as const;
+/** 본문의 마지막 블록과 바닥글 글자 사이의 가장 작은 틈(mm). docs/CONTRACT.md 7절 (R29). render-pdf 가 찍기 전에 잰다. */
+export const FOOT_GAP_MM = 6;
+/** 바닥글 상자의 높이(mm)와 한 줄의 높이(8pt × 1.05) */
+const FOOT_BOX_MM = 6;
+const FOOT_LINE_MM = (8 * 1.05 * 25.4) / 72;
+
+/** 바닥글이 몇 줄로 찍히는가. 8pt 글자의 대강의 폭으로 센다 (공개된 차시는 주소가 들어 두 줄이다). */
+export function footLines(text: string, width = 190): number {
+  return Math.max(1, Math.ceil((textWidth(text) * (8 / 12)) / (width - 2)));
+}
+
+/**
+ * 본문 아래에 비워 둘 높이(mm). 바닥글은 6mm 상자의 아래에 붙으므로 한 줄이면 상자 위쪽 3mm 남짓이 이미 빈다.
+ * 바닥글 글자와 6mm 를 띄우는 데 모자라는 만큼만 본문에서 비운다 (한 줄: 3mm 남짓, 두 줄: 6mm 남짓).
+ * footer 는 가장 긴 쪽의 바닥글 (쪽 번호까지).
+ */
+export function footReserve(footer: string, width = 190): number {
+  const textMm = footLines(footer, width) * FOOT_LINE_MM;
+  return Math.ceil((FOOT_GAP_MM - (FOOT_BOX_MM - textMm)) * 10 + 2) / 10;
+}
+
+/** 덱의 카드 쪽이 쓰는 줄 수: 가장 많이 든 쪽의 줄 수. 모든 쪽(앞·뒤)이 이 줄 수만큼 자리를 둔다. */
+export function cardRows(count: number): number {
+  return Math.max(1, Math.ceil(Math.min(CARDS_PER_SIDE, count) / 2));
+}
+
+/** 카드 한 장의 가장 큰 높이(mm). 카드가 적어도 이보다 길게 늘이지 않는다 (손에 쥐고 놀기 좋은 크기). */
+export const CARD_MAX_MM = 85;
+
+/**
+ * 카드 한 장의 높이(mm). 한 덱의 카드는 모두 같은 크기다: 가장 많이 든 쪽의 줄 수로 본문 높이(바닥글 앞의 틈을 뺀)를 나눈다.
+ * 8장(4줄)이면 61mm 남짓, 6장(3줄)이면 82mm 남짓, 그보다 적으면 85mm 에서 멈춘다.
+ */
+export function cardHeight(count: number, reserve: number): number {
+  const rows = cardRows(count);
+  return Math.min(CARD_MAX_MM, Math.floor(((BODY_MM.portrait - reserve) / rows) * 10) / 10);
+}
+
+/** 카드 쪽의 줄마다 그림이 든 카드가 있는가. 그런 줄은 모든 카드가 같은 높이의 그림 자리를 두어 낱말이 한 줄에 선다. */
+export function pictureRows(cells: ({ media?: string } | undefined)[]): boolean[] {
+  return cells.map((_, i) => {
+    const row = i - (i % 2);
+    return !!(cells[row]?.media || cells[row + 1]?.media);
+  });
+}

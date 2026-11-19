@@ -6,18 +6,21 @@ import Media from '#src/components/Media.astro';
 import PrintLayout from '#src/components/print/PrintLayout.astro';
 import Sheet from '#src/components/print/Sheet.astro';
 import '#src/components/print/coloring.css';
-import { lessonPaths, loadLesson, printJobs } from '#lib/content.ts';
+import { footReserve } from '#src/components/print/layout.ts';
+import { lessonPaths, loadLesson, printJobs, sheetFooter } from '#lib/content.ts';
 import { keepParticle as k } from '#lib/site.ts';
 
 export function getStaticPaths() { return lessonPaths('coloring'); }
 const lesson = loadLesson(Astro.props.id);
 const job = printJobs(lesson).find((j) => j.kind === 'coloring')!;
 const coloring = lesson.assets.coloring;
+// 바닥글 앞의 틈(6mm, R29)을 남기려고 본문 아래에 비워 두는 높이 (coloring.css 의 .coloring padding-bottom)
+const reserve = footReserve(`${sheetFooter(lesson)} · 1/1`);
 ---
 <PrintLayout lesson={lesson} job={job}>
   {coloring.state === 'ready' && (
     <Sheet lesson={lesson} job={job} no={1} title={k(coloring.title)} name="student">
-      <div class="coloring">
+      <div class="coloring" style={`--foot-reserve:${reserve}mm`}>
         <Media lesson={lesson} id={coloring.media} caption={false} class="coloring-picture" />
         {coloring.look_for.length > 0 && (
           <div class="coloring-look">

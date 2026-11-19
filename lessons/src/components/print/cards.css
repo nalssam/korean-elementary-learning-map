@@ -1,11 +1,12 @@
-/* 카드. 한 장 95 × 62mm, 한 면에 2열 × 4행 (190 × 248mm). 본문의 왼쪽 위부터 채운다.
+/* 카드. 폭 95mm, 높이는 덱마다 하나(--card-h, cards.astro 가 layout.ts 의 cardHeight 로 준다). 한 면에 2열 × 4행까지, 본문의 왼쪽 위부터 채운다.
+   줄이 본문 높이(바닥글 앞의 틈 6mm 를 뺀)를 나누어 가져 카드가 적은 덱도 종이를 아래까지 쓴다. 한 장이 85mm 보다 길어지지는 않는다.
    앞면: 자르는 선(.cut, print.css 의 0.5mm 실선)이 카드의 가장자리다. 카드마다 네 변을 다 그리면 이웃한 카드의 선이
    나란히 붙어 가운데 선만 두 배(1mm)로 굵어진다. 그래서 카드는 오른쪽과 아래 변만 그리고, 왼쪽 열은 왼쪽 변을,
    첫 줄은 위 변을 더 그린다. 모든 자르는 선이 한 줄, 같은 굵기다. 카드는 왼쪽 위부터 채우므로 빈 칸이 있어도 선이 끊기지 않는다.
-   카드의 크기(95 × 62mm)와 자리는 그대로여서 뒷면과 맞는다.
+   앞뒤 쪽의 카드 크기와 자리가 같아서, 긴 변으로 뒤집어 양면 인쇄하면 맞는다.
    뒷면: 선이 없다. 안쪽 여백 9mm 는 양면 맞춤이 어긋나도 글이 잘리지 않게 하는 자리다. */
-.cards { display: grid; grid-template-columns: repeat(2, 95mm); grid-auto-rows: 62mm; color: var(--ink); }
-.card { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5mm; width: 95mm; height: 62mm; text-align: center; }
+.cards { --card-h: 62mm; display: grid; grid-template-columns: repeat(2, 95mm); grid-auto-rows: var(--card-h); color: var(--ink); }
+.card { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5mm; width: 95mm; height: var(--card-h); text-align: center; }
 .card-front { padding: 5mm; }
 /* 굵기는 2px(0.53mm)로 적는다. Chromium 은 테두리 굵기를 화면 점 단위로 내려 맞춰서 0.5mm(1.89px)로 적으면 1px(0.26mm)로 찍힌다. */
 .cards { --cut-w: 2px; }
@@ -14,8 +15,11 @@
 .cards .card-front.cut:nth-child(-n + 2) { border-top-width: var(--cut-w); }
 .card-back { padding: 9mm; }
 
-/* 앞면: 이름·낱말. 14자까지 한 줄에 들어가게 길수록 작게 찍는다 (layout.ts 의 frontSize). */
-.card-word { margin: 0; font-weight: 800; line-height: 1.25; letter-spacing: -0.01em; white-space: nowrap; }
+/* 앞면: 이름·낱말. 14자까지 한 줄에 들어가게 길수록 작게 찍는다 (layout.ts 의 frontSize).
+   낱말 줄의 높이는 글자 크기와 관계없이 같다: 가장 큰 글자 크기의 보이지 않는 받침(::before)이 줄의 높이와 기준선을 정하고
+   낱말이 그 기준선에 선다. 그래서 한 줄의 카드는 낱말이 길든 짧든 같은 높이에 선다. */
+.card-word { --strut: 30pt; display: flex; justify-content: center; align-items: baseline; margin: 0; font-weight: 800; line-height: 1.25; letter-spacing: -0.01em; white-space: nowrap; }
+.card-word::before { content: '\200b'; width: 0; font-size: var(--strut); }
 .card-word[data-size='xl'] { font-size: 30pt; }
 .card-word[data-size='lg'] { font-size: 24pt; }
 .card-word[data-size='md'] { font-size: 18pt; }
@@ -24,13 +28,17 @@
 /* 단원 덱에서 어느 묶음의 카드인지 알리는 글자. 색이 아니라 글자와 테두리로 구분한다. */
 .card-label { position: absolute; top: 3.5mm; left: 4mm; padding: 0.4mm 2mm; border: 0.3mm solid var(--ink); border-radius: 1.2mm; font-size: 9pt; font-weight: 700; line-height: 1.4; }
 
-/* 그림이 있는 앞면: 그림이 위, 낱말이 아래 */
-.card-picture { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; align-items: center; max-width: 100%; }
-.card-picture img { flex: none; width: 70mm; height: 28mm; max-width: 100%; }
-.card .card-picture figcaption { margin-top: 0.6mm; }
-.card .card-picture .media-credit { font-size: 6pt; }
-.card-picture + .card-word[data-size='xl'] { font-size: 22pt; }
-.card-picture + .card-word[data-size='lg'] { font-size: 19pt; }
+/* 그림이 든 카드가 있는 줄: 모든 카드가 같은 높이의 그림 자리(카드 높이의 절반)를 두고 그 아래에 낱말을 찍는다.
+   그림이 없는 카드도 자리를 비워 두어, 줄의 낱말이 모두 같은 높이에 선다. 그림은 자리의 아래쪽에 서고 출처 표시가 그 밑에 붙는다. */
+.card[data-picture-row] { --pic-h: calc(var(--card-h) * 0.5); }
+.card-picture-slot { flex: none; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; width: 100%; height: var(--pic-h); }
+.card-picture { display: flex; flex-direction: column; align-items: center; max-width: 100%; }
+.card-picture img { flex: none; width: 75mm; height: calc(var(--pic-h) - 4mm); max-width: 100%; object-fit: contain; object-position: center bottom; }
+.card .card-picture figcaption { margin-top: 0.8mm; }
+.card .card-picture .media-credit { font-size: 7pt; }
+.card[data-picture-row] .card-word { --strut: 22pt; }
+.card[data-picture-row] .card-word[data-size='xl'] { font-size: 22pt; }
+.card[data-picture-row] .card-word[data-size='lg'] { font-size: 19pt; }
 
 /* 뒷면: 한 줄 풀이 (50자까지) */
 .card-meaning { margin: 0; font-size: 14pt; font-weight: 500; line-height: 1.5; text-wrap: balance; }
