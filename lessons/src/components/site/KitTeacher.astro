@@ -5,14 +5,15 @@
 import { creditFull, getFact, shownMedia, worksheetKey } from '#lib/content.ts';
 import { ASSET_LABEL } from '#lib/site.ts';
 import type { Lesson } from '#schema/lesson.ts';
-import { factRefs } from './data.ts';
+import { factRefs, uniqueSources } from './data.ts';
 import Fold from './Fold.astro';
 import { koDate } from './format.ts';
 
 interface Props { lesson: Lesson }
 const { lesson } = Astro.props;
 const key = worksheetKey(lesson);
-const facts = factRefs(lesson).map((ref) => getFact(lesson, ref));
+// 한 사실 아래 같은 출처(이름·제목·주소가 같은 것)는 한 번만 보여 준다 (docs/CONTRACT.md 6절)
+const facts = factRefs(lesson).map((ref) => getFact(lesson, ref)).map((f) => ({ claim: f.claim, sources: uniqueSources(f.sources) }));
 const pictures = shownMedia(lesson).map((m) => ({ alt: m.alt, credit: creditFull(m) }));
 ---
 <section class="sec" aria-labelledby="teacher-title">

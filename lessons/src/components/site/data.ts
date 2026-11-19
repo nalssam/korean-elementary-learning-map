@@ -4,7 +4,7 @@ import {
   allBundles, deckCards, isPublic, lessonRoute, lessonsLabel, loadRegistry, pagesLabel, printJobs, semesterLabel, visibleLessons,
 } from '#lib/content.ts';
 import type { BundleRef, PrintJob } from '#lib/content.ts';
-import { ASSET_LABEL, printLine } from '#lib/site.ts';
+import { ASSET_LABEL, PER_LABEL, printLine } from '#lib/site.ts';
 import type { AssetKind, Lesson } from '#schema/lesson.ts';
 import { factUses } from '#schema/lesson.ts';
 import { href } from '#src/lib/url.ts';
@@ -87,24 +87,52 @@ export interface PrintRow {
   cards?: number;
   /** 카드의 놀이 방법. 카드 줄 아래에 보여 준다 (docs/CONTRACT.md 6절). */
   games: { name: string; how: string }[];
+  /** 명세의 prepare 가운데 이 인쇄물을 가리키는 항목에서 덧붙인 말. 따로 한 줄을 만들지 않고 이 줄에 합친다 (docs/CONTRACT.md 6절). */
+  notes: string[];
+}
+
+/**
+ * prepare 항목이 인쇄물 줄을 가리키는지 본다. 항목이 그 인쇄물의 이름(ASSET_LABEL)이나 명세에 적은 제목으로 시작하면 같은 것이다.
+ * 가리키면 덧붙인 말(이름 뒤의 괄호 글과 qty)을 돌려준다. 덧붙인 말이 없으면 빈 문자열, 가리키지 않으면 undefined.
+ * qty 가 인쇄 안내와 같은 단위(모둠마다 1부 ↔ 모둠마다 1벌)로 시작하면 한 줄에 같은 말이 두 번 서므로 뺀다.
+ */
+export function prepareNote(item: { item: string; qty?: string }, row: Pick<PrintRow, 'job' | 'title'>): string | undefined {
+  const text = item.item.trim();
+  const name = [row.job.label, row.title].find((n) => text === n || text.startsWith(`${n} `) || text.startsWith(`${n}(`));
+  if (name === undefined) return undefined;
+  const rest = text.slice(name.length).trim().replace(/^\((.*)\)$/, '$1').trim();
+  const per = PER_LABEL[row.job.print.per].split(' ')[0];
+  const qty = item.qty && !item.qty.startsWith(per) ? item.qty : '';
+  return [rest, qty].filter(Boolean).join(' · ');
 }
 
 /**
  * 인쇄물을 준비물과 '더 해 볼 자료'로 나눈다 (docs/CONTRACT.md 5절).
  * 준비물: 학습지와, 흐름의 uses 에 나오는 인쇄물. 나머지 인쇄물은 '더 해 볼 자료'.
+ * 명세의 prepare 가운데 준비물의 인쇄물 줄을 가리키는 항목은 그 줄의 notes 로 옮기고, 나머지만 extra 로 돌려준다 (6절).
  */
-export function printRows(lesson: Lesson): { prepare: PrintRow[]; more: PrintRow[] } {
+export function printRows(lesson: Lesson): { prepare: PrintRow[]; more: PrintRow[]; extra: Lesson['prepare'] } {
   const used = usedInFlow(lesson);
   const a = lesson.assets;
   const row = (job: PrintJob): PrintRow => {
-    if (job.kind === 'cards' && a.cards.state === 'ready') return { job, title: a.cards.title, cards: deckCards(lesson).length, games: a.cards.games };
-    if (job.kind === 'papercraft' && a.papercraft.state === 'ready') return { job, title: a.papercraft.title, games: [] };
-    if (job.kind === 'coloring' && a.coloring.state === 'ready') return { job, title: a.coloring.title, games: [] };
-    return { job, title: lesson.worksheet.title, games: [] };
+    if (job.kind === 'cards' && a.cards.state === 'ready') return { job, title: a.cards.title, cards: deckCards(lesson).length, games: a.cards.games, notes: [] };
+    if (job.kind === 'papercraft' && a.papercraft.state === 'ready') return { job, title: a.papercraft.title, games: [], notes: [] };
+    if (job.kind === 'coloring' && a.coloring.state === 'ready') return { job, title: a.coloring.title, games: [], notes: [] };
+    return { job, title: lesson.worksheet.title, games: [], notes: [] };
   };
   const rows = printJobs(lesson).map(row);
   const inPrepare = (r: PrintRow) => r.job.kind === 'worksheet' || used.has(r.job.kind);
-  return { prepare: rows.filter(inPrepare), more: rows.filter((r) => !inPrepare(r)) };
+  const prepare = rows.filter(inPrepare);
+  const extra = lesson.prepare.filter((p) => {
+    for (const r of prepare) {
+      const note = prepareNote(p, r);
+      if (note === undefined) continue;
+      if (note) r.notes.push(note);
+      return false;
+    }
+    return true;
+  });
+  return { prepare, more: rows.filter((r) => !inPrepare(r)), extra };
 }
 
 /** 흐름 단계의 '쓰는 자료'를 우리말 이름으로 */
@@ -123,4 +151,19 @@ export function neighbours(id: string): { prev?: Row; next?: Row } {
   if (i < 0) return {};
   const same = (r: Row | undefined) => (r && r.lesson && r.ref.semester.id === rows[i].ref.semester.id ? r : undefined);
   return { prev: same(rows[i - 1]), next: same(rows[i + 1]) };
+}
+
+/**
+ * 한 사실 아래의 출처를 이름·제목·주소가 같은 것끼리 한 줄로 묶는다 (docs/CONTRACT.md 6절).
+ * 같은 문서의 다른 구절을 따로 적은 출처가 화면에 두 번 서지 않게 한다. 확인한 날은 가장 늦은 날을 남긴다. 차례는 처음 나온 차례다.
+ */
+export function uniqueSources<S extends { name: string; title?: string; url: string; accessed: string }>(sources: readonly S[]): S[] {
+  const seen = new Map<string, S>();
+  for (const s of sources) {
+    const key = JSON.stringify([s.name, s.title ?? '', s.url]);
+    const hit = seen.get(key);
+    if (!hit) seen.set(key, s);
+    else if (s.accessed > hit.accessed) seen.set(key, { ...hit, accessed: s.accessed });
+  }
+  return [...seen.values()];
 }

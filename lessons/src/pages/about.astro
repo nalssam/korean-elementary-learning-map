@@ -9,6 +9,11 @@ import { href } from '#src/lib/url.ts';
 import { allRows, progressOf, textbookLabel } from '#src/components/site/data.ts';
 
 const progress = progressOf(allRows());
+// 교과서를 낸 곳. 이 사이트가 그곳과 관계없다고 밝힐 때 쓴다 (차시표의 textbook).
+const { publisher } = loadRegistry().textbook;
+// 출판사 이름의 끝 글자에 받침이 있는지 보고 조사를 고른다 (비상교육과 · 지학사와)
+const code = publisher.charCodeAt(publisher.length - 1) - 0xac00;
+const batchim = code >= 0 && code < 11172 && code % 28 !== 0;
 const reviews = REVIEW_KINDS.map((k) => REVIEW_LABEL[k]).join(', ');
 ---
 <SiteLayout title="소개" current="about" crumbs={[{ label: '처음', href: href('/') }, { label: '소개' }]}>
@@ -30,8 +35,8 @@ const reviews = REVIEW_KINDS.map((k) => REVIEW_LABEL[k]).join(', ');
     <ol>
       <li>차시마다 명세 파일을 하나 씁니다. 수업 화면, 학습지, 확인 퀴즈, 카드가 모두 이 파일에서 나오므로 같은 사실이 자료마다 다르게 적히지 않습니다.</li>
       <li>초안은 AI 도구로 만듭니다.</li>
-      <li>사실은 한 번만 적고, 박물관이나 공공 기관처럼 누구나 열어 볼 수 있는 출처를 붙입니다. 사실마다 서로 다른 둘이 출처와 맞는지 확인합니다. 이 확인은 AI 검증자가 맡기도 합니다.</li>
-      <li>공개하기 전에 다섯 가지 검수를 거칩니다: {reviews}. 마지막 승인은 교사가 직접 읽고 합니다.</li>
+      <li>사실은 한 번만 적고, 박물관이나 공공 기관처럼 누구나 열어 볼 수 있는 출처를 붙입니다. 사실마다 두 확인자가 출처와 맞는지 따로 봅니다. 확인자는 AI일 수도 있고, 마지막 승인은 날쌤이 차시 전체를 직접 읽고 합니다.</li>
+      <li>공개하기 전에 다섯 가지 검수를 거칩니다: {reviews}.</li>
       <li>검수한 뒤에 한 글자라도 고치면 그 차시는 다시 검수합니다.</li>
       <li>공개한 뒤에 사실을 고치면 차시 안내 페이지에 날짜와 고친 내용을 남깁니다.</li>
     </ol>
@@ -39,6 +44,7 @@ const reviews = REVIEW_KINDS.map((k) => REVIEW_LABEL[k]).join(', ');
 
     <h2>교과서와의 관계</h2>
     <p>차시 번호와 쪽수는 {textbookLabel()}를 따릅니다 ({loadRegistry().curriculum}). 교과서에서 가져온 것은 단원명, 차시 번호, 쪽수뿐입니다. 교과서의 문장, 그림, 활동, 예시 답은 싣지 않았습니다.</p>
+    <p>이 사이트는 {publisher}{batchim ? '과' : '와'} 관계없이 만든 것이며, {publisher}{batchim ? '이나' : '나'} 교과서 집필진이 만들거나 보증한 자료가 아닙니다.</p>
     <p>다른 출판사의 교과서를 쓰면 쪽수와 차시 번호가 맞지 않습니다. 그때는 첫 화면에서 낱말로 찾습니다.</p>
 
     <h2>사진과 그림</h2>

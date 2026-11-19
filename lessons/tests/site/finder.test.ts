@@ -1,7 +1,7 @@
 // 쪽수·차시로 찾기의 셈 (src/components/site/finder.ts). 브라우저에서 도는 것과 같은 코드를 Node 에서 돌려 본다.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { emptyMessage, findBundles, pageRange, parseQuery } from '#src/components/site/finder.ts';
+import { QUERY_HELP, emptyMessage, findBundles, pageRange, parseQuery } from '#src/components/site/finder.ts';
 import type { FinderSemester } from '#src/components/site/finder.ts';
 
 const semester: FinderSemester = {
@@ -24,6 +24,15 @@ test('적은 글에서 숫자와 종류를 읽는다', () => {
   assert.deepEqual(parseQuery('2단원 1'), { n: 1, by: 'lesson', unit: 2 });
   assert.equal(parseQuery('고인돌'), undefined);
   assert.equal(parseQuery(''), undefined);
+});
+
+test('전각 숫자는 바꾸어 읽고, 숫자가 하나가 아닌 글은 받지 않는다', () => {
+  assert.deepEqual(parseQuery('７'), { n: 7, by: 'either' });
+  assert.deepEqual(parseQuery('３４쪽'), { n: 34, by: 'page' });
+  assert.deepEqual(parseQuery('34 쪽'), { n: 34, by: 'page' });
+  // 예전에는 첫 숫자만 읽어 '-1' 은 1을, '6-9' 는 6을 찾았다. 어느 쪽을 찾을지 모르므로 받지 않고 QUERY_HELP 를 보여 준다.
+  for (const bad of ['-1', '1.5', '6-9', '0', '34쪽 35쪽', '2단원']) assert.equal(parseQuery(bad), undefined, bad);
+  assert.equal(QUERY_HELP, '쪽수나 차시 번호를 숫자 하나로 넣어 주세요. 예: 34, 34쪽, 5차시');
 });
 
 test('쪽수로 찾으면 그 쪽을 다루는 묶음이 모두 나온다', () => {

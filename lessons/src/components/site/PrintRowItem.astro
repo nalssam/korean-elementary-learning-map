@@ -19,6 +19,7 @@ const { job } = row;
     <p class="mat-line">{jobLine(job)}</p>
     {job.print.materials.length > 0 && <p class="mat-line">함께 챙길 것: {job.print.materials.join(', ')}</p>}
     {job.print.note && <p class="mat-line">{job.print.note}</p>}
+    {row.notes.map((n) => <p class="mat-line">{n}</p>)}
     {row.games.length > 0 && (
       <dl class="games">
         <dt class="games-title">놀이 방법</dt>

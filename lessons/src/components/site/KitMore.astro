@@ -1,11 +1,8 @@
 ---
-// 더 해 볼 자료: 만들어 두었지만(ready) 수업 흐름에서는 쓰지 않는 인쇄물, 웹 활동, 만들기 세트.
+// 더 해 볼 자료: 만들어 두었지만(ready) 수업 흐름에서는 쓰지 않는 인쇄물과 만들기 세트.
 // 준비물에 넣으면 챙기지 않아도 되는 것을 챙기게 된다 (docs/CONTRACT.md 5절).
-// 웹 활동의 QR 은 확인 퀴즈 곁(KitStudent)에 한 번만 두고, 여기에서는 그리로 가는 링크만 건다.
-import { lessonRoute } from '#lib/content.ts';
-import { ASSET_LABEL, ASSET_ROUTE } from '#lib/site.ts';
+// 웹 활동은 ready 이면 늘 확인 퀴즈 곁(KitStudent)에 QR 카드로 나오므로 여기에 다시 적지 않는다. 흐름 밖의 웹 활동은 그 카드에 '더 해 볼 자료' 표시가 붙는다.
 import type { Lesson } from '#schema/lesson.ts';
-import { href } from '#src/lib/url.ts';
 import { printRows, usedInFlow } from './data.ts';
 import MakingKitItem from './MakingKitItem.astro';
 import PrintRowItem from './PrintRowItem.astro';
@@ -15,29 +12,13 @@ const { lesson } = Astro.props;
 const { more } = printRows(lesson);
 const used = usedInFlow(lesson);
 const kitAside = lesson.assets.making_kit.state === 'ready' && !used.has('making_kit');
-const web = lesson.assets.web_activity.state === 'ready' && !used.has('web_activity') ? lesson.assets.web_activity : undefined;
 ---
-{(more.length > 0 || kitAside || web) && (
+{(more.length > 0 || kitAside) && (
   <section class="sec" aria-labelledby="more-title">
     <h2 class="sec-title" id="more-title">더 해 볼 자료</h2>
     <p class="sec-note">수업 흐름에는 들어 있지 않습니다. 시간이 남거나 이어서 할 때 씁니다.</p>
     <ul class="mats">
       {more.map((row) => <PrintRowItem row={row} />)}
-      {web && (
-        <li class="mat">
-          <div class="mat-main">
-            <p class="mat-name">
-              <span class="mat-kind">{ASSET_LABEL.web_activity}</span>
-              <span class="mat-title">{web.title}</span>
-            </p>
-            <p class="mat-line">아이들이 위의 QR 코드를 찍어 엽니다.</p>
-          </div>
-          <p class="mat-links" data-pagefind-ignore>
-            <a href="#student-title">QR 코드 보기</a>
-            <a href={href(lessonRoute(lesson.id, ASSET_ROUTE.web_activity))}><span class="visually-hidden">{ASSET_LABEL.web_activity} </span>열기</a>
-          </p>
-        </li>
-      )}
       {kitAside && <MakingKitItem lesson={lesson} />}
     </ul>
   </section>

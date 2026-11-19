@@ -1,7 +1,7 @@
 ---
 // 사이트 화면(첫 화면·학기·단원·차시 안내·소개·이용 조건·오류 제보)의 틀.
 // Base.astro 를 감싸고 머리(사이트 이름, 안내 링크), 초안 표시 띠, 본문, 바닥글을 놓는다.
-// 검색 색인에는 <main data-pagefind-body> 안의 글만 들어간다 (docs/CONTRACT.md 6절).
+// 검색 색인에는 <main data-pagefind-body> 안의 글만 들어간다 (docs/CONTRACT.md 6절). index={false} 인 페이지(404)는 그 표시를 붙이지 않는다.
 import Base from './Base.astro';
 import '../components/site/site.css';
 import { footerNotice } from '#lib/content.ts';
@@ -9,7 +9,8 @@ import { SITE } from '#lib/site.ts';
 import type { Lesson } from '#schema/lesson.ts';
 import { href } from '#src/lib/url.ts';
 
-interface Crumb { label: string; href?: string }
+/** 현재 위치의 한 칸. rest 는 좁은 화면(480px 아래)에서 감추는 뒷부분이다. 예: label '1단원', rest '유적과 유물로 살펴본 옛사람들의 생활' */
+interface Crumb { label: string; rest?: string; href?: string }
 interface Props {
   /** <title> 앞부분 */
   title: string;
@@ -20,8 +21,10 @@ interface Props {
   crumbs?: Crumb[];
   /** 안내 링크 가운데 지금 페이지 */
   current?: 'about' | 'licence' | 'report';
+  /** false 이면 검색 색인에 넣지 않는다 (404 처럼 찾아 들어올 까닭이 없는 페이지) */
+  index?: boolean;
 }
-const { title, description, lesson, crumbs = [], current } = Astro.props;
+const { title, description, lesson, crumbs = [], current, index = true } = Astro.props;
 
 // 맨 아래 문구는 Base.astro 가 찍는다. 검수를 마치지 않은 글이 보이는 페이지(초안, 초안이 섞인 미리 보기)는 맨 위에도 같은 문구를 띠로 보여 준다.
 const notice = footerNotice(lesson);
@@ -53,12 +56,15 @@ const links = [
   {flagged && (
     <p class="site-flag"><span class="wrap"><span class="site-flag-dot" aria-hidden="true"></span>{notice}</span></p>
   )}
-  <main id="main" data-pagefind-body>
+  <main id="main" data-pagefind-body={index ? '' : undefined}>
     <div class="wrap">
       {crumbs.length > 0 && (
         <nav class="crumbs" aria-label="현재 위치" data-pagefind-ignore>
           <ol>
-            {crumbs.map((c) => <li>{c.href ? <a href={c.href}>{c.label}</a> : <span aria-current="page">{c.label}</span>}</li>)}
+            {crumbs.map((c) => {
+              const text = <>{c.label}{c.rest && <span class="crumb-rest"> {c.rest}</span>}</>;
+              return <li>{c.href ? <a href={c.href}>{text}</a> : <span aria-current="page">{text}</span>}</li>;
+            })}
           </ol>
         </nav>
       )}

@@ -1,5 +1,6 @@
 ---
-// 큰 버튼. '수업 화면 띄우기'와 '학습지 인쇄' 둘이 기본이고, 페이퍼크래프트가 ready 인 묶음에만 '만들기 인쇄'가 붙는다 (docs/CONTRACT.md 6절).
+// 큰 버튼. '수업 화면 띄우기'와 '학습지 인쇄' 둘이 기본이고, 페이퍼크래프트가 ready 인 묶음에만 '페이퍼크래프트 인쇄'가 붙는다 (docs/CONTRACT.md 6절).
+// 만들기 세트와 헷갈리지 않게 '만들기'라고 줄이지 않고 ASSET_LABEL 의 이름(printJobs 의 label)을 쓴다.
 // 버튼 아래의 작은 링크는 만들어진 파일(PPTX, PDF)을 내려받는다. 경로와 한글 파일 이름은 pptxFile() 과 printJobs() 가 준다.
 import { lessonRoute, pptxFile, printJobs } from '#lib/content.ts';
 import { ASSET_LABEL, ASSET_ROUTE } from '#lib/site.ts';
@@ -26,7 +27,7 @@ const papercraft = jobs.find((j) => j.kind === 'papercraft');
   )}
   {papercraft && (
     <div class="action">
-      <a class="btn btn-big" href={href(papercraft.route)}>만들기 인쇄</a>
+      <a class="btn btn-big" href={href(papercraft.route)}>{papercraft.label} 인쇄</a>
       <a class="action-sub" href={href(papercraft.file)} download={papercraft.download}><span class="visually-hidden">{papercraft.label} </span>PDF 내려받기</a>
     </div>
   )}

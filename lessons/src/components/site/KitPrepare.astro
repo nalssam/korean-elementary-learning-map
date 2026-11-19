@@ -1,5 +1,6 @@
 ---
 // 준비물: 학습지, 흐름에서 쓰는 인쇄물마다 한 줄, 흐름에서 쓰는 만들기 세트, 명세의 prepare (docs/CONTRACT.md 5절).
+// prepare 가운데 인쇄물 줄과 같은 것을 가리키는 항목은 따로 적지 않고 그 줄에 합친다 (6절. printRows 가 나눈다).
 // 흐름에서 쓰지 않는 자료는 여기에 넣지 않고 '더 해 볼 자료'(KitMore)에 둔다.
 import type { Lesson } from '#schema/lesson.ts';
 import { printRows, usedInFlow } from './data.ts';
@@ -8,7 +9,7 @@ import PrintRowItem from './PrintRowItem.astro';
 
 interface Props { lesson: Lesson }
 const { lesson } = Astro.props;
-const { prepare } = printRows(lesson);
+const { prepare, extra } = printRows(lesson);
 const kitInFlow = lesson.assets.making_kit.state === 'ready' && usedInFlow(lesson).has('making_kit');
 ---
 <section class="sec" aria-labelledby="prepare-title">
@@ -16,7 +17,7 @@ const kitInFlow = lesson.assets.making_kit.state === 'ready' && usedInFlow(lesso
   <ul class="mats">
     {prepare.map((row) => <PrintRowItem row={row} />)}
     {kitInFlow && <MakingKitItem lesson={lesson} />}
-    {lesson.prepare.map((p) => (
+    {extra.map((p) => (
       <li class="mat">
         <div class="mat-main">
           <p class="mat-name"><span class="mat-title">{p.item}</span></p>
