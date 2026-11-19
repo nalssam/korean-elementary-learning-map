@@ -9,6 +9,8 @@ import * as c from '#lib/content.ts';
 import { factIssues } from '#lib/checks.ts';
 import { OPTIONAL_ASSET_KINDS } from '#schema/lesson.ts';
 import { BANNED, SERVICES } from '../../checks/rules.mjs';
+import { tempContent } from '../contract/helpers.ts';
+import { runNode } from './helpers.ts';
 
 const FILE = path.join(c.ROOT, 'docs', 'template', 'lesson.yaml');
 const TEXT = fs.readFileSync(FILE, 'utf8');
@@ -75,4 +77,30 @@ test('칸마다 처음 나오는 자리의 윗줄에 한국어 주석이 있다'
   const comments = lines.filter((l) => l.trim().startsWith('#'));
   assert.ok(comments.length > 100);
   for (const l of comments) assert.match(l, /[가-힣]/, l);
+});
+
+test('본보기를 그림 폴더와 함께 복사하고 id 만 고치면 검사를 통과한다 (CONTRIBUTING 1절)', () => {
+  const t = tempContent('repo-template');
+  try {
+    // 시험용 차시표에서 명세가 아직 없는 묶음 (5-2 둘째 단원 1차시)
+    const dir = path.join(t.dir, '5-2', '2', '01');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'lesson.yaml'), TEXT.replace(/^id: .*$/m, 'id: 5-2/2/01'));
+    fs.cpSync(path.join(c.ROOT, 'docs', 'template', 'media'), path.join(dir, 'media'), { recursive: true });
+    const r = runNode('checks/run.mjs', [], { CONTENT_DIR: t.dir });
+    assert.equal(r.code, 0, r.all);
+    assert.match(r.out, /5-2\/2\/01  .*\(초안\)\n/);
+    assert.doesNotMatch(r.out, /5-2\/2\/01  .*\n(?:  알림 .*\n)*  고칠 것/);
+  } finally {
+    t.cleanup();
+  }
+});
+
+test('본보기의 그림 폴더에는 명세가 가리키는 그림이 모두 있고, 1MB 를 넘지 않는다', () => {
+  const lesson = c.parseLessonText(TEXT, FILE);
+  for (const m of lesson.media) {
+    const file = path.join(c.ROOT, 'docs', 'template', m.file);
+    assert.ok(fs.existsSync(file), m.file);
+    assert.ok(fs.statSync(file).size < 1024 * 1024, m.file);
+  }
 });

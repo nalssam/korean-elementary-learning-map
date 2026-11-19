@@ -5,6 +5,9 @@
 //
 // 비공개 자료는 저장소 밖 폴더에 두고 TEXTBOOK_STORE 로 가리킨다: <학기>/<종류>/<쪽 세 자리>.txt (종류: textbook, guide, sheet, ppt).
 // 띄어쓰기와 문장부호를 뺀 뒤 한글이 12자 이상 이어서 같으면 실패, 8~11자는 알림이다. 단원명과 checks/originality-allow.txt 의 말은 뺀다.
+// 파일의 글자 그대로와 함께, 읽히는 글로 푼 것도 견준다: YAML 은 읽은 값(\uAC00 같은 이스케이프, 접힌 줄), SVG 는 태그를 걷어 낸 글
+// (<tspan> 으로 나눈 글, &#xAC00; 같은 문자 참조), 전개도 모듈은 문자열의 \uAC00 이스케이프. 꼴만 바꿔 감춘 글이 빠져나가지 않게 한다.
+// 묶음을 검사하려면 자료에 그 묶음의 교과서 쪽(차시표의 pages)과 지도서 쪽이 하나 이상 있어야 한다. 없으면 견줄 것이 모자라 기록하지 않는다.
 //
 // 이 도구는 겹친 글을 찍지 않는다. "교과서 8쪽과 한글 14자"처럼 쪽수와 길이, 그리고 우리 파일의 줄 번호만 찍는다.
 // 검사 결과도 공개 저장소·CI 기록·PR 에 남기 때문이다 (교과서 문장을 옮겨 적지 않는다).
@@ -13,6 +16,7 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { isScalar, parseDocument, visit } from 'yaml';
 import * as c from '#lib/content.ts';
 import { Registry } from '#schema/registry.ts';
 import { UsageError, appendRecord, gitRoot, parseArgs, rel, setRecord, today } from './lib.mjs';
@@ -36,15 +40,104 @@ const WORDLIKE = /[\p{L}\p{N}]/u;
 // ───────────── 글을 견줄 꼴로 ─────────────
 
 /** 띄어쓰기와 문장부호·기호를 뺀 글자들과, 그 글자가 원래 글의 몇째 글자였는지 */
-export function normalize(text) {
+export function normalize(text, offsets) {
   const chars = [];
   const at = [];
   let i = 0;
   for (const ch of text.normalize('NFC')) {
-    if (WORDLIKE.test(ch)) { chars.push(ch.toLowerCase()); at.push(i); }
+    if (WORDLIKE.test(ch)) { chars.push(ch.toLowerCase()); at.push(offsets ? offsets[i] : i); }
     i += ch.length;
   }
   return { chars, at };
+}
+
+// ───────────── 읽히는 글로 풀기 ─────────────
+// 돌려주는 값은 { text, offsets }: 푼 글과, 그 글의 글자(UTF-16 칸)마다 원래 파일의 몇째 칸에서 왔는지.
+// 미리 NFC 로 맞춰 둔다 (normalize() 가 다시 NFC 로 바꿀 때 칸 수가 달라지지 않게).
+
+function builder() {
+  let text = '';
+  const offsets = [];
+  return {
+    push(str, from) { const s = str.normalize('NFC'); for (let k = 0; k < s.length; k++) offsets.push(from); text += s; },
+    done: () => ({ text, offsets }),
+  };
+}
+
+const NAMED = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+/** &#xAC00; &#44032; &amp; 를 글자로 */
+function entity(body) {
+  if (body[0] === '#') {
+    const n = body[1] === 'x' || body[1] === 'X' ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10);
+    return Number.isFinite(n) && n > 0 && n <= 0x10ffff ? String.fromCodePoint(n) : undefined;
+  }
+  return NAMED[body];
+}
+
+/** SVG·XML: 태그와 주석을 걷어 내고(<tspan> 으로 나눈 글은 이어 붙는다) 문자 참조를 글자로 푼다 */
+export function svgText(text) {
+  const b = builder();
+  const re = /<!--[\s\S]*?-->|<!\[CDATA\[([\s\S]*?)\]\]>|<[^>]*>|&(#x[0-9a-f]+|#\d+|[a-z]+);/gi;
+  let last = 0;
+  for (const m of text.matchAll(re)) {
+    for (let k = last; k < m.index; k++) b.push(text[k], k);
+    if (m[1] !== undefined) for (let k = 0; k < m[1].length; k++) b.push(m[1][k], m.index + 9 + k);
+    else if (m[2] !== undefined) { const ch = entity(m[2]); if (ch !== undefined) b.push(ch, m.index); }
+    last = m.index + m[0].length;
+  }
+  for (let k = last; k < text.length; k++) b.push(text[k], k);
+  return b.done();
+}
+
+/** 코드(전개도 모듈): 문자열 안의 \uAC00, \u{AC00}, \xAC 같은 이스케이프를 글자로 푼다 */
+export function codeText(text) {
+  const b = builder();
+  let last = 0;
+  for (const m of text.matchAll(/\\u\{([0-9a-f]+)\}|\\u([0-9a-f]{4})|\\x([0-9a-f]{2})/gi)) {
+    for (let k = last; k < m.index; k++) b.push(text[k], k);
+    const n = parseInt(m[1] ?? m[2] ?? m[3], 16);
+    if (n <= 0x10ffff) b.push(String.fromCodePoint(n), m.index);
+    last = m.index + m[0].length;
+  }
+  for (let k = last; k < text.length; k++) b.push(text[k], k);
+  return b.done();
+}
+
+/**
+ * YAML: 읽은 값(글)을 파일의 차례대로 이어 붙인다. "\uAC00" 이스케이프와 여러 줄 글(| >)이 풀린 값이다.
+ * 값의 글자마다 원래 자리는 그 값이 시작한 칸에, 값 안에서 지난 줄 수만큼을 더한 줄로 어림한다 (줄 번호를 찍는 데만 쓴다).
+ */
+export function yamlText(text) {
+  const b = builder();
+  let doc;
+  try { doc = parseDocument(text); } catch { return b.done(); }
+  const lineStarts = [0];
+  for (let k = 0; k < text.length; k++) if (text[k] === '\n') lineStarts.push(k + 1);
+  const lineOf = (offset) => { let lo = 0, hi = lineStarts.length - 1; while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (lineStarts[mid] <= offset) lo = mid; else hi = mid - 1; } return lo; };
+  visit(doc, {
+    Scalar(key, node) {
+      // 칸 이름(key)은 빼고 값만 잇는다. 칸 이름은 영문이라 글자 그대로의 검사에서 이미 보았다.
+      if (key === 'key' || !isScalar(node) || typeof node.value !== 'string' || !node.range) return;
+      const start = node.range[0];
+      const first = lineOf(start);
+      let line = first;
+      for (const ch of node.value) {
+        b.push(ch, line === first ? start : lineStarts[line]);
+        if (ch === '\n') line = Math.min(line + 1, lineStarts.length - 1);
+      }
+      b.push('\n', node.range[1]);
+    },
+  });
+  return b.done();
+}
+
+/** 파일 하나를 견줄 꼴들: 글자 그대로, 그리고 확장자에 맞게 푼 글 */
+function views(text, file = '') {
+  const out = [{ text, offsets: undefined }];
+  if (/\.ya?ml$/i.test(file)) out.push(yamlText(text));
+  else if (/\.svg$/i.test(file)) out.push(svgText(text));
+  else if (/\.(?:[cm]?[jt]s)$/i.test(file)) out.push(codeText(text));
+  return out;
 }
 
 /**
@@ -130,21 +223,44 @@ export function openStore(dir = process.env.TEXTBOOK_STORE) {
 // ───────────── 견주기 ─────────────
 
 /** 파일 하나를 자료와 견준다. 돌려주는 값: { line, lineEnd, page, hangul, level } (글은 담지 않는다) */
-export function compareFile(text, pages, allow) {
-  const { chars, at } = normalize(text);
-  const blocked = blockedAt(chars, allow);
+export function compareFile(text, pages, allow, file) {
   const lineOf = (offset) => text.slice(0, offset).split('\n').length;
-  const out = [];
-  for (const p of pages) {
-    for (const r of sharedRuns(chars, p.norm, blocked)) {
-      out.push({
-        line: lineOf(at[r.start]), lineEnd: lineOf(at[r.end - 1]),
-        page: `${KIND_LABEL[p.kind]} ${p.page}쪽`, hangul: r.hangul,
-        level: r.hangul >= FAIL_AT ? 'fail' : 'warn',
-      });
+  const found = new Map();
+  for (const v of views(text, file)) {
+    const { chars, at } = normalize(v.text, v.offsets);
+    const blocked = blockedAt(chars, allow);
+    for (const p of pages) {
+      for (const r of sharedRuns(chars, p.norm, blocked)) {
+        const hit = {
+          line: lineOf(at[r.start]), lineEnd: lineOf(at[r.end - 1]),
+          page: `${KIND_LABEL[p.kind]} ${p.page}쪽`, hangul: r.hangul,
+          level: r.hangul >= FAIL_AT ? 'fail' : 'warn',
+        };
+        // 글자 그대로와 푼 글이 같은 곳을 찾으면 한 번만, 더 길게 찾은 쪽으로 적는다
+        const key = `${hit.page}\u0000${hit.line}`;
+        const had = found.get(key);
+        if (!had || had.hangul < hit.hangul) found.set(key, hit);
+      }
     }
   }
-  return out.sort((a, b) => a.line - b.line || b.hangul - a.hangul);
+  return [...found.values()].sort((a, b) => a.line - b.line || b.hangul - a.hangul);
+}
+
+/**
+ * 묶음 하나를 견주기에 자료가 모자라지 않은가: 차시표에 적힌 그 묶음의 교과서 쪽이 하나 이상, 그 학기의 지도서 쪽이 하나 이상.
+ * (학기의 아무 쪽이나 있으면 통과하던 것을 막는다. 다른 단원의 쪽만 있는 자료로는 이 묶음이 베꼈는지 알 수 없다.)
+ * 돌려주는 값: { problems: 기록하지 못하는 까닭, missing: 범위 안에서 자료에 없는 교과서 쪽 }
+ */
+export function storeCoverage(pages, semester, range) {
+  const mine = pages.filter((p) => p.semester === semester);
+  const [from, to] = range;
+  const textbook = new Set(mine.filter((p) => p.kind === 'textbook').map((p) => p.page));
+  const problems = [];
+  const missing = [];
+  for (let n = from; n <= to; n++) if (!textbook.has(n)) missing.push(n);
+  if (missing.length === to - from + 1) problems.push(`비공개 자료에 교과서 ${from === to ? from : `${from}~${to}`}쪽이 없습니다. 견줄 것이 모자라 기록하지 않습니다`);
+  if (!mine.some((p) => p.kind === 'guide')) problems.push('비공개 자료에 이 학기의 지도서 쪽이 없습니다. 견줄 것이 모자라 기록하지 않습니다');
+  return { problems, missing: problems.length ? [] : missing };
 }
 
 /** 단원명 (교과서에서 가져오는 것이라 겹쳐도 된다) 과 고유 명사 목록 */
@@ -197,12 +313,23 @@ function main() {
 
   for (const t of targets) {
     lines.push('', t.key === 'registry' ? `차시표 (${rel(t.files[0])})` : t.key);
-    if (t.pages.length === 0) {
-      lines.push(`  비공개 자료에 이 학기의 쪽이 없습니다. 견줄 것이 없어 기록하지 않습니다`);
-      failed = true;
-      continue;
+    if (t.key === 'registry') {
+      if (!t.pages.some((p) => p.kind === 'textbook')) {
+        lines.push('  비공개 자료에 교과서 쪽이 하나도 없습니다. 견줄 것이 모자라 기록하지 않습니다');
+        failed = true;
+        continue;
+      }
+    } else {
+      const b = c.findBundle(t.key);
+      const { problems, missing } = storeCoverage(store.pages, b.semester.id, b.pages);
+      if (problems.length) {
+        for (const p of problems) lines.push(`  ${p}`);
+        failed = true;
+        continue;
+      }
+      if (missing.length) lines.push(`  알림     교과서 ${missing.join('·')}쪽은 자료에 없어 견주지 않았습니다. 그림만 있는 쪽이면 그대로 둡니다`);
     }
-    const found = t.files.flatMap((f) => compareFile(fs.readFileSync(f, 'utf8'), t.pages, allow).map((r) => ({ ...r, file: f })));
+    const found = t.files.flatMap((f) => compareFile(fs.readFileSync(f, 'utf8'), t.pages, allow, f).map((r) => ({ ...r, file: f })));
     const fails = found.filter((r) => r.level === 'fail');
     for (const r of found) {
       const where = `${t.key === 'registry' ? rel(r.file) : path.relative(c.lessonDir(t.key), r.file).split(path.sep).join('/')} ${r.line === r.lineEnd ? r.line : `${r.line}~${r.lineEnd}`}번째 줄`;

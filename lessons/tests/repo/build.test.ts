@@ -32,8 +32,12 @@ function setup() {
     fs.writeFileSync(path.join(FAKE, file), `const fs = require('node:fs');
 fs.appendFileSync(${JSON.stringify(LOG)}, ${JSON.stringify(name)} + ' ' + process.argv.slice(2).join(' ') + ' | ' + (process.env.SITE_URL || '-') + ' ' + process.cwd() + '\\n');
 if (process.env.STUB_FAIL === ${JSON.stringify(name)}) { console.error('흉내 낸 실패'); process.exit(3); }
+${name === 'pagefind' ? "fs.mkdirSync(require('node:path').join(process.argv[3], 'pagefind'), { recursive: true });" : ''}
 `.replace(/^const fs = require\('node:fs'\);/, file.endsWith('.cjs') ? "const fs = require('node:fs');" : "import fs from 'node:fs';"));
   }
+  // Pagefind 의 MIT 고지 (빌드가 dist/pagefind/LICENSE 로 복사한다)
+  fs.mkdirSync(path.join(FAKE, 'node_modules', 'pagefind', 'LICENSE'), { recursive: true });
+  fs.writeFileSync(path.join(FAKE, 'node_modules', 'pagefind', 'LICENSE', 'LICENSE'), 'pagefind\n\nMIT License\n');
 }
 const build = (args: string[] = [], env: Record<string, string> = {}) => runNode('scripts/build.mjs', args, env, { cwd: FAKE });
 const log = () => (fs.existsSync(LOG) ? fs.readFileSync(LOG, 'utf8').trim().split('\n') : []);
@@ -54,6 +58,8 @@ test('여섯 단계를 차례로 부르고, --out 은 1단계(--outDir)부터 6�
   assert.match(r.out, /^빌드: \.cache\/x · 공개 빌드 · 5-2\/1\/01 만/);
   assert.match(r.out, /── 6\/6 검색 색인 끝/);
   assert.match(r.out, /빌드를 마쳤습니다: \.cache\/x/);
+  // 검색 색인과 함께 Pagefind 의 이용 조건 고지가 실린다
+  assert.equal(fs.readFileSync(path.join(out, 'pagefind', 'LICENSE'), 'utf8'), 'pagefind\n\nMIT License\n');
 });
 
 test('--out 이 없으면 dist/ 에 만든다 (astro 의 기본 자리라 --outDir 를 주지 않는다)', () => {
@@ -67,7 +73,7 @@ test('한 단계가 실패하면 거기에서 멈추고 그 값으로 끝난다'
   const r = build([], { STUB_FAIL: 'render-pdf' });
   assert.equal(r.code, 3);
   assert.deepEqual(log().map((l) => l.split(' ')[0]), ['astro', 'sync-media', 'render-pdf']);
-  assert.match(r.err, /3단계\(PDF 만들기\)에서 멈췄습니다 \(끝난 값 3\)\. 위의 글을 읽고 고친 뒤 다시 npm run build 를 돌립니다/);
+  assert.match(r.err, /3단계\(PDF 만들기\)에서 멈췄습니다 \(종료 코드 3\)\. 위의 글을 읽고 고친 뒤 다시 npm run build 를 돌립니다/);
 });
 
 test('다른 담당의 스크립트가 없으면 누가 만드는 것인지 알려 주고 시작하지 않는다', () => {
@@ -76,7 +82,7 @@ test('다른 담당의 스크립트가 없으면 누가 만드는 것인지 알�
   fs.rmSync(path.join(FAKE, 'generators'), { recursive: true });
   const r = build();
   assert.equal(r.code, 1);
-  assert.equal(r.err, '3단계(PDF 만들기)에 쓸 scripts/render-pdf.mjs 이(가) 없습니다 (인쇄물 담당이 만듭니다).\n4단계(PPTX 만들기)에 쓸 generators/pptx/build.mjs 이(가) 없습니다 (슬라이드 담당이 만듭니다).\n빌드를 시작하지 않습니다.\n');
+  assert.equal(r.err, '3단계(PDF 만들기)에 쓸 파일이 없습니다: scripts/render-pdf.mjs (인쇄물 담당이 만듭니다).\n4단계(PPTX 만들기)에 쓸 파일이 없습니다: generators/pptx/build.mjs (슬라이드 담당이 만듭니다).\n빌드를 시작하지 않습니다.\n');
   assert.deepEqual(log(), []);
 });
 

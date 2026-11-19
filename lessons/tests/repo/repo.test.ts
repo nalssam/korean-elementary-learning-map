@@ -48,10 +48,10 @@ test('CONTRIBUTING 은 계약 17절의 일곱 가지를 차례대로 다룬다',
   for (const must of ['docs/template/lesson.yaml', '콜론+빈칸', '따옴표로 시작하는 글', '값 뒤의 ` #`', '탭', 'O·X', '이용 조건', '출처 주소', '확인한 날', '1MB', '파일 이름', 'CC BY-NC-SA 4.0', 'MIT', '실명', '베끼기 검사를 건너뜁니다', 'draft', 'corrections']) assert.ok(text.includes(must), must);
 });
 
-test('CODEOWNERS 는 계약 12절의 경로에 /lessons/ 를 붙여 날쌤을 적는다', () => {
+test('CODEOWNERS 는 lessons/ 전체와 .github/ 전체에 날쌤을 적는다 (검사가 돌지 말지를 정하는 파일까지)', () => {
   const lines = readGit('.github', 'CODEOWNERS').split('\n').filter((l) => l.trim() && !l.startsWith('#'));
   const owned = lines.map((l) => { const [p, who] = l.trim().split(/\s+/); assert.equal(who, '@nalssam', l); return p; });
-  assert.deepEqual(owned.sort(), ['/content/', '/schema/', '/lib/', '/generators/papercraft/modules/', '/checks/', '/scripts/sign.mjs', '/docs/CONTRACT.md'].map((p) => `/lessons${p}`).concat('/.github/').sort());
+  assert.deepEqual(owned.sort(), ['/.github/', '/lessons/']);
 });
 
 const workflow = (name: string) => YAML.parse(readGit('.github', 'workflows', name));
@@ -68,13 +68,26 @@ test('워크플로: lessons/ 가 바뀔 때만 돌고, lessons/ 에서 명령을
   assert.ok(fs.existsSync(path.join(GIT_ROOT, '.github', 'workflows', 'ontology-release.yml')));
 });
 
-test('CI: 검사·시험·형식 검사, Chromium 과 Python 을 깐 미리 보기 빌드, 미리 보기 올리기. 기본 가지에서만 --push', () => {
+test('CI: PR·기본 가지 push·손으로 돌릴 때만 돈다 (PR 가지에서 두 번 돌지 않는다)', () => {
+  const wf = workflow('lessons-ci.yml');
+  assert.deepEqual(Object.keys(wf.on).sort(), ['pull_request', 'push', 'workflow_dispatch']);
+  assert.deepEqual(wf.on.push.branches, ['main']);
+  assert.equal(wf.on.pull_request.branches, undefined);
+});
+
+test('CI: 검사·시험·형식 검사, Chromium·Python·LibreOffice 를 깐 미리 보기 빌드, 미리 보기 올리기. 기본 가지에서만 --push', () => {
   const wf = workflow('lessons-ci.yml');
   const run = steps(wf).map((s: any) => s.run ?? '').join('\n');
-  for (const cmd of ['npm ci', 'npm test', 'npm run typecheck', 'npm run build', 'npx playwright install --with-deps chromium', 'python -m pip install -r generators/pptx/requirements.txt']) assert.ok(run.includes(cmd), cmd);
+  for (const cmd of ['npm ci', 'npm test', 'npm run typecheck', 'npm run build', 'npx playwright install --with-deps chromium', 'python -m pip install -r generators/pptx/requirements.txt', 'libreoffice-impress', 'poppler-utils']) assert.ok(run.includes(cmd), cmd);
   assert.match(run, /npm run check -- --base "origin\/\$BASE_REF"/);
   assert.match(run, /if \[ "\$EVENT" = "pull_request" \]; then\n\s+npm run check -- --base/);
   assert.match(run, /refs\/heads\/\$DEFAULT_BRANCH[\s\S]*npm run check -- --push/);
+  // 강제로 올려 앞의 커밋이 없으면 --base 없이 견준다
+  assert.match(run, /git cat-file -e "\$BEFORE\^\{commit\}"[^\n]*; then\n\s+npm run check -- --push --base "\$BEFORE"/);
+  // 건너뛴 시험이 하나라도 있으면 실패한다 (16절)
+  const t = steps(wf).find((s: any) => s.name === '시험');
+  assert.match(t.run, /--test-reporter=tap --test-reporter-destination="\$RUNNER_TEMP\/test-results\.tap"/);
+  assert.match(t.run, /grep -qx '# skipped 0' "\$RUNNER_TEMP\/test-results\.tap"[\s\S]*exit 1/);
   const build = steps(wf).find((s: any) => s.run === 'npm run build');
   assert.equal(build.env.SHOW_DRAFTS, '1');
   const up = steps(wf).find((s: any) => s.uses?.startsWith('actions/upload-artifact'));
@@ -83,22 +96,42 @@ test('CI: 검사·시험·형식 검사, Chromium 과 Python 을 깐 미리 보�
   assert.doesNotMatch(run, /\$\{\{/);
 });
 
-test('배포: SITE_URL 이 없으면 멈추고, --push 검사 뒤 공개 빌드, 배포 요약, production 환경으로 Pages 에 올린다', () => {
+test('워크플로: 산출물 캐시(.cache/files, .cache/media, .cache/lessons.json)를 빌드 전에 받아 온다', () => {
+  for (const name of ['lessons-ci.yml', 'lessons-deploy.yml']) {
+    const all = steps(workflow(name));
+    const i = all.findIndex((s: any) => s.uses?.startsWith('actions/cache@'));
+    assert.ok(i >= 0, name);
+    assert.deepEqual(all[i].with.path.trim().split('\n').map((l: string) => l.trim()), ['lessons/.cache/files', 'lessons/.cache/media', 'lessons/.cache/lessons.json']);
+    assert.match(all[i].with['restore-keys'], /lessons-out-/);
+    assert.ok(i < all.findIndex((s: any) => /npm run build/.test(s.run ?? '')), name);
+  }
+});
+
+test('배포: 기본 가지에서만, SITE_URL 이 없으면 실패하지 않고 건너뛴다. --push 검사 뒤 공개 빌드, 배포 요약, production 환경으로 Pages 에 올린다', () => {
   const wf = workflow('lessons-deploy.yml');
+  assert.deepEqual(wf.on.push.branches, ['main']);
   const build = wf.jobs.build;
+  assert.match(build.if, /default_branch/);
+  assert.match(build.if, /vars\.SITE_URL != ''/);
+  assert.match(wf.jobs.skipped.if, /vars\.SITE_URL == ''/);
+  assert.match(wf.jobs.skipped.steps[0].run, /GITHUB_STEP_SUMMARY/);
+  assert.doesNotMatch(JSON.stringify(wf.jobs.skipped), /exit 1/);
   assert.equal(build.env.SITE_URL, '${{ vars.SITE_URL }}');
-  assert.equal(build.env.SITE_BASE, '${{ vars.SITE_BASE }}');
   assert.equal(build.env.SHOW_DRAFTS, undefined);
-  // 첫 단계가 SITE_URL 을 본다 (내려받기보다 먼저)
-  assert.match(build.steps[0].run, /if \[ -z "\$SITE_URL" \]; then[\s\S]*exit 1/);
+  // 하위 경로(SITE_BASE)는 빌드 전에 configure-pages 의 base_path 에서 받는다
+  assert.equal(build.env.SITE_BASE, undefined);
   const runs = build.steps.map((s: any) => s.run ?? s.uses);
+  const pages = build.steps.findIndex((s: any) => s.uses === 'actions/configure-pages@v5');
+  const base = build.steps.findIndex((s: any) => s.env?.PAGES_BASE === '${{ steps.pages.outputs.base_path }}');
+  assert.equal(build.steps[pages].id, 'pages');
+  assert.match(build.steps[base].run, /echo "SITE_BASE=\$PAGES_BASE" >> "\$GITHUB_ENV"/);
+  assert.ok(pages < base && base < runs.indexOf('npm run build'));
   const order = ['npm run check -- --push', 'npm run build', 'node checks/deploy-summary.mjs >> "$GITHUB_STEP_SUMMARY"', 'actions/upload-pages-artifact@v3'];
   assert.deepEqual(order.map((x) => runs.indexOf(x)).sort((a: number, b: number) => a - b), order.map((x) => runs.indexOf(x)));
   assert.ok(order.every((x) => runs.includes(x)));
   assert.equal(wf.jobs.deploy.environment.name, 'production');
   assert.deepEqual(wf.jobs.deploy.permissions, { pages: 'write', 'id-token': 'write' });
   assert.equal(wf.jobs.deploy.steps[0].uses, 'actions/deploy-pages@v4');
-  assert.match(build.if, /default_branch/);
 });
 
 test('배포 요약: 새로 공개되는 묶음과 사이트에서 빠지는 묶음', () => {
@@ -117,6 +150,12 @@ test('배포 요약: 새로 공개되는 묶음과 사이트에서 빠지는 묶
     const r = runNode('checks/deploy-summary.mjs', ['--out', dir, '--current', path.join(dir, 'old.json')], { CONTENT_DIR: process.env.CONTENT_DIR });
     assert.equal(r.code, 0, r.all);
     assert.match(r.out, /^## 배포 요약\n\n### 새로 공개되는 묶음 1개\n\n- `5-2\/1\/01`/);
+    // 지금 사이트에 닿지 못해도 배포를 막지 않는다: 견주지 못했다고 적고 0 으로 끝난다
+    const down = runNode('checks/deploy-summary.mjs', ['--out', dir, '--current', 'http://127.0.0.1:4759/published.json'], { CONTENT_DIR: process.env.CONTENT_DIR });
+    assert.equal(down.code, 0, down.all);
+    assert.match(down.out, /^## 배포 요약\n\n지금 사이트의 `\/published\.json` 을 읽지 못해 견주지 못했습니다 \(접속하지 못했습니다: [A-Z]+\)/);
+    assert.match(down.out, /### 이번 빌드에 실린 공개 묶음 1개\n\n- `5-2\/1\/01`/);
+    assert.match(down.err, /배포 요약에서 견주기를 건너뜁니다/);
     fs.rmSync(dir, { recursive: true, force: true });
   } finally {
     delete process.env.CONTENT_DIR;

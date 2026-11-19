@@ -1,5 +1,5 @@
 // 저장소 담당 시험이 같이 쓰는 도우미. (*.test.ts 가 아니라서 시험으로 돌지 않는다.)
-// 검사·기록 도구는 교사가 터미널에서 돌리는 것이라, 시험도 스크립트를 따로 띄워 찍힌 글과 끝난 값을 본다.
+// 검사·기록 도구는 교사가 터미널에서 돌리는 것이라, 시험도 스크립트를 따로 띄워 찍힌 글과 종료 코드를 본다.
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';

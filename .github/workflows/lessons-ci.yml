@@ -1,6 +1,8 @@
-# 수업 자료(lessons/)의 CI. lessons/ 가 바뀔 때만 돈다 (lessons/docs/CONTRACT.md 0절).
+# 수업 자료(lessons/)의 CI. lessons/ 가 바뀔 때만 돈다 (lessons/docs/CONTRACT.md 0·12절).
 # 검사 → 시험 → 형식 검사 → 초안까지 싣는 미리 보기 빌드. 미리 보기는 내려받아 볼 수 있게 올려 둔다.
 # 기본 가지에서는 베끼기 검사 기록이 없으면 실패한다 (--push, 13절). PR 에서는 알림으로만 보인다.
+#
+# 도는 때: PR, 기본 가지(main)에 올린 때, 손으로 돌린 때. PR 가지에 올리면 PR 쪽에서 한 번만 돈다.
 name: lessons-ci
 
 on:
@@ -9,6 +11,7 @@ on:
       - "lessons/**"
       - ".github/workflows/lessons-ci.yml"
   push:
+    branches: [main]
     paths:
       - "lessons/**"
       - ".github/workflows/lessons-ci.yml"
@@ -48,11 +51,30 @@ jobs:
         with:
           python-version: "3.12"
 
+      # PPTX 를 PDF 로 찍어 보는 넘침 시험이 LibreOffice 와 pdftotext 를 쓴다. 없으면 그 시험이 건너뛰어진다.
+      # Pretendard 는 LibreOffice 가 글 폭을 PowerPoint 와 같게 재도록 이 컴퓨터에만 깐다 (사이트에는 npm 패키지에서 싣는다).
       - name: 내려받기
         run: |
           npm ci
           python -m pip install -r generators/pptx/requirements.txt
           npx playwright install --with-deps chromium
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends libreoffice-impress poppler-utils
+          mkdir -p ~/.fonts
+          cp node_modules/pretendard/dist/public/static/*.otf ~/.fonts/
+          fc-cache -f ~/.fonts
+
+      # 만든 PDF·PPTX 와 그림의 캐시. 입력의 sha256 이 같을 때만 복사해 쓰므로 앞 실행의 것을 받아 와도 틀린 파일이 섞이지 않는다 (10절).
+      - name: 산출물 캐시 받기
+        uses: actions/cache@v4
+        with:
+          path: |
+            lessons/.cache/files
+            lessons/.cache/media
+            lessons/.cache/lessons.json
+          key: lessons-out-${{ runner.os }}-${{ hashFiles('lessons/package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            lessons-out-${{ runner.os }}-${{ hashFiles('lessons/package-lock.json') }}-
 
       - name: 명세 검사
         env:
@@ -65,17 +87,29 @@ jobs:
             npm run check -- --base "origin/$BASE_REF"
           elif [ "$GITHUB_REF" = "refs/heads/$DEFAULT_BRANCH" ]; then
             # 기본 가지: 베끼기 검사 기록이 있어야 한다. 이번 push 앞의 커밋과 견주어 corrections 를 본다.
-            if [ -n "$BEFORE" ] && ! echo "$BEFORE" | grep -qE '^0+$'; then
+            # 강제로 올린 뒤에는 앞의 커밋이 없을 수 있다. 그때는 견주지 않고 --push 만 본다.
+            if [ -n "$BEFORE" ] && ! echo "$BEFORE" | grep -qE '^0+$' && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
               npm run check -- --push --base "$BEFORE"
             else
+              if [ -n "$BEFORE" ] && ! echo "$BEFORE" | grep -qE '^0+$'; then
+                echo "::notice::앞의 커밋($BEFORE)을 찾을 수 없어(강제로 올린 것) 공개된 차시의 corrections 는 견주지 않습니다."
+              fi
               npm run check -- --push
             fi
           else
             npm run check
           fi
 
+      # 건너뛴 시험이 하나라도 있으면 실패한다 (16절). 건너뛴 까닭은 위의 시험 기록에 적혀 있다.
       - name: 시험
-        run: npm test
+        run: |
+          npm test -- --test-reporter=spec --test-reporter-destination=stdout --test-reporter=tap --test-reporter-destination="$RUNNER_TEMP/test-results.tap"
+          if ! grep -qx '# skipped 0' "$RUNNER_TEMP/test-results.tap"; then
+            echo "::error::건너뛴 시험이 있습니다. CI 에서는 모든 시험이 돌아야 합니다 (CONTRACT 16절). 건너뛴 시험과 까닭:"
+            grep -E '# SKIP' "$RUNNER_TEMP/test-results.tap" || true
+            exit 1
+          fi
+          echo "건너뛴 시험: 0"
 
       - name: 형식 검사
         run: npm run typecheck

@@ -15,7 +15,9 @@ import { factIssues, sourceIssues } from '#lib/checks.ts';
 import { factSeal } from '#lib/seal.ts';
 import { Lesson } from '#schema/lesson.ts';
 import { UsageError, gitRoot, parseArgs, rel } from './lib.mjs';
-import { BANNED, CLASSROOM, EMOJI, PAIN_WORDS, SERVICES, isPlayPath, parseAllow, svgProblems } from './rules.mjs';
+import { REVIEW_LABEL } from '#lib/site.ts';
+import { REVIEW_KINDS } from '#schema/lesson.ts';
+import { BANNED, CLASSROOM, EMOJI, PAIN_WORDS, SERVICES, fileNameTitle, isPlayPath, parseAllow, svgProblems } from './rules.mjs';
 
 const USAGE = `쓰는 법: npm run check [-- --push] [-- --base <기준 가지>]
   --push   베끼기 검사 기록이 없거나 낡았으면 실패로 칩니다 (기본 가지의 CI 와 날쌤의 컴퓨터에서만 붙입니다)
@@ -69,6 +71,9 @@ function locator(id) {
 /** 글의 경로("slides[3].title")를 같은 꼴로 */
 const at = (loc, p, text) => loc(`${p}: ${text}`);
 
+/** 남의 자료 이름을 밝히는 출처 칸인가: 사실의 출처, 그림의 credit, 읽기 자료와 짧은 글의 source */
+const isSourcePath = (p) => /^facts\[\d+\]\.sources\[|\.credit\.|(^|\.)source$/.test(p);
+
 // ───────────── 검사 ─────────────
 
 function readAllow(file) {
@@ -101,7 +106,8 @@ function loadAll(out) {
     } catch (e) {
       if (!(e instanceof c.SpecError)) { sec.fail('형식', `읽다가 멈췄습니다: ${e.message}`); continue; }
       sec.title = `${id}  (${rel(e.file)})`;
-      for (const i of e.issues) sec.fail('형식', i);
+      // 형식 오류는 '형식', 공개된 차시가 공개 조건을 잃은 것은 '검수 기록' 갈래로 보인다 (SpecError.category)
+      for (const i of e.issues) sec.fail(e.category ?? '형식', i);
     }
   }
   return { reg, lessons };
@@ -117,7 +123,9 @@ function checkWords({ lesson, sec, loc }) {
   const strings = [...c.childStrings(lesson), ...c.teacherStrings(lesson)].filter((s) => !seen.has(s.path) && seen.add(s.path));
   for (const s of strings) {
     for (const b of BANNED) if (b.re.test(s.text)) sec.fail('표현', at(loc, s.path, b.say));
-    const svc = SERVICES.exec(s.text);
+    // 출처 칸(사실의 출처, 그림의 credit, 읽기 자료·짧은 글의 source)은 남의 자료 이름을 밝히는 자리라 서비스 이름 검사에서 뺀다.
+    // 교과서 회사 이름은 출처 검사(sourceIssues)가 거기에서 따로 본다. 여기에서도 보면 한 이름이 두 번 찍힌다.
+    const svc = !isSourcePath(s.path) && SERVICES.exec(s.text);
     if (svc) sec.fail('표현', at(loc, s.path, `다른 회사의 서비스 이름("${svc[0]}")을 쓰지 않습니다. 무엇을 하는지로 바꿔 씁니다`));
     if (EMOJI.test(s.text)) sec.note('표현', at(loc, s.path, '이모지를 쓰지 않습니다 (14절)'));
   }
@@ -129,7 +137,7 @@ function checkWords({ lesson, sec, loc }) {
   if (!c.scored(lesson)) {
     for (const s of c.childStrings(lesson)) {
       const w = isPlayPath(s.path) && PAIN_WORDS.exec(s.text);
-      if (w) sec.note('표현', at(loc, s.path, `무게가 있는 차시의 놀이 자료에 "${w[0]}" 이(가) 나옵니다. 학습지의 읽기와 생각 쓰기로 옮길 수 있는지 봅니다`));
+      if (w) sec.note('표현', at(loc, s.path, `무게가 있는 차시의 놀이 자료에 피해 낱말("${w[0]}")이 나옵니다. 학습지의 읽기와 생각 쓰기로 옮길 수 있는지 봅니다`));
     }
   }
 }
@@ -140,6 +148,11 @@ function checkMedia({ lesson, sec, loc }) {
     if (!fs.existsSync(file)) return; // 로더가 이미 알렸다
     const size = fs.statSync(file).size;
     if (size > MB) sec.fail('그림', at(loc, `media.${m.id}`, `파일이 1MB 를 넘습니다 (${(size / MB).toFixed(1)}MB, ${m.file}). 크기를 줄여 다시 저장합니다`));
+    // 출처 표시의 제목은 사람이 읽는 이름이다. 파일 이름(위키미디어 공용의 "GMJ 0154.jpg" 따위)은 화면과 인쇄물의 출처 줄에 그대로 찍힌다.
+    const named = fileNameTitle(m.credit.title);
+    const titleAt = `media.${m.id}.credit.title`;
+    if (named === 'name') sec.fail('그림', at(loc, titleAt, `출처의 제목이 파일 이름입니다 ("${m.credit.title}"). 원본 페이지에 적힌 작품·소장품 이름을 우리말로 씁니다. 예: 강화 부근리 고인돌`));
+    else if (named === 'part') sec.note('그림', at(loc, titleAt, `출처의 제목에 파일 이름이 섞여 있습니다 ("${m.credit.title}"). 파일 이름을 빼고 작품·소장품 이름만 씁니다`));
     if (m.file.endsWith('.svg')) {
       for (const [line, why] of svgProblems(fs.readFileSync(file, 'utf8'))) sec.fail("그림", `${m.file} ${line}번째 줄: ${why}`);
     }
@@ -197,8 +210,8 @@ function checkTerms(lessons) {
       }
     }
     for (const h of hits.values()) {
-      const more = h.count > 1 ? ` 외 ${h.count - 1}곳` : '';
-      sec.note('낱말', at(loc, h.first, `뒤 차시(${h.from})에서 처음 배우는 낱말 "${h.term}" 이(가) 나옵니다${more}. 쉬운 말로 바꾸거나, 글자만 같은 다른 말이면 checks/terms-allow.txt 에 적습니다`));
+      const more = h.count > 1 ? ` 이 자리 말고도 ${h.count - 1}곳에 더 나옵니다.` : '';
+      sec.note('낱말', at(loc, h.first, `뒤 차시(${h.from})에서 처음 배우는 낱말("${h.term}")이 나옵니다.${more} 쉬운 말로 바꾸거나, 글자만 같은 다른 말이면 checks/terms-allow.txt 에 적습니다`));
     }
   }
 }
@@ -220,7 +233,54 @@ function checkOriginality(lessons, reg, push) {
   else if (r === 'stale') reg[say]('검수 기록', `차시표의 학기 소개(blurb)나 초점(focus)이 검사 뒤에 바뀌었습니다. 다시 검사해 기록합니다 (${cmd})`);
 }
 
-/** 기준 가지에서 공개되어 있던 차시의 사실이 바뀌었는데 corrections 가 늘지 않았는가 (11절 '검수 기록') */
+/** "f1, f2, f3, f5" → "f1~f3, f5" (사실 id 를 번호 차례로 줄여 적는다) */
+function idRanges(ids) {
+  const num = (id) => Number(/^f(\d+)$/.exec(id)?.[1] ?? NaN);
+  const plain = ids.filter((id) => Number.isNaN(num(id)));
+  const sorted = ids.filter((id) => !Number.isNaN(num(id))).sort((a, b) => num(a) - num(b));
+  const out = [];
+  for (let i = 0; i < sorted.length;) {
+    let j = i;
+    while (j + 1 < sorted.length && num(sorted[j + 1]) === num(sorted[j]) + 1) j++;
+    out.push(j - i >= 2 ? `${sorted[i]}~${sorted[j]}` : sorted.slice(i, j + 1).join(', '));
+    i = j + 1;
+  }
+  return [...out, ...plain].join(', ');
+}
+
+/**
+ * 초안마다 공개까지 남은 것을 한 줄로 (알림). publishGaps(id) 를 검수·사실 확인·앞 묶음으로 묶어 센다.
+ * 검수가 어디까지 왔는지 보려고 기록 도구를 돌릴 필요가 없게 한다. 하나하나의 까닭은 npm run sign 이 기록을 적은 뒤에 찍는다.
+ */
+export function gapSummary(gaps) {
+  if (!gaps.length) return '공개 조건을 모두 채웠습니다. 공개(status: published)는 날쌤이 적습니다';
+  const isKind = (g, k) => g.startsWith(`${REVIEW_LABEL[k]}(${k})`);
+  const kinds = REVIEW_KINDS.filter((k) => gaps.some((g) => isKind(g, k)));
+  const facts = [...new Set(gaps.map((g) => /^사실 ([^:]+):/.exec(g)?.[1]).filter(Boolean))];
+  const refs = [...new Set(gaps.map((g) => /^가리키는 (\S+) 묶음/.exec(g)?.[1]).filter(Boolean))];
+  const rest = gaps.filter((g) => !/^사실 [^:]+:|^가리키는 \S+ 묶음/.test(g) && !REVIEW_KINDS.some((k) => isKind(g, k)));
+  const parts = [];
+  if (kinds.length) parts.push(`검수 ${kinds.length}가지(${kinds.map((k) => REVIEW_LABEL[k]).join(', ')})`);
+  if (facts.length) parts.push(`사실 확인 ${facts.length}개(${idRanges(facts)})`);
+  if (refs.length) parts.push(`먼저 공개할 앞 묶음(${refs.join(', ')})`);
+  parts.push(...rest);
+  return `공개까지 남은 것: ${parts.join(' · ')}`;
+}
+
+function checkProgress(lessons) {
+  for (const { lesson, sec } of lessons) {
+    if (lesson.status === 'published') continue; // 공개된 차시가 조건을 잃으면 로더가 이미 '검수 기록' 으로 막았다
+    let gaps;
+    try { gaps = c.publishGaps(lesson.id); } catch { continue; } // 가리키는 묶음이 읽히지 않으면 그쪽에서 알렸다
+    sec.note('검수 기록', gapSummary(gaps));
+  }
+}
+
+/**
+ * 기준 가지와 견준다 (11절 '검수 기록'). 기준 가지에서 공개되어 있던 묶음마다:
+ *  - 명세가 없어졌거나 draft 로 내려갔으면 실패. 그대로 합치면 종이에 박힌 주소가 사이트에서 사라진다 (12절: 고치기부터 다시 공개까지 한 PR 에서).
+ *  - 사실이 바뀌었는데 corrections 가 늘지 않았으면 실패.
+ */
 function checkCorrections(base, out) {
   // 명세가 든 저장소에 묻는다 (CONTENT_DIR 로 시험용 명세를 가리키면 그 폴더의 저장소다)
   const repo = c.contentDir();
@@ -233,22 +293,36 @@ function checkCorrections(base, out) {
     sec.fail('검수 기록', `--base ${base}: 기준 가지를 찾을 수 없습니다. git fetch 로 받아 오거나 이름을 고칩니다`);
     return;
   }
-  for (const id of c.lessonIds()) {
-    const file = c.lessonFile(id);
-    let before;
+  // 기준 가지에 있던 명세 전부 (지금 차시표에서 빠진 묶음도 본다)
+  const where = path.relative(root, fs.realpathSync(repo)).split(path.sep).join('/');
+  const listed = execFileSync('git', ['ls-tree', '-r', '--name-only', base, '--', where || '.'], { cwd: root, stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * MB }).toString();
+  const prefix = where ? `${where}/` : '';
+  const ids = listed.split('\n')
+    .map((f) => (f.startsWith(prefix) ? f.slice(prefix.length) : undefined))
+    .map((f) => f && /^([3-6]-[12]\/\d{1,2}\/\d{2}(?:-\d{2})?)\/lesson\.yaml$/.exec(f)?.[1])
+    .filter(Boolean);
+  for (const id of ids) {
+    let old;
     try {
-      const where = path.relative(root, fs.realpathSync(file)).split(path.sep).join('/');
-      before = execFileSync('git', ['show', `${base}:${where}`], { cwd: repo, stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * MB }).toString();
-    } catch { continue; } // 기준 가지에 없던 차시
-    let old, now;
-    try { old = c.parseLessonText(before, `${base}:${id}`); } catch { continue; } // 기준 가지의 명세를 지금 형식으로 읽을 수 없으면 견주지 않는다
+      const before = execFileSync('git', ['show', `${base}:${prefix}${id}/lesson.yaml`], { cwd: root, stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * MB }).toString();
+      old = c.parseLessonText(before, `${base}:${id}`);
+    } catch { continue; } // 기준 가지의 명세를 지금 형식으로 읽을 수 없으면 견주지 않는다
     if (old.status !== 'published') continue;
+    const file = c.lessonFile(id);
+    const target = out.find((s) => s.key === id) ?? sec;
+    if (!fs.existsSync(file)) {
+      sec.fail('검수 기록', `${id}: 공개되어 있던 묶음의 명세가 없어졌습니다. 이대로 합치면 종이에 박힌 이 묶음의 주소가 사이트에서 사라집니다. 명세를 되살립니다 (고치는 중이면 지우지 않고 draft 로 내렸다가 같은 PR 에서 다시 공개합니다)`);
+      continue;
+    }
+    let now;
     try { now = c.parseLessonText(fs.readFileSync(file, 'utf8'), file); } catch { continue; } // 형식 오류는 위에서 알렸다
+    if (now.status !== 'published') {
+      target.fail('검수 기록', '공개되어 있던 묶음이 draft 로 바뀌었습니다. 이대로 합치면 종이에 박힌 주소가 사이트에서 사라집니다. 다시 검수를 마치고 날쌤이 published 로 적은 뒤에 합칩니다 (CONTRIBUTING.md 7절)');
+    }
     const seals = (l) => new Map(l.facts.map((f) => [f.id, factSeal(f)]));
     const a = seals(old), b = seals(now);
     const changed = [...new Set([...a.keys(), ...b.keys()])].filter((k) => a.get(k) !== b.get(k));
     if (changed.length && now.corrections.length <= old.corrections.length) {
-      const target = out.find((s) => s.key === id) ?? sec;
       target.fail('검수 기록', `공개되어 있던 차시의 사실(${changed.join(', ')})이 바뀌었습니다. corrections 에 날짜와 고친 내용을 한 줄 더 적습니다 (안내 페이지에 보입니다)`);
     }
   }
@@ -305,8 +379,9 @@ async function main() {
   }
   checkTerms(lessons);
   if (!reg.fails.length) checkOriginality(lessons, reg, push);
+  checkProgress(lessons);
   if (args.flags['--base']) checkCorrections(args.flags['--base'], out);
   return print(out, push) ? 1 : 0;
 }
 
-process.exitCode = await main();
+if (import.meta.main) process.exitCode = await main();
