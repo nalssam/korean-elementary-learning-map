@@ -152,9 +152,14 @@ const kp = keepParticle;
   .pc-preview-art svg { max-height: 100%; }
 
   .pc-try, .pc-reflect { flex: none; }
-  .pc-try li { position: relative; padding-left: 5mm; font-size: 12pt; line-height: 1.5; }
-  .pc-try li::before { content: ''; position: absolute; left: 0.6mm; top: 2.6mm; width: 2mm; height: 2mm; border: 0.3mm solid var(--ink); }
-  .pc-try li + li { margin-top: 1.5mm; }
+  /* 해 보기의 칸: 모둠이 해 본 것을 연필로 표시하는 4.4mm 네모. 글머리표로 읽히지 않게 크게, 가는 선으로 그리고
+     첫 줄의 가운데에 맞춘다 (줄 높이 6.35mm(12pt 의 1.5배)에서 칸 높이를 빼고 반으로 나눈 0.975mm). */
+  .pc-try li { position: relative; padding-left: 8mm; font-size: 12pt; line-height: 1.5; }
+  .pc-try li::before {
+    content: ''; position: absolute; left: 0; top: 0.975mm; box-sizing: border-box;
+    width: 4.4mm; height: 4.4mm; border: 0.25mm solid var(--ink); border-radius: 0.6mm;
+  }
+  .pc-try li + li { margin-top: 2mm; }
 
   .pc-reflect ol { counter-reset: pc-q; display: grid; gap: 3mm; }
   .pc-reflect li { counter-increment: pc-q; }
@@ -169,7 +174,7 @@ const kp = keepParticle;
   .pc-tight .pc-steps li { line-height: 1.35; }
   .pc-tight .pc-steps li::before { top: -0.1mm; }
   .pc-tight .pc-try li, .pc-tight .pc-reflect p { line-height: 1.38; }
-  .pc-tight .pc-try li::before { top: 2.1mm; }
+  .pc-tight .pc-try li::before { top: 0.72mm; }
   .pc-tight .pc-try li + li { margin-top: 0.8mm; }
   .pc-tight .pc-reflect ol { gap: 2mm; }
 </style>
