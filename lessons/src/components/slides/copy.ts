@@ -64,7 +64,7 @@ export const STAGE_COPY = {
   /** 화면 가리기(B, .)를 켰을 때 화면 읽기 프로그램에 알리는 글 */
   blank: '화면을 가렸습니다. 다음 장이나 이전 장 키를 누르면 다시 보입니다.',
   /** 화면 읽기 프로그램용 */
-  slideLabel: (no: number, total: number) => `${total}장 가운데 ${no}번째 장`,
+  slideLabel: (no: number, total: number) => `${total}장 가운데 ${no}번 장`,
   region: '수업 화면',
 } as const;
 

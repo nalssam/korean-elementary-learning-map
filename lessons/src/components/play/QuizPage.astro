@@ -46,7 +46,7 @@ const OX = [{ value: 'true', key: 'yes' }, { value: 'false', key: 'no' }] as con
           <p class="q-count">
             {multi && <span class="q-lesson">{g.lesson}차시</span>}
             <span aria-hidden="true"><b>{i + 1}</b> / {g.items.length}</span>
-            <span class="visually-hidden">{g.items.length}문제 가운데 {i + 1}번째 문제</span>
+            <span class="visually-hidden">{g.items.length}문제 가운데 {i + 1}번 문제</span>
           </p>
           <ol class="q-steps" aria-hidden="true">
             {g.items.map((_, k) => <li class:list={[{ done: k < i, now: k === i }]} />)}
