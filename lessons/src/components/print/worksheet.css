@@ -104,16 +104,88 @@
 /* 빈 칸 (그리기·자유롭게 쓰기) */
 .ws-box { padding: 2mm 3mm; border: 0.4mm solid var(--ink-dim); border-radius: 2.5mm; }
 
-/* 그림 */
+/* 그림. 그림 · 설명 · 출처 표시 차례로 찍는다.
+   설명은 Media 가 아니라 여기에서 찍는다 (아이가 읽는 글이라 keepParticle 을 거친다). 그래서 Media 의 figure 와
+   figcaption 을 상자로 두지 않고(display: contents) 그 안의 그림과 출처 표시를 설명과 한 줄기에 놓는다. */
+.ws-figcell .media,
+.ws-figcell .media figcaption { display: contents; }
+.ws-figcell img { order: 1; grid-row: 1; }
+.ws-figcell .ws-fig-caption { order: 2; grid-row: 2; margin-top: 1.5mm; font-size: 12pt; line-height: 1.4; text-align: center; }
+.ws-figcell .media-credit { order: 3; grid-row: 3; margin-top: 0.6mm; text-align: center; }
+
+/* 한 장짜리 그림 */
 .ws-figure { display: flex; justify-content: center; }
-.ws-figure .media { width: 100%; }
-.ws-figure[data-width='half'] .media { width: 50%; }
-.ws-figure[data-width='third'] .media { width: 34%; }
+.ws-figure .ws-figcell { display: flex; flex-direction: column; align-items: center; width: 100%; }
+.ws-figure[data-width='half'] .ws-figcell { width: 50%; }
+.ws-figure[data-width='third'] .ws-figcell { width: 34%; }
 .ws-figure img { width: 100%; max-height: 105mm; }
 /* 글을 써 넣는 표가 있는 쪽에서는 그림을 줄여 쓰는 칸에 자리를 준다 */
 .ws:has(.ws-table-write) .ws-figure img { max-height: 70mm; }
 .ws-figure[data-width='half'] img { max-height: 75mm; }
 .ws-figure[data-width='third'] img { max-height: 55mm; }
+
+/* 그림 줄 (단마다 그림 한 장인 나란히 놓기). 모든 그림이 같은 높이의 상자에 줄여 들어가고(자르지 않는다),
+   아래끝을 맞춰 선다. 설명과 출처 표시는 단마다 같은 줄에 놓인다 (subgrid 로 세 줄을 함께 쓴다).
+   줄의 출처 표시가 모두 같으면 그림마다 찍지 않고 줄 아래에 한 번 찍는다 (.ws-figrow-credit). */
+.ws-figrow {
+  --fig-h: 62mm;
+  display: grid;
+  grid-template-rows: var(--fig-h) auto auto auto;
+  column-gap: 5mm;
+}
+.ws-figrow[data-count='2'] { --fig-h: 72mm; }
+.ws-figrow[data-count='4'] { --fig-h: 46mm; }
+.ws:has(.ws-table-write) .ws-figrow { --fig-h: 54mm; }
+.ws:has(.ws-table-write) .ws-figrow[data-count='2'] { --fig-h: 62mm; }
+.ws:has(.ws-table-write) .ws-figrow[data-count='4'] { --fig-h: 40mm; }
+.ws-figrow .ws-figcell { display: grid; grid-row: 1 / span 3; grid-template-rows: subgrid; justify-items: center; min-width: 0; }
+.ws-figrow img { width: 100%; height: 100%; max-width: none; object-fit: contain; object-position: center bottom; }
+.ws-figrow .ws-fig-caption { align-self: start; }
+.ws-figrow .media-credit { align-self: start; }
+.ws-figrow[data-shared-credit] .media-credit { display: none; }
+.ws-figrow-credit { grid-column: 1 / -1; grid-row: 4; margin-top: 0.8mm; font-size: 7.5pt; line-height: 1.3; color: var(--ink-dim); text-align: center; }
+
+/* 풀어 놓은 보기. 아이가 할 일의 본보기라 지시문보다 조용하게: 옅은 테두리 상자, 보통 굵기의 글, 번호 없음.
+   왼쪽의 작은 "예" 표시로 보기임을 알린다. 칸(parts)은 이름표 + 글이 한 줄에 놓이고 화살표로 이어진다.
+   단이 좁으면(120mm 아래) 칸을 위아래로 쌓고 화살표가 아래를 가리킨다. */
+.ws-example {
+  container-type: inline-size;
+  display: flex;
+  align-items: flex-start;
+  gap: 3mm;
+  padding: 2.6mm 4mm 2.8mm 3mm;
+  border: 0.3mm solid var(--rule);
+  border-radius: 2.5mm;
+  font-size: 12pt;
+  font-weight: 400;
+  line-height: 1.45;
+}
+.ws-prompt + .ws-example { margin-top: 3mm; }
+/* "예" 표시: 옅은 테두리의 작은 네모. 바탕색을 쓰지 않아 '배경 그래픽'을 꺼도 그대로 찍힌다. */
+.ws-example-tag {
+  flex: none;
+  margin-top: 0.4mm;
+  padding: 0 1.5mm;
+  border: 0.3mm solid var(--rule);
+  border-radius: 1.2mm;
+  font-size: 9.5pt;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+.ws-example-text { flex: 1 1 0; min-width: 0; }
+.ws-example-parts { flex: 1 1 0; min-width: 0; display: flex; align-items: stretch; gap: 1.5mm; margin: 0; padding: 0; list-style: none; }
+/* 칸은 글 길이만큼, 화살표는 남는 폭을 나누어 가져 칸 사이 한가운데에 놓인다. 글이 길면 칸이 줄어 줄을 바꾼다. */
+.ws-example-part { flex: 0 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 0.6mm; }
+.ws-example-label { font-size: 10pt; font-weight: 700; line-height: 1.3; color: var(--ink-dim); }
+.ws-example-said { overflow-wrap: break-word; }
+.ws-example-arrow { flex: 1 1 0; min-width: 7mm; display: flex; justify-content: center; align-items: center; color: var(--ink-dim); padding-top: 4.5mm; }
+.ws-example-arrow svg { display: block; width: 4mm; height: 4mm; }
+@container (max-width: 120mm) {
+  .ws-example-parts { flex-direction: column; gap: 0.8mm; }
+  .ws-example-arrow { flex: none; justify-content: flex-start; padding: 0 0 0 1mm; }
+  .ws-example-arrow svg { transform: rotate(90deg); width: 3.4mm; height: 3.4mm; }
+}
 
 /* 본 것 → 짐작한 것 → 까닭. 자리가 넓으면(가로 종이) 그림을 왼쪽에, 좁으면 위에 둔다.
    쪽에 자리가 남으면 세 칸의 쓰는 줄이 아래로 늘어난다 (.ws-oi 부터 .ws-oi-lines 까지 세로 flex). */

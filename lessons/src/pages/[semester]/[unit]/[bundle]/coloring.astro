@@ -7,6 +7,7 @@ import PrintLayout from '#src/components/print/PrintLayout.astro';
 import Sheet from '#src/components/print/Sheet.astro';
 import '#src/components/print/coloring.css';
 import { lessonPaths, loadLesson, printJobs } from '#lib/content.ts';
+import { keepParticle as k } from '#lib/site.ts';
 
 export function getStaticPaths() { return lessonPaths('coloring'); }
 const lesson = loadLesson(Astro.props.id);
@@ -15,13 +16,13 @@ const coloring = lesson.assets.coloring;
 ---
 <PrintLayout lesson={lesson} job={job}>
   {coloring.state === 'ready' && (
-    <Sheet lesson={lesson} job={job} no={1} title={coloring.title} name="student">
+    <Sheet lesson={lesson} job={job} no={1} title={k(coloring.title)} name="student">
       <div class="coloring">
         <Media lesson={lesson} id={coloring.media} caption={false} class="coloring-picture" />
         {coloring.look_for.length > 0 && (
           <div class="coloring-look">
             <p class="coloring-look-title">찾아볼 것</p>
-            <ul class="coloring-tasks">{coloring.look_for.map((task) => <li>{task}</li>)}</ul>
+            <ul class="coloring-tasks">{coloring.look_for.map((task) => <li>{k(task)}</li>)}</ul>
           </div>
         )}
       </div>

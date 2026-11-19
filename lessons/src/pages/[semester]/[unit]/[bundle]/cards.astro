@@ -3,6 +3,7 @@
 // A4 세로 한 면에 8장(2열 × 4행, 한 장 95 × 62mm)을 본문의 왼쪽 위부터 채운다.
 // 앞면 쪽 다음에 그 뒷면 쪽이 온다. 뒷면 쪽은 좌우 열을 바꿔 놓아서, 긴 변으로 뒤집어 양면 인쇄하면 앞뒤가 맞는다.
 // 앞면에는 자르는 선(.cut)을 그리고, 뒷면에는 선 없이 안쪽 여백을 넉넉히 둔다 (양면 맞춤이 몇 mm 어긋나도 글이 잘리지 않는다).
+// 앞뒤의 글은 keepParticle() 을 거친다 (닫는 따옴표와 조사가 줄 끝에서 갈리지 않는다).
 // 놀이 방법(games)은 여기에 찍지 않는다. 차시 안내 페이지에 보인다 (docs/CONTRACT.md 6·7절).
 import Media from '#src/components/Media.astro';
 import PrintLayout from '#src/components/print/PrintLayout.astro';
@@ -10,6 +11,7 @@ import Sheet from '#src/components/print/Sheet.astro';
 import '#src/components/print/cards.css';
 import { cardSheets, frontSize } from '#src/components/print/layout.ts';
 import { deckCards, lessonPaths, loadLesson, printJobs } from '#lib/content.ts';
+import { keepParticle as k } from '#lib/site.ts';
 
 export function getStaticPaths() { return lessonPaths('cards'); }
 const lesson = loadLesson(Astro.props.id);
@@ -19,17 +21,17 @@ const sheets = cardSheets(deckCards(lesson));
 ---
 <PrintLayout lesson={lesson} job={job}>
   {cards.state === 'ready' && sheets.map((sheet, i) => (
-    <Sheet lesson={lesson} job={job} no={i + 1} title={cards.title} sub={sheet.side === 'front' ? '앞면 · 선을 따라 오려 봅시다' : '뒷면'}>
+    <Sheet lesson={lesson} job={job} no={i + 1} title={k(cards.title)} sub={sheet.side === 'front' ? '앞면 · 선을 따라 오려 봅시다' : '뒷면'}>
       <div class="cards" data-side={sheet.side}>
         {sheet.cells.map((card) => !card ? <div class="card card-empty"></div> : sheet.side === 'front' ? (
           <div class="card card-front cut">
             {card.label && <span class="card-label">{card.label}</span>}
             {card.media && <Media lesson={card.lesson} id={card.media} caption={false} class="card-picture" />}
-            <p class="card-word" data-size={frontSize(card.front)}>{card.front}</p>
+            <p class="card-word" data-size={frontSize(card.front)}>{k(card.front)}</p>
           </div>
         ) : (
           <div class="card card-back">
-            <p class="card-meaning">{card.back}</p>
+            <p class="card-meaning">{k(card.back)}</p>
           </div>
         ))}
       </div>
