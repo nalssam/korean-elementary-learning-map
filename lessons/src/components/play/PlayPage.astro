@@ -3,10 +3,14 @@
 // 네 가지(sort 분류하기, match 짝 맞추기, order 차례 맞추기, place 그림에 이름표 놓기)를 모두 '카드를 골라 자리에 놓기'로 푼다.
 // 누르고 누르기(터치), 끌어 놓기(마우스·터치), 키보드(Tab·Enter) 모두 된다. 시간을 재지 않는다.
 // 정답은 data- 속성에 싣고, 명세의 글은 글자로만 넣는다. 섞는 차례는 묶음 id 로 정해 빌드마다 같다.
+// 아이가 읽는 명세의 글은 keepParticle() 을 거친다 (‘…’은 이 줄 끝과 다음 줄 첫머리로 갈리지 않게. 15절).
+// 그림의 출처는 카드마다 찍지 않고 활동 아래 '그림 출처'에 한 번 모은다 (9절).
 import StudentLayout from './StudentLayout.astro';
 import Media from '#src/components/Media.astro';
-import { loadLesson, scored } from '#lib/content.ts';
+import { creditList, getMedia, loadLesson, mediaFile, scored } from '#lib/content.ts';
+import { keepParticle as kp } from '#lib/site.ts';
 import { shuffledOrder } from './logic.ts';
+import { pictureRatio } from './picture.ts';
 
 interface Props { id: string }
 const lesson = loadLesson(Astro.props.id);
@@ -24,14 +28,36 @@ if (act.kind === 'match') chips = chipsOf(act.pairs.map((p, i) => ({ key: i, tex
 if (act.kind === 'place') chips = chipsOf(act.spots.map((s, i) => ({ key: i, text: s.label, answer: String(i), why: s.why })));
 const orderRows = act.kind === 'order' ? shuffledOrder(act.items.length, `${lesson.id}#order`).map((i) => ({ key: i, text: act.items[i] })) : [];
 
+// 활동에 실린 그림 (카드의 그림, 이름표를 놓는 그림). 출처는 creditList() 로 한 번만 모은다 (같은 출처는 한 줄로 묶인다).
+const pictureIds = [...new Set([...(act.kind === 'place' ? [act.media] : []), ...chips.flatMap((c) => (c.media ? [c.media] : []))])];
+// 아이 화면에는 원본 주소를 걸지 않으므로(제목처럼 아직 알려 주지 않은 이름이 나올 수 있다) 글과 이용 조건 주소가 같은 줄은 하나로 묶는다.
+// 예: 국립중앙박물관의 사진 두 장 → "사진 2장: 국립중앙박물관, 공공누리 제1유형, 일부를 잘라 씀"
+const credits = [...creditList(pictureIds.map((id) => getMedia(lesson, id)))
+  .reduce((acc, l) => {
+    const text = l.text.replace(/^(\S+?)(?: \d+장)?: /, '$1: ');
+    const key = JSON.stringify([text, l.licenceUrl ?? '']);
+    acc.set(key, { text, licenceUrl: l.licenceUrl, count: (acc.get(key)?.count ?? 0) + l.count });
+    return acc;
+  }, new Map<string, { text: string; licenceUrl?: string; count: number }>())
+  .values()].map((l) => ({ ...l, text: l.count > 1 ? l.text.replace(/^(\S+?): /, `$1 ${l.count}장: `) : l.text }));
+// 카드 그림의 가로세로 비율. play.css 가 이것으로 짧은 변의 길이를 맞춘다.
+const ratio = (id: string) => Math.round(pictureRatio(mediaFile(lesson, id)) * 1000) / 1000;
+
 // 카드를 부르는 이름과 고른 뒤의 안내. 활동마다 놓는 곳의 이름이 다르다.
+// ask 는 고른 카드 바로 아래에 펼치는 안내 칸의 물음이다 (고른 카드는 바로 위에 보이므로 카드 이름을 되풀이하지 않는다).
 const WORDS = {
-  sort: { noun: '카드', tray: '넣을 카드', how: '카드를 누른 다음 넣을 상자를 눌러 봅시다. 끌어서 옮겨도 됩니다.', prompt: '넣을 상자를 눌러 봅시다.' },
-  match: { noun: '카드', tray: '짝 카드', how: '카드를 누른 다음 짝이 되는 빈칸을 눌러 봅시다. 끌어서 옮겨도 됩니다.', prompt: '짝이 되는 빈칸을 눌러 봅시다.' },
-  place: { noun: '이름표', tray: '이름표', how: '이름표를 누른 다음 그림의 번호나 아래 빈칸을 눌러 봅시다. 끌어서 옮겨도 됩니다.', prompt: '놓을 번호를 눌러 봅시다.' },
-  order: { noun: '카드', tray: '', how: '카드를 누른 다음 옮겨 갈 자리의 카드를 눌러 봅시다. 화살표 단추로 한 칸씩 옮겨도 됩니다.', prompt: '옮겨 갈 자리의 카드를 눌러 봅시다.' },
+  sort: { noun: '카드', tray: '넣을 카드', how: '카드를 누른 다음 넣을 상자를 눌러 봅시다. 끌어서 옮겨도 됩니다.', prompt: '넣을 상자를 눌러 봅시다.', ask: '어느 상자에 넣을까요?' },
+  match: { noun: '카드', tray: '짝 카드', how: '카드를 누른 다음 짝이 되는 빈칸을 눌러 봅시다. 끌어서 옮겨도 됩니다.', prompt: '짝이 되는 빈칸을 눌러 봅시다.', ask: '어느 것과 짝이 될까요?' },
+  place: { noun: '이름표', tray: '이름표', how: '이름표를 누른 다음 그림의 번호나 아래 빈칸을 눌러 봅시다. 끌어서 옮겨도 됩니다.', prompt: '놓을 번호를 눌러 봅시다.', ask: '몇 번 자리에 놓을까요?' },
+  order: { noun: '카드', tray: '', how: '카드를 누른 다음 옮겨 갈 자리의 카드를 눌러 봅시다. 화살표 단추로 한 칸씩 옮겨도 됩니다.', prompt: '옮겨 갈 자리의 카드를 눌러 봅시다.', ask: '옮겨 갈 자리의 카드를 눌러 봅시다.' },
 } as const;
 const words = WORDS[act.kind];
+/** 고른 카드 아래 안내 칸에 늘어놓는 놓을 곳. 상자·빈칸·번호가 화면 아래에 있어도 아이가 바로 고를 수 있다. */
+const targets: { id: string; label: string; sr: string }[] =
+  act.kind === 'sort' ? act.bins.map((b) => ({ id: b.id, label: b.label, sr: ' 상자에 넣기' }))
+  : act.kind === 'match' ? act.pairs.map((p, k) => ({ id: String(k), label: p.left, sr: ' 옆 빈칸에 놓기' }))
+  : act.kind === 'place' ? act.spots.map((_, k) => ({ id: String(k), label: `${k + 1}번`, sr: ' 자리에 놓기' }))
+  : [];
 ---
 <StudentLayout lesson={lesson} asset="web_activity" heading={wa.title} lead={wa.instructions}>
   {act.kind !== 'order' ? (
@@ -58,11 +84,11 @@ const words = WORDS[act.kind];
         </div>
         <ul class="drop tray-drop" data-drop="tray" data-said="처음 자리로 돌려놓았습니다">
           {chips.map((c) => (
-            <li class:list={['chip', { 'chip-media': c.media }]} data-item={String(c.key)} data-answer={c.answer}>
+            <li class:list={['chip', { 'chip-media': c.media, 'chip-wide': c.media && ratio(c.media) > 1.7 }]} data-item={String(c.key)} data-answer={c.answer} style={c.media ? `--ar:${ratio(c.media)}` : undefined}>
               {c.media && <Media lesson={lesson} id={c.media} caption={false} class="chip-picture" />}
-              <button type="button" class="chip-btn">{c.text}</button>
+              <button type="button" class="chip-btn">{kp(c.text)}</button>
               <span class="chip-mark" data-mark aria-live="off"></span>
-              {c.why && <p class="chip-why" data-why hidden>{c.why}</p>}
+              {c.why && <p class="chip-why" data-why hidden>{kp(c.why)}</p>}
             </li>
           ))}
         </ul>
@@ -73,7 +99,7 @@ const words = WORDS[act.kind];
         <div class="bins" style={`--bins:${act.bins.length}`}>
           {act.bins.map((b) => (
             <section class="bin" data-target={b.id} aria-label={`${b.label} 상자`}>
-              <h2 class="bin-title"><button type="button" class="bin-btn" data-target={b.id}>{b.label}<span class="visually-hidden"> 상자에 넣기</span></button></h2>
+              <h2 class="bin-title"><button type="button" class="bin-btn" data-target={b.id}>{kp(b.label)}<span class="visually-hidden"> 상자에 넣기</span></button></h2>
               <ul class="drop bin-drop" data-drop={b.id} data-said={`${b.label} 상자에 넣었습니다`}></ul>
             </section>
           ))}
@@ -84,7 +110,7 @@ const words = WORDS[act.kind];
         <ol class="pairs">
           {act.pairs.map((p, k) => (
             <li class="pair">
-              <p class="pair-left" id={`pair-${k}`}>{p.left}</p>
+              <p class="pair-left" id={`pair-${k}`}>{kp(p.left)}</p>
               <div class="slot" data-target={String(k)}>
                 <ul class="drop slot-drop" data-drop={String(k)} data-said={`‘${p.left}’ 옆 빈칸에 놓았습니다`}></ul>
                 <button type="button" class="slot-empty" data-target={String(k)} aria-describedby={`pair-${k}`}>빈칸<span class="visually-hidden">에 놓기</span></button>
@@ -109,8 +135,12 @@ const words = WORDS[act.kind];
       )}
 
       <div class="pickbar" data-pickbar hidden>
-        <p class="pickbar-text" data-pickmsg></p>
-        <button type="button" class="btn btn-quiet pickbar-cancel" data-cancel>고르기 취소</button>
+        <p class="pickbar-text">{words.ask}</p>
+        <button type="button" class="pickbar-cancel" data-cancel>고르기 취소</button>
+        <div class="pickbar-targets">
+          {targets.map((x) => <button type="button" class="pick-to" data-target={x.id}>{kp(x.label)}<span class="visually-hidden">{x.sr}</span></button>)}
+          <button type="button" class="pick-to pick-back" data-target="tray" data-back hidden>처음 자리로<span class="visually-hidden"> 돌려놓기</span></button>
+        </div>
       </div>
       <div class="board-actions">
         <button type="button" class="btn btn-primary" data-check>확인하기</button>
@@ -126,7 +156,7 @@ const words = WORDS[act.kind];
         {orderRows.map((r) => (
           <li class="row" data-item={String(r.key)}>
             <span class="row-no" aria-hidden="true"></span>
-            <button type="button" class="row-btn">{r.text}</button>
+            <button type="button" class="row-btn">{kp(r.text)}</button>
             <span class="row-mark" data-mark></span>
             <span class="row-move">
               <button type="button" class="row-arrow" data-up><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14l6-6 6 6" /></svg><span class="visually-hidden">{r.text} 위로 옮기기</span></button>
@@ -137,8 +167,8 @@ const words = WORDS[act.kind];
       </ol>
       <p class="order-end order-last" aria-hidden="true">나중</p>
       <div class="pickbar" data-pickbar hidden>
-        <p class="pickbar-text" data-pickmsg></p>
-        <button type="button" class="btn btn-quiet pickbar-cancel" data-cancel>고르기 취소</button>
+        <p class="pickbar-text">{words.ask}</p>
+        <button type="button" class="pickbar-cancel" data-cancel>고르기 취소</button>
       </div>
       <div class="board-actions">
         <button type="button" class="btn btn-primary" data-check>확인하기</button>
@@ -146,6 +176,17 @@ const words = WORDS[act.kind];
       </div>
       <p class="board-status" data-status role="status"></p>
     </order-board>
+  )}
+
+  {credits.length > 0 && (
+    <section class="credits" aria-labelledby="credits-title">
+      <h2 class="credits-title" id="credits-title">그림 출처</h2>
+      <ul class="credits-list">
+        {credits.map((l) => (
+          <li>{l.text}{l.licenceUrl && <> <a href={l.licenceUrl} target="_blank" rel="noopener noreferrer">이용 조건<span class="visually-hidden"> (새 창)</span></a></>}</li>
+        ))}
+      </ul>
+    </section>
   )}
   <script>
     import './board.ts';

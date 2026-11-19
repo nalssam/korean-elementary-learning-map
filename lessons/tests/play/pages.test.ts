@@ -1,6 +1,7 @@
 // 확인 퀴즈와 웹 활동 페이지를 시험용 명세로 빌드해 본다.
 // tests/play/fixtures/site 는 저장소의 quiz.astro·play.astro 와 같은 두 페이지만 가진 작은 사이트다 (다른 담당의 페이지와 떼어 빌드한다).
 // 시험용 명세를 .cache/tests/play-<pid>/ 에 복사하고, 04 묶음의 웹 활동을 짝 맞추기로 바꿔 네 가지 활동(sort·place·match·order)을 모두 싣는다.
+// 01 묶음의 분류하기 카드 둘에는 남의 그림(키 큰 것, 넓은 것)을 붙이고, 퀴즈와 까닭에 ‘따옴표’ 뒤 조사를 넣는다 (prepare()).
 // 앞쪽은 만들어진 HTML 을 읽고, 뒤쪽은 Chromium 으로 아이처럼 눌러 본다 (Chromium 이 없으면 건너뛴다. 16절).
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,6 +10,7 @@ import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 import * as c from '#lib/content.ts';
+import { MARK, MARK_LABEL, keepParticle } from '#lib/site.ts';
 import { buildSite, noChromium, tempContent } from '../contract/helpers.ts';
 
 const skip = await noChromium();
@@ -24,10 +26,38 @@ const MATCH = [
   { left: '규칙 셋', right: '셋째로 지킬 것' },
 ];
 
-before(() => {
+// 같은 출처(만든 이·조건이 같은 것)의 남의 그림 두 장. 키 큰 것과 넓은 것으로 카드 그림의 짧은 변을 잰다.
+const PICS = [
+  { id: 'tall-rock', file: 'media/tall-rock.svg', w: 300, h: 600, item: '바위' },
+  { id: 'wide-gravel', file: 'media/wide-gravel.svg', w: 900, h: 300, item: '자갈' },
+];
+const PIC_LICENCE = 'https://creativecommons.org/licenses/by-sa/4.0/';
+const QUOTED_Q = '돌탑을 보고 한 말 가운데 ‘눈으로 본 것’은 무엇인가요? ‘돌’과 ‘물’ 가운데 알맞은 것을 골라 봅시다.';
+const QUOTED_WHY = '‘작은 돌’은 자갈이라고 부릅니다.';
+
+/** 시험용 명세 복사본을 이 시험에 맞게 고친다. tmp.reset() 뒤에도 다시 부른다. */
+function prepare() {
   tmp.edit(NOPLAY, (raw) => {
     raw.assets.web_activity = { state: 'ready', title: '규칙과 차례를 짝지어 봅시다', instructions: '규칙에 알맞은 카드를 빈칸에 놓아 봅시다.', activity: { kind: 'match', pairs: MATCH, facts: ['f1'] } };
   });
+  for (const p of PICS) {
+    fs.writeFileSync(path.join(tmp.dir, ...SCORED.split('/'), p.file), `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${p.w} ${p.h}"><rect width="${p.w}" height="${p.h}" fill="#8a7"/></svg>`);
+  }
+  tmp.edit(SCORED, (raw) => {
+    raw.media.push(...PICS.map((p, i) => ({
+      id: p.id, kind: 'photo', file: p.file, alt: `시험용 돌 사진 ${i + 1}`,
+      credit: { holder: '시험용 사진가', title: `시험용 돌 ${i + 1}`, source_url: `https://example.org/stone/${i + 1}`, licence: 'CC-BY-SA', licence_url: PIC_LICENCE, checked: '2026-11-18' },
+    })));
+    const items = raw.assets.web_activity.activity.items;
+    for (const p of PICS) items.find((it: { text: string }) => it.text === p.item).media = p.id;
+    items.find((it: { text: string }) => it.text === '자갈').why = QUOTED_WHY;
+    raw.quiz.items[1].q = QUOTED_Q;
+    raw.quiz.items[1].explain = '‘눈으로 본 것’은 손가락으로 가리킬 수 있습니다.';
+  });
+}
+
+before(() => {
+  prepare();
   buildSite(OUT, { CONTENT_DIR: tmp.dir, SHOW_DRAFTS: '1' }, { root: SITE_DIR });
   // 그림: 빌드 2단계(scripts/sync-media.mjs)가 하는 일을 여기에서 줄여서 한다 (명세에 적힌 파일만 /media/<id>/ 로)
   for (const id of c.lessonIds()) {
@@ -62,7 +92,7 @@ test('주소: 확인 퀴즈는 모든 차시에, 웹 활동은 ready 인 차시�
     assert.ok(fs.existsSync(path.join(out, ORDER, 'quiz', 'index.html')));
   } finally {
     tmp.reset();
-    tmp.edit(NOPLAY, (raw) => { raw.assets.web_activity = { state: 'ready', title: '규칙과 차례를 짝지어 봅시다', instructions: '규칙에 알맞은 카드를 빈칸에 놓아 봅시다.', activity: { kind: 'match', pairs: MATCH, facts: ['f1'] } }; });
+    prepare();
   }
 });
 
@@ -74,8 +104,10 @@ test('학생 페이지의 틀: kind=student, 초안 문구, 검색 색인 밖, �
     assert.ok(page.includes('<p class="site-notice">검수 전 초안입니다. 수업에 쓰지 마세요.</p>'), p);
     assert.ok(!page.includes('data-pagefind-body'), p);
     assert.match(page, /<meta name="robots" content="noindex,nofollow">/, p);
-    // 사이트 밖으로 나가는 주소가 없다 (링크·그림·스크립트·스타일)
-    for (const [, url] of page.matchAll(/\b(?:href|src|action)="([^"]*)"/g)) assert.ok(url.startsWith('/') && !url.startsWith('//'), `${p}: 사이트 밖 주소 ${url}`);
+    // 사이트 밖으로 나가는 주소가 없다 (링크·그림·스크립트·스타일). 하나만 예외다: 활동 아래 '그림 출처'의 이용 조건 안내 링크 (9절)
+    const credits = page.match(/<section class="credits"[\s\S]*?<\/section>/)?.[0] ?? '';
+    for (const [, url] of page.replace(credits, '').matchAll(/\b(?:href|src|action)="([^"]*)"/g)) assert.ok(url.startsWith('/') && !url.startsWith('//'), `${p}: 사이트 밖 주소 ${url}`);
+    for (const [, url] of credits.matchAll(/\bhref="([^"]*)"/g)) assert.match(url, /^https:\/\/(creativecommons\.org|www\.kogl\.or\.kr)\//, `${p}: 출처 목록의 링크 ${url}`);
     // 이름·번호를 묻는 칸이 없다. 단답 칸은 이름이 없고 자동 완성을 끈다 (브라우저가 답을 기억하지 않게).
     assert.ok(!/<input[^>]*\bname=/.test(page), `${p}: name 이 붙은 입력 칸`);
     assert.ok(!/이름|번호를/.test(page.replace(/<[^>]+>/g, ' ').replace(/이름표/g, '')), `${p}: 이름·번호를 묻는 글`);
@@ -99,10 +131,17 @@ test('확인 퀴즈: 점수는 scored(lesson) 인 차시에만, 두 차시 묶�
   assert.equal(attrs(one, 'quiz-runner')['data-scored'], 'true');
   assert.match(one, /class="quiz-end-score"/);
   assert.ok(!one.includes('class="quiz-pick"'), '한 차시 묶음에는 고르는 화면이 없다');
+  // 아이가 읽는 글은 keepParticle() 을 거쳐 찍힌다 (따옴표와 조사 사이에 U+2060)
   for (const item of c.loadLesson(SCORED).quiz.items) {
-    assert.ok(one.includes(`>${item.q}</h2>`), item.q);
-    assert.ok(one.includes(`<p class="feedback-explain">${item.explain}</p>`), item.explain);
+    assert.ok(one.includes(`>${keepParticle(item.q)}</h2>`), item.q);
+    assert.ok(one.includes(`<p class="feedback-explain">${keepParticle(item.explain)}</p>`), item.explain);
   }
+  assert.ok(one.includes('본 것’\u2060은 무엇인가요?'), '물음의 따옴표 뒤 조사가 묶이지 않았습니다');
+  // OX 단추: 표시는 MARK, 이름은 MARK_LABEL (손으로 적은 O·X 가 아니다. 9·15절)
+  for (const [value, key] of [['true', 'yes'], ['false', 'no']] as const) {
+    assert.match(one, new RegExp(`data-value="${value}" aria-label="${MARK_LABEL[key]}"><span class="ox-mark" aria-hidden="true">${MARK[key]}</span>`));
+  }
+  assert.doesNotMatch(one, /aria-label="[OX]"/);
   // 단답의 accept 는 글로 싣는다 (숫자로 적은 값도)
   assert.ok(one.includes('data-accept="[&quot;1392년&quot;]"'));
 
@@ -128,7 +167,12 @@ test('웹 활동: 네 가지가 모두 그려지고, 카드는 묶음 id 로 정
   assert.deepEqual([attrs(place, 'play-board')['data-kind'], attrs(place, 'play-board')['data-scored']], ['place', 'false']);
   assert.match(place, /<button type="button" class="marker" data-target="0" style="--x:10%;--y:75%"/);
   assert.match(place, /<figure class="media"><img src="\/media\/5-2\/1\/02-03\/map\.svg"/);
-  assert.ok(place.includes('media-credit'), '그림 옆에 출처 표시');
+  // 그림의 출처는 활동 아래 '그림 출처'에 한 번 (만든 이, 이용 조건, 그 안내 링크)
+  assert.match(place, /<h2 class="credits-title" id="credits-title">그림 출처<\/h2>\s*<ul class="credits-list">\s*<li>지도: 시험용 그린이, CC BY-NC-SA 4\.0 <a href="https:\/\/creativecommons\.org\/licenses\/by-nc-sa\/4\.0\/deed\.ko" target="_blank" rel="noopener noreferrer">이용 조건/);
+  // 카드 그림: 출처는 카드마다 찍지 않고 아래에 한 줄로 모인다 (같은 출처 두 장 → '2장')
+  assert.ok(sort.includes(`<li>사진 2장: 시험용 사진가, CC BY-SA 4.0 <a href="${PIC_LICENCE}"`), '카드 그림의 출처 목록');
+  assert.equal(sort.match(/시험용 사진가/g)!.length, 3, '출처 목록 한 줄 + 카드에 숨긴 출처 두 곳(Media.astro)만 있어야 합니다');
+  assert.ok(sort.includes(`<p class="chip-why" data-why hidden>${keepParticle(QUOTED_WHY)}</p>`) && keepParticle(QUOTED_WHY) !== QUOTED_WHY, '카드의 까닭도 keepParticle() 을 거친다');
   const match = html(`${NOPLAY}/play`);
   assert.deepEqual([attrs(match, 'play-board')['data-kind'], attrs(match, 'play-board')['data-scored']], ['match', 'false']);
   for (const p of MATCH) assert.ok(match.includes(`>${p.left}</p>`) && match.includes(`>${p.right}</button>`));
@@ -149,6 +193,8 @@ test('학생 화면 문구: 띄어 쓰지 않는 말, 다시 풀 수 없는 퀴�
     const src = fs.readFileSync(path.join(dir, f), 'utf8');
     assert.ok(!src.includes('써 넣'), `${f}: '써넣다' 는 한 낱말입니다`);
     assert.ok(!src.includes('다시 살펴봅시다'), `${f}: 퀴즈는 한 문항에 한 번 답하므로 다시 살펴볼 수 없습니다`);
+    // 맞고 틀림의 표시와 그 읽는 말은 lib 의 MARK·MARK_LABEL 에서만 온다 (손으로 적은 O·X·○·× 가 없다. 9·15절)
+    assert.doesNotMatch(src, /aria-label="[OX○×]"|['"`][OX○×]['"`]|[○×]/, `${f}: 맞고 틀림의 표시를 손으로 적었습니다`);
   }
 });
 
@@ -411,24 +457,138 @@ test('아이처럼 눌러 보기: 퀴즈·웹 활동 네 가지 (터치, 마우�
       await done();
     });
 
-    await t.test('휴대폰(390x844)에서 그림 카드는 낮게, 첫 상자는 마지막 카드에서 한 화면 안에', async () => {
-      const { page, done } = await open(`/${SCORED}/play/`, { touch: true });
-      // 시험용 명세의 카드에는 그림이 없으므로 키 큰 그림 카드를 하나 끼워 넣어 잰다
-      await page.evaluate(() => {
-        const li = document.createElement('li');
-        li.className = 'chip chip-media';
-        li.innerHTML = '<figure class="media chip-picture"><img alt="" width="300" height="600" src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22600%22/%3E"></figure><button type="button" class="chip-btn">그림 카드</button>';
-        document.querySelector('.tray-drop')!.append(li);
-      });
-      const m = await page.evaluate(() => {
-        const img = document.querySelector('.chip-picture img')!.getBoundingClientRect();
-        const chips = [...document.querySelectorAll('.tray .chip')];
-        const last = chips[chips.length - 1].getBoundingClientRect();
-        const bin = document.querySelector('.bin')!.getBoundingClientRect();
-        return { img: img.height, gap: bin.top - last.bottom };
-      });
-      assert.ok(m.img <= 64.5, `휴대폰에서 그림 카드의 그림이 ${m.img}px 로 높습니다 (64px 까지)`);
-      assert.ok(m.gap >= 0 && m.gap < 844, `마지막 카드와 첫 상자 사이가 ${m.gap}px 입니다`);
+    // 휴대폰 두 크기. 높이도 바꾼다 (open() 은 높이 844 로 연다)
+    const PHONES = [{ width: 390, height: 844 }, { width: 360, height: 740 }];
+    const phone = async (url: string, size: { width: number; height: number }) => {
+      const o = await open(url, { touch: true, width: size.width });
+      await o.page.setViewportSize(size);
+      return o;
+    };
+    type Box = { x: number; y: number; width: number; height: number };
+    const overlap = (a: Box, b: Box) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+
+    await t.test('휴대폰에서 카드를 고르면: 안내 칸이 어떤 카드도 가리지 않고, 놓을 곳이 모두 화면 안에 보인다 (9절)', async () => {
+      for (const size of PHONES) {
+        for (const url of [`/${SCORED}/play/`, `/${CARE}/play/`, `/${NOPLAY}/play/`]) {
+          const { page, done } = await phone(url, size);
+          const n = await page.locator('.tray .chip').count();
+          for (let i = 0; i < n; i++) {
+            // 처음 화면에서 i 번째 카드까지 내려가 누른다 (아이가 손으로 쓸어 내린 것처럼, 카드가 화면 안에 들어오게만)
+            await page.evaluate(() => window.scrollTo(0, 0));
+            const chip = page.locator('.tray .chip').nth(i);
+            await chip.locator('.chip-btn').evaluate((el) => el.scrollIntoView({ block: 'nearest' }));
+            await chip.locator('.chip-btn').tap();
+            const where = `${url} ${size.width}x${size.height} ${i + 1}번째 카드`;
+            const bar = (await page.locator('[data-pickbar]').boundingBox())!;
+            assert.ok(bar, `${where}: 안내 칸이 보이지 않습니다`);
+            // 안내 칸은 어떤 카드와도 겹치지 않는다 (화면에 떠서 카드를 가리지 않는다)
+            for (const box of await page.locator('.chip, .row').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON()))) {
+              assert.ok(!overlap(bar, box), `${where}: 안내 칸이 카드를 가립니다`);
+            }
+            // 놓을 곳의 이름이 모두 손으로 쓸어 내리지 않아도 화면 안에 있다
+            const targets = await page.locator('[data-pickbar] .pick-to:not([hidden])').evaluateAll((els) => els.map((e) => ({ text: e.textContent!.trim(), ...e.getBoundingClientRect().toJSON() })));
+            assert.ok(targets.length > 0, `${where}: 놓을 곳 단추가 없습니다`);
+            for (const tg of targets) assert.ok(tg.y >= 0 && tg.y + tg.height <= size.height + 1 && tg.x >= 0 && tg.x + tg.width <= size.width, `${where}: '${tg.text}' 가 화면 밖에 있습니다`);
+            // 고른 카드도 함께 보인다
+            const picked = (await chip.boundingBox())!;
+            assert.ok(picked.y + picked.height > 0 && picked.y < size.height, `${where}: 고른 카드가 화면 밖으로 밀렸습니다`);
+            await page.locator('[data-cancel]').tap();
+          }
+          // 안내 칸의 단추로 놓으면 그 자리에 들어간다
+          await page.evaluate(() => window.scrollTo(0, 0));
+          const first = (await page.locator('.tray .chip-btn').first().textContent())!.trim();
+          await page.locator('.tray .chip-btn').first().tap();
+          const to = page.locator('[data-pickbar] .pick-to:not([hidden])').first();
+          const id = await to.getAttribute('data-target');
+          await to.tap();
+          assert.equal((await page.locator(`[data-drop="${id}"] .chip-btn`).last().textContent())!.trim(), first);
+          assert.ok(!(await page.locator('[data-pickbar]').isVisible()));
+          assert.ok(await page.evaluate((w) => document.documentElement.scrollWidth <= w, size.width), `${url}: 가로 스크롤`);
+          await done();
+        }
+        // 차례 맞추기: 고른 줄 아래에 안내만 펼쳐지고 줄을 가리지 않는다
+        const { page, done } = await phone(`/${ORDER}/play/`, size);
+        await page.locator('.row').nth(10).locator('.row-btn').evaluate((el) => el.scrollIntoView({ block: 'end' }));
+        await page.locator('.row').nth(10).locator('.row-btn').tap();
+        const bar = (await page.locator('[data-pickbar]').boundingBox())!;
+        assert.ok(bar.y >= 0 && bar.y + bar.height <= size.height + 1, '차례 맞추기의 안내 칸이 화면 밖에 있습니다');
+        for (const box of await page.locator('.row').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON()))) assert.ok(!overlap(bar, box), '안내 칸이 줄을 가립니다');
+        await page.locator('.row').nth(2).locator('.row-btn').tap();
+        assert.match(await page.locator('[data-status]').textContent() ?? '', /3번째 자리로 옮겼습니다\.$/);
+        await done();
+      }
+    });
+
+    await t.test('카드의 그림: 390px 폭에서 짧은 변 96px 이상, 카드에는 출처가 보이지 않고 활동 아래에 한 번 (9절)', async () => {
+      for (const width of [390, 1280]) {
+        const { page, done } = await open(`/${SCORED}/play/`, { touch: width < 600, width });
+        const pics = await page.locator('.chip-picture img').evaluateAll((els) => els.map((e) => e.getBoundingClientRect()).map((r) => ({ w: r.width, h: r.height })));
+        assert.equal(pics.length, PICS.length);
+        const min = width < 600 ? 96 : 120;
+        for (const p of pics) assert.ok(Math.min(p.w, p.h) >= min, `${width}px: 카드 그림의 짧은 변이 ${Math.min(p.w, p.h)}px 입니다 (${min}px 이상)`);
+        // 그림은 찌그러지지 않는다 (키 큰 그림은 1:2, 넓은 그림은 3:1 그대로)
+        assert.deepEqual(pics.map((p) => Math.round((p.w / p.h) * 100) / 100).sort(), [0.5, 3]);
+        // 카드 안에는 출처 글이 보이지 않는다
+        for (const text of await page.locator('.chip').allInnerTexts()) assert.ok(!/시험용 사진가|CC BY|공공누리/.test(text), `카드에 출처가 보입니다: ${text}`);
+        // 활동 아래 '그림 출처': 같은 출처 두 장이 한 줄로, 이용 조건 링크와 함께
+        const lines = await page.locator('.credits-list li').allInnerTexts();
+        assert.equal(lines.length, 1, `출처 목록: ${lines.join(' / ')}`);
+        assert.match(lines[0], /^사진 2장: 시험용 사진가, CC BY-SA 4\.0 이용 조건/);
+        assert.equal(await page.locator('.credits-list a').getAttribute('href'), PIC_LICENCE);
+        assert.ok(await page.locator('.credits').isVisible());
+        await done();
+      }
+    });
+
+    await t.test('따옴표 뒤의 조사는 줄 첫머리에 오지 않는다: 퀴즈의 물음·풀이를 여러 폭으로 (15절)', async () => {
+      for (const size of PHONES) {
+        const { page, done } = await phone(`/${SCORED}/quiz/`, size);
+        const bad = await page.evaluate(() => {
+          const out: string[] = [];
+          // 모든 문항과 풀이를 한꺼번에 보이게 하고, 글 칸의 너비를 조금씩 바꿔 가며 줄이 갈리는 자리를 모두 본다
+          for (const q of document.querySelectorAll<HTMLElement>('.q')) { q.classList.add('is-current'); q.querySelector<HTMLElement>('[data-feedback]')!.hidden = false; q.querySelector<HTMLElement>('[data-correct]')!.hidden = false; }
+          const els = [...document.querySelectorAll<HTMLElement>('.q-text, .choice-text, .feedback-explain, .feedback-answer')];
+          const full = document.querySelector<HTMLElement>('.q-text')!.getBoundingClientRect().width;
+          for (let w = Math.round(full); w >= 160; w -= 3) {
+            for (const el of els) {
+              el.style.width = `${w}px`;
+              const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+              for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+                const s = n.textContent!;
+                for (let i = 0; i < s.length - 1; i++) {
+                  if (!/[’”」』'"]/.test(s[i])) continue;
+                  let j = i + 1;
+                  while (s[j] === '⁠') j++;
+                  if (!/[가-힣]/.test(s[j] ?? '')) continue;
+                  const r = document.createRange();
+                  r.setStart(n, i); r.setEnd(n, i + 1);
+                  const a = r.getBoundingClientRect();
+                  r.setStart(n, j); r.setEnd(n, j + 1);
+                  const b = r.getBoundingClientRect();
+                  if (b.top > a.top + 2) out.push(`${w}px: ${s.slice(Math.max(0, i - 6), j + 1)}`);
+                }
+              }
+              el.style.width = '';
+            }
+          }
+          return [...new Set(out)];
+        });
+        assert.deepEqual(bad, [], `${size.width}px: 따옴표 뒤의 조사가 다음 줄 첫머리로 갔습니다`);
+        await done();
+      }
+    });
+
+    await t.test('OX 단추: ○·× 를 보이고, 화면 읽기에는 MARK_LABEL 로 읽힌다. 풀이의 정답도 ○·× (9절)', async () => {
+      const { page, done } = await open(`/${SCORED}/quiz/`);
+      for (const [key, value] of [['yes', 'true'], ['no', 'false']] as const) {
+        const btn = page.getByRole('button', { name: MARK_LABEL[key], exact: true });
+        assert.equal(await btn.getAttribute('data-value'), value);
+        assert.equal((await btn.locator('.ox-mark').textContent())!.trim(), MARK[key]);
+      }
+      await page.getByRole('button', { name: MARK_LABEL.no, exact: true }).click();
+      const answer = page.locator('.q.is-current [data-correct]');
+      assert.equal((await answer.locator('.answer-mark').textContent())!.trim(), MARK.yes);
+      assert.match(await answer.evaluate((e) => e.textContent ?? ''), new RegExp(MARK_LABEL.yes));
       await done();
     });
 
