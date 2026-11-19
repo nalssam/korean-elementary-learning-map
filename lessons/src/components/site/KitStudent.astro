@@ -22,7 +22,7 @@ const webAside = web && !usedInFlow(lesson).has('web_activity');
 ---
 <section class="sec" aria-labelledby="student-title">
   <h2 class="sec-title" id="student-title">{web ? `${ASSET_LABEL.quiz}와 ${ASSET_LABEL.web_activity}` : ASSET_LABEL.quiz}</h2>
-  <p class="sec-note" data-pagefind-ignore>아이들이 QR 코드를 찍거나 주소를 넣어 엽니다. 이름을 묻지 않고, 답을 저장하거나 다른 곳으로 보내지 않습니다.{!scored(lesson) && ' 이 차시에서는 점수를 보여 주지 않습니다.'}</p>
+  <p class="sec-note" data-pagefind-ignore>아이들이 QR 코드를 찍거나 주소를 넣어 엽니다. 이름을 묻지 않고, 답을 저장하거나 다른 곳으로 보내지 않습니다.{!scored(lesson) && ' 이 차시에서는 점수를 보여 주지 않습니다.'}{lesson.slides.length > 0 && ' 수업 화면의 QR 버튼(q 키)을 눌러도 같은 QR 코드를 띄울 수 있습니다.'}</p>
   <div class="qr-cards">
     <article class="qr-card">
       <Qr url={absoluteUrl(quizRoute)} label={`${ASSET_LABEL.quiz} QR 코드`} />
