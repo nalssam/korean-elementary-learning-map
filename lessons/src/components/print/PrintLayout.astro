@@ -1,13 +1,19 @@
 ---
-// 인쇄 페이지의 틀. 화면에서는 인쇄 안내와 버튼이 보이고, 인쇄할 때는 종이(.sheet)만 나온다.
-// 뼈대는 계약과 함께 들어왔고 인쇄물 담당이 이어서 채운다. props 는 바꾸지 않는다.
+// 인쇄 페이지의 틀. 화면에서는 회색 바탕 위에 인쇄 안내와 종이 미리보기가 보이고, 인쇄할 때는 종이(.sheet)만 나온다.
+// props 는 바꾸지 않는다 (페이퍼크래프트 담당이 같이 쓴다).
+//
+// 모양은 두 파일에 있다.
+//  - src/styles/print.css          쪽의 치수 (작게 둔다. Astro 가 4KB 보다 작은 CSS 를 HTML 안에 넣는데, 계약 시험이 그 자리에서 이 파일을 찾는다)
+//  - src/components/print/sheet.css 머리·바닥글의 모양과 화면의 인쇄 안내. 따로 실리도록 주소(?url)로 가져와 <link> 로 건다
 import Base from '#src/layouts/Base.astro';
 import '#src/styles/print.css';
-import { lessonRoute } from '#lib/content.ts';
+import sheetCss from './sheet.css?url';
+import { footerNotice, isPublic, lessonRoute } from '#lib/content.ts';
 import type { PrintJob } from '#lib/content.ts';
 import { printLine } from '#lib/site.ts';
 import type { Lesson } from '#schema/lesson.ts';
 import { href } from '#src/lib/url.ts';
+import { sheetKicker } from './layout.ts';
 
 interface Props {
   lesson: Lesson;
@@ -15,14 +21,61 @@ interface Props {
   job: PrintJob;
 }
 const { lesson, job } = Astro.props;
+const { print } = job;
 ---
 <Base title={`${lesson.title} ${job.label}`} kind="print" lesson={lesson}>
+  <link slot="head" rel="stylesheet" href={sheetCss} />
   <div class="print-bar no-print">
-    <button type="button" onclick="window.print()">{job.label} 인쇄</button>
-    <a href={href(job.file)} download={job.download}>PDF 내려받기</a>
-    <a href={href(lessonRoute(lesson.id))}>차시 안내로 돌아가기</a>
-    <p>{printLine(job.print, job.pages)} · {job.print.paper}{job.print.materials.length > 0 && ` · 준비물: ${job.print.materials.join(', ')}`}</p>
-    {job.print.note && <p>{job.print.note}</p>}
+    <div class="print-bar-in" data-orientation={print.orientation}>
+      <a class="print-back" href={href(lessonRoute(lesson.id))}>
+        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M9.5 3.5 5 8l4.5 4.5" /></svg>
+        차시 안내로 돌아가기
+      </a>
+      <div class="print-top">
+        <div class="print-what">
+          <p class="print-kicker">{sheetKicker(lesson)} · {lesson.title}</p>
+          <h1>{job.label}</h1>
+        </div>
+        <div class="print-actions">
+          <button type="button" class="print-button" onclick="window.print()">
+            <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M6 7V3h8v4M6 14H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-2M6 11h8v6H6z" /></svg>
+            {job.label} 인쇄
+          </button>
+          <a class="print-download" href={href(job.file)} download={job.download}>
+            <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M10 3v10m0 0 4-4m-4 4L6 9M4 16h12" /></svg>
+            PDF 내려받기
+          </a>
+        </div>
+      </div>
+      <div class="print-info">
+        <p class="print-line">{printLine(print, job.pages)} · {print.paper}</p>
+        {(print.materials.length > 0 || print.note || job.kind === 'cards') && (
+          <dl>
+            {print.materials.length > 0 && <div><dt>준비물</dt><dd>{print.materials.join(', ')}</dd></div>}
+            {print.note && <div><dt>알아 둘 것</dt><dd>{print.note}</dd></div>}
+            {job.kind === 'cards' && <div><dt>양면 맞추기</dt><dd>인쇄 창에서 '긴 변으로 뒤집기'를 고르면 앞면과 뒷면이 맞습니다.</dd></div>}
+          </dl>
+        )}
+      </div>
+      {!isPublic(lesson) && <p class="print-draft">{footerNotice(lesson)}</p>}
+    </div>
   </div>
-  <slot />
+  <main class="print-preview">
+    <slot />
+  </main>
+  <script is:inline>
+    // 화면이 종이보다 좁으면(휴대폰) 미리보기를 줄여 보여 준다. 인쇄할 때는 쓰지 않는다 (sheet.css 의 @media screen 안에서만 읽는다).
+    (function () {
+      var PX_PER_MM = 96 / 25.4;
+      function fit() {
+        var sheet = document.querySelector('.sheet');
+        if (!sheet) return;
+        var paper = (sheet.getAttribute('data-orientation') === 'landscape' ? 297 : 210) * PX_PER_MM;
+        var room = document.documentElement.clientWidth - 24;
+        document.documentElement.style.setProperty('--preview-zoom', String(Math.min(1, room / paper)));
+      }
+      fit();
+      window.addEventListener('resize', fit);
+    })();
+  </script>
 </Base>
