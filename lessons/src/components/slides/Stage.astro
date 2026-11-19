@@ -1,0 +1,144 @@
+---
+// 수업 화면(전체 화면 발표)의 틀. Base.astro 를 kind="stage" 로 감싼다.
+// 명세의 슬라이드 한 장이 화면 한 장이다. 1920 × 1080 무대를 화면 크기에 맞춰 줄이고 늘인다 (16:9, 남는 곳은 바탕색).
+//
+// 조작 (교실 앞에서 리모컨·키보드·마우스·터치로)
+//   다음 장: → ↓ Space PageDown Enter, 화면 오른쪽 클릭·탭     이전 장: ← ↑ Shift+Space PageUp, 화면 왼쪽 클릭·탭
+//   처음·끝: Home End     전체 화면: F     교사 메모: N     차시 안내로 돌아가기: Esc
+//   퀴즈 장: 다음 글쇠를 처음 누르면 정답이 드러나고, 한 번 더 누르면 다음 장으로 간다.
+//   주소의 #4 는 4번 장에서 시작한다. 장을 넘기면 주소의 번호도 바뀐다 (새로 고쳐도 그 장이 열린다).
+// 스크립트가 돌지 않으면 모든 장을 위에서 아래로 늘어놓는다.
+import Base from '#src/layouts/Base.astro';
+import { lessonRoute } from '#lib/content.ts';
+import type { Lesson } from '#schema/lesson.ts';
+import { href } from '#src/lib/url.ts';
+import Slide from './Slide.astro';
+import { NOTE_COPY, STAGE_COPY } from './copy.ts';
+import './stage.css';
+
+interface Props { lesson: Lesson }
+const { lesson } = Astro.props;
+const total = lesson.slides.length;
+const k = STAGE_COPY.keys;
+---
+<Base title={`${lesson.title} 수업 화면`} kind="stage" lesson={lesson}>
+  <script is:inline slot="head">document.documentElement.classList.add('stage-js');</script>
+  <main class="stage" data-exit={href(lessonRoute(lesson.id))} data-total={total} aria-label={STAGE_COPY.region}>
+    <div class="screen">
+      {lesson.slides.map((slide, i) => <Slide lesson={lesson} slide={slide} no={i + 1} total={total} />)}
+    </div>
+    <nav class="hud" aria-label={STAGE_COPY.region}>
+      <button type="button" data-act="prev"><span>{STAGE_COPY.prev}</span><kbd>{k.prev}</kbd></button>
+      <p class="hud-count" aria-live="polite"><span data-count>1</span> / {total}</p>
+      <button type="button" data-act="next"><span>{STAGE_COPY.next}</span><kbd>{k.next}</kbd></button>
+      <span class="hud-gap"></span>
+      <button type="button" data-act="notes" aria-pressed="false"><span>{STAGE_COPY.notes}</span><kbd>{k.notes}</kbd></button>
+      <button type="button" data-act="fullscreen"><span>{STAGE_COPY.fullscreen}</span><kbd>{k.fullscreen}</kbd></button>
+      <a href={href(lessonRoute(lesson.id))} data-act="exit"><span>{STAGE_COPY.exit}</span><kbd>{k.exit}</kbd></a>
+    </nav>
+    <aside class="notes" hidden aria-labelledby="notes-heading">
+      <h2 id="notes-heading">{NOTE_COPY.heading} <span class="notes-no"></span></h2>
+      <div class="notes-body"></div>
+      <p class="notes-hint" hidden>{STAGE_COPY.revealHint}</p>
+    </aside>
+  </main>
+</Base>
+
+<script>
+  const stage = document.querySelector<HTMLElement>('.stage')!;
+  const screen = stage.querySelector<HTMLElement>('.screen')!;
+  const slides = [...screen.querySelectorAll<HTMLElement>('.slide')];
+  const total = slides.length;
+  const count = stage.querySelector<HTMLElement>('[data-count]')!;
+  const notes = stage.querySelector<HTMLElement>('.notes')!;
+  const notesBody = notes.querySelector<HTMLElement>('.notes-body')!;
+  const notesNo = notes.querySelector<HTMLElement>('.notes-no')!;
+  const notesHint = notes.querySelector<HTMLElement>('.notes-hint')!;
+  const notesBtn = stage.querySelector<HTMLButtonElement>('[data-act="notes"]')!;
+  const fsBtn = stage.querySelector<HTMLButtonElement>('[data-act="fullscreen"]')!;
+  let cur = 0;
+
+  const fromHash = () => {
+    const n = Number.parseInt(location.hash.slice(1), 10);
+    return Number.isInteger(n) ? Math.min(Math.max(n, 1), total) - 1 : 0;
+  };
+
+  function show(i: number, revealed = false) {
+    cur = Math.min(Math.max(i, 0), total - 1);
+    slides.forEach((s, j) => {
+      s.hidden = j !== cur;
+      if (j === cur && s.dataset.quiz) s.dataset.revealed = String(revealed);
+    });
+    count.textContent = String(cur + 1);
+    const want = `#${cur + 1}`;
+    if (location.hash !== want) history.replaceState(null, '', want);
+    renderNotes();
+  }
+
+  function renderNotes() {
+    const s = slides[cur];
+    notesNo.textContent = `${cur + 1} / ${total}`;
+    notesBody.replaceChildren(...[...s.querySelector('.slide-notes')!.children].map((c) => c.cloneNode(true)));
+    notesHint.hidden = !(s.dataset.quiz && s.dataset.revealed !== 'true');
+  }
+
+  function next() {
+    const s = slides[cur];
+    // 퀴즈 장은 정답을 먼저 보여 주고 나서 넘어간다
+    if (s.dataset.quiz && s.dataset.revealed !== 'true') { s.dataset.revealed = 'true'; renderNotes(); return; }
+    if (cur < total - 1) show(cur + 1);
+  }
+  // 앞 장으로 돌아가면 퀴즈의 정답은 드러난 채로 보여 준다 (방금 본 것을 다시 짚을 때)
+  function prev() { if (cur > 0) show(cur - 1, true); }
+
+  function toggleNotes(open = notes.hidden) {
+    notes.hidden = !open;
+    notesBtn.setAttribute('aria-pressed', String(open));
+  }
+  function toggleFullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen?.().catch(() => {});
+  }
+  if (!document.fullscreenEnabled) fsBtn.hidden = true;
+
+  document.addEventListener('keydown', (e) => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const t = e.target as HTMLElement;
+    // 단추에 초점이 있을 때 Space·Enter 는 그 단추를 누른다
+    if ((e.key === ' ' || e.key === 'Enter') && t.closest('button, a')) return;
+    const k = e.key;
+    if (['ArrowRight', 'ArrowDown', 'PageDown', 'Enter'].includes(k) || (k === ' ' && !e.shiftKey)) next();
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(k) || (k === ' ' && e.shiftKey)) prev();
+    else if (k === 'Home') show(0);
+    else if (k === 'End') show(total - 1);
+    else if (k === 'f' || k === 'F' || k === 'ㄹ') toggleFullscreen();
+    else if (k === 'n' || k === 'N' || k === 'ㅜ') toggleNotes();
+    else if (k === 'Escape') { if (!notes.hidden) toggleNotes(false); else location.href = stage.dataset.exit!; }
+    else return;
+    e.preventDefault();
+  });
+
+  // 화면 왼쪽 3분의 1을 누르면 이전 장, 나머지는 다음 장
+  screen.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).closest('a, button')) return;
+    const r = screen.getBoundingClientRect();
+    if (e.clientX - r.left < r.width / 3) prev(); else next();
+  });
+
+  stage.querySelector('[data-act="prev"]')!.addEventListener('click', prev);
+  stage.querySelector('[data-act="next"]')!.addEventListener('click', next);
+  notesBtn.addEventListener('click', () => toggleNotes());
+  fsBtn.addEventListener('click', toggleFullscreen);
+  window.addEventListener('hashchange', () => { if (fromHash() !== cur) show(fromHash()); });
+
+  // 조작 단추는 마우스를 움직이거나 단추에 초점이 갈 때만 보인다 (아이들이 보는 화면을 가리지 않게)
+  let idle = 0;
+  const wake = () => {
+    stage.classList.add('is-awake');
+    clearTimeout(idle);
+    idle = window.setTimeout(() => stage.classList.remove('is-awake'), 2500);
+  };
+  document.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') wake(); });
+
+  show(fromHash());
+</script>

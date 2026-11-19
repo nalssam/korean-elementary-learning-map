@@ -1,0 +1,33 @@
+---
+// 활동 안내. 할 일은 왼쪽에 번호를 붙여, 시간과 준비물은 오른쪽 상자에 둔다.
+import { SLIDE_COPY } from './copy.ts';
+import type { SlideProps } from './types.ts';
+
+type Props = SlideProps<'activity'>;
+const { slide } = Astro.props;
+const aside = slide.minutes !== undefined || slide.materials.length > 0;
+---
+<div class:list={['sl-activity', aside && 'has-aside']}>
+  <h2 class="sl-title">{slide.title}</h2>
+  <div class="sl-activity-body">
+    <ol class="sl-list sl-list-tight">
+      {slide.instructions.map((t, i) => <li><span class="sl-num" aria-hidden="true">{i + 1}</span><span class="sl-li-text">{t}</span></li>)}
+    </ol>
+    {aside && (
+      <aside class="sl-aside">
+        {slide.minutes !== undefined && (
+          <div class="sl-aside-block">
+            <p class="sl-aside-label">{SLIDE_COPY.minutes}</p>
+            <p class="sl-aside-big">{slide.minutes}{SLIDE_COPY.minuteUnit}</p>
+          </div>
+        )}
+        {slide.materials.length > 0 && (
+          <div class="sl-aside-block">
+            <p class="sl-aside-label">{SLIDE_COPY.materials}</p>
+            <ul class="sl-materials">{slide.materials.map((m) => <li>{m}</li>)}</ul>
+          </div>
+        )}
+      </aside>
+    )}
+  </div>
+</div>
