@@ -8,6 +8,7 @@ lessons.json 은 generators/pptx/build.mjs 가 검증을 마친 명세에서 내
 웹 무대(src/components/slides/stage.css)와 같은 자리에 같은 크기로 놓아서 화면과 PPTX 가 같은 얼굴이 되게 한다.
 글은 진짜 글상자로 넣는다 (교사가 고칠 수 있게). 넘침은 글꼴 파일의 글자 폭으로 줄바꿈을 미리 셈해 막는다.
 """
+import datetime
 import json
 import os
 import sys
@@ -16,7 +17,7 @@ from PIL import Image
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_CONNECTOR, MSO_SHAPE
-from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE, PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Emu, Pt
 
@@ -47,6 +48,9 @@ class Ctx:
         self.bold = Font(f['bold'])
         self.copy = data['copy']
         self.type = data['type']
+        # 장에 맞게 줄어드는 글의 크기 차례 (copy.ts 의 STAGE_FIT)와 그림 틀의 크기 (STAGE_PICTURE)
+        self.fit = data['fit']
+        self.pic = data['picture']
 
 
 # ───────────────────────── 글 재기 ─────────────────────────
@@ -134,6 +138,30 @@ def text(ctx, s, x, y, w, h, paras, size, color='navy', bold=False, lh=1.4, alig
     return tb
 
 
+def filled_text(ctx, s, x, y, w, h, px, py, paras, fill='paper', radius=20):
+    """바탕을 칠한 둥근 상자 하나에 문단 여럿. 상자는 글에 맞춰 늘어난다 (spAutoFit).
+    h 는 글꼴 폭으로 셈한 높이다. PowerPoint 는 그대로 열고, 글꼴이 바뀐 프로그램은 상자를 늘린다.
+    paras: (글, 크기, 색, 굵게, 줄 간격, 앞 여백) 목록"""
+    sh = box(ctx, s, x, y, w, h, fill=fill, line=None, radius=radius)
+    tf = sh.text_frame
+    tf.word_wrap = True
+    tf.margin_left = tf.margin_right = E(px)
+    tf.margin_top = tf.margin_bottom = E(py)
+    tf.vertical_anchor = MSO_ANCHOR.TOP
+    for i, (t, size, color, bold, lh, before) in enumerate(paras):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        p.alignment = PP_ALIGN.LEFT
+        p.line_spacing = Pt(size * lh / 2)
+        if before:
+            p.space_before = Pt(before / 2)
+        p._p.get_or_add_pPr().set('latinLnBrk', '0')
+        r = p.add_run()
+        r.text = t
+        _font(ctx, r, size, bold, color)
+    tf.auto_size = MSO_AUTO_SIZE.SHAPE_TO_FIT_TEXT
+    return sh
+
+
 def box(ctx, s, x, y, w, h, fill='card', line='line', radius=20, lw=1, shape=MSO_SHAPE.ROUNDED_RECTANGLE):
     sh = s.shapes.add_shape(shape, E(x), E(y), E(w), E(h))
     if fill:
@@ -184,14 +212,24 @@ def chip(ctx, s, x, y, label, size=44, fill='teal-soft', color='teal', pad=18, l
     return w, h
 
 
+def credit_h(ctx, m, w):
+    """그림 아래 출처 표시가 차지하는 높이 (위 여백 10 포함)"""
+    return text_h(ctx, m['credit'], ctx.type['credit'], w, 1.3) + 10
+
+
+def fit_box(m, w, h):
+    """그림을 틀(w, h)에 원본 비율대로 넣었을 때의 크기"""
+    k = min(w / m['width'], h / m['height'])
+    return m['width'] * k, m['height'] * k
+
+
 def picture(ctx, s, m, x, y, w, h, credit=True):
     """그림을 틀(x, y, w, h) 안에 원본 비율 그대로 넣는다 (자르지도 늘이지도 않는다). 출처 표시는 그림 바로 아래 가운데.
     돌려주는 값: 실제로 차지한 (y 시작, y 끝)"""
-    size = ctx.type['credit']
-    ch = text_h(ctx, m['credit'], size, w, 1.3) + 10 if credit else 0
+    ch = credit_h(ctx, m, w) if credit else 0
     bh = h - ch
-    if bh < 20:
-        raise Overflow(f'그림 {m["id"]} 이 들어갈 자리가 없습니다')
+    if min(w, bh) < ctx.pic['shortSide'] - 0.5:
+        raise Overflow(f'그림 {m["id"]} 의 틀이 너무 작습니다 ({w:.0f} × {bh:.0f}px)')
     iw, ih = m['width'], m['height']
     k = min(w / iw, bh / ih)
     pw, ph = iw * k, ih * k
@@ -200,7 +238,7 @@ def picture(ctx, s, m, x, y, w, h, credit=True):
     pic = s.shapes.add_picture(m['file'], E(px), E(py), E(pw), E(ph))
     pic._element.nvPicPr.cNvPr.set('descr', m['alt'])
     if credit:
-        text(ctx, s, x, py + ph + 10, w, ch - 10, m['credit'], size, 'gray', lh=1.3, align='c')
+        text(ctx, s, x, py + ph + 10, w, ch - 10, m['credit'], ctx.type['credit'], 'gray', lh=1.3, align='c')
     return py, py + ph + ch
 
 
@@ -212,9 +250,16 @@ def title(ctx, s, t, y=PAD_T, size=72, mb=48, width=CW):
     return y + h + mb
 
 
-def counter(ctx, s, no, total):
+def counter(ctx, s, label):
+    """오른쪽 아래 장 번호. 두 차시 묶음은 "3차시 1 / 4" 처럼 차시마다 센다 (counter.ts)."""
     size = ctx.type['counter']
-    text(ctx, s, W - 48 - 200, H - 36 - size, 200, size, f'{no} / {total}', size, 'gray', lh=1, align='r')
+    text(ctx, s, W - 48 - 400, H - 36 - size, 400, size, label, size, 'gray', lh=1, align='r')
+
+
+def draft_notice(ctx, s, notice):
+    """공개하지 않은 차시: 왼쪽 아래에 초안 표시 (웹 무대의 .sl-draft 와 같은 자리)"""
+    size = ctx.type['draft']
+    text(ctx, s, PAD_X, H - 34 - size, 1400, size, notice, size, 'gray', lh=1)
 
 
 def check(ctx, s, x, y, scale=1.0):
@@ -289,6 +334,10 @@ def lay_picture(ctx, s, sl, L):
     picture(ctx, s, sl['media'], PAD_X, y, CW, bottom - y)
 
 
+def numbered_h(ctx, items, w, size, lh, gap):
+    return sum(max(text_h(ctx, t, size, w - 92, lh), 64) for t in items) + gap * (len(items) - 1)
+
+
 def numbered(ctx, s, items, x, y, w, size, lh, gap, bottom):
     """번호를 붙인 목록. 넘치면 Overflow"""
     for i, t in enumerate(items):
@@ -304,10 +353,17 @@ def numbered(ctx, s, items, x, y, w, size, lh, gap, bottom):
 def lay_points(ctx, s, sl, L):
     media = sl.get('media')
     y = title(ctx, s, sl['title'])
-    lw = CW - 72 - 620 if media else CW
-    numbered(ctx, s, sl['points'], PAD_X, y, lw, 44 if media else 48, 1.4, 32, BOTTOM)
     if media:
+        lw = CW - 72 - 620
+        numbered(ctx, s, sl['points'], PAD_X, y, lw, 44, 1.4, 32, BOTTOM)
         picture(ctx, s, media, W - PAD_X - 620, y, 620, BOTTOM - y)
+        return
+    # 그림이 없으면 크게 쓰고(넘치면 줄이고) 제목 아래 남은 자리의 위아래 가운데에 둔다
+    for size in ctx.fit['points']:
+        h = numbered_h(ctx, sl['points'], CW, size, 1.4, 48)
+        if y + h <= BOTTOM + 1:
+            break
+    numbered(ctx, s, sl['points'], PAD_X, y + max(0, (BOTTOM - y - h) / 2), CW, size, 1.4, 48, BOTTOM)
 
 
 def bullets(ctx, s, items, x, y, w, size=44, lh=1.32, gap=12):
@@ -330,45 +386,140 @@ def lay_compare(ctx, s, sl, L):
     sides = (sl['left'], sl['right'])
     lab = 44 * 1.3
     iw = cw - 72
-    # 그림이 없으면 카드는 글 높이만큼만 (두 카드는 같은 높이). 그림이 있으면 아래 끝까지 쓰고 남는 자리를 그림이 쓴다.
-    bottom = BOTTOM if any_media else y + 24 + lab + 16 + max(bullets_h(ctx, sd['points'], iw) for sd in sides) + 24
-    if bottom > BOTTOM + 1:
-        raise Overflow('견주기')
+    iy0 = y + 24 + lab + 16
+    if any_media:
+        # 그림이 있으면 카드는 아래 끝까지. 그림 틀이 compareMin 보다 낮아지지 않게 항목 글을 먼저 줄인다 (STAGE_FIT.compareMedia)
+        def frame(size):
+            return min((BOTTOM - 24 - bullets_h(ctx, sd['points'], iw, size)) - 16 - iy0 - credit_h(ctx, sd['media'], iw)
+                       for sd in sides if sd.get('media'))
+        sizes = ctx.fit['compareMedia']
+        size = next((z for z in sizes if frame(z) >= ctx.pic['compareMin'] - 0.5), sizes[-1])
+        top, bottom = y, BOTTOM
+    else:
+        # 그림이 없으면 카드는 글 높이만큼 (두 카드는 같은 높이), 크게 쓰고 넘치면 줄이고, 남은 자리의 위아래 가운데에 둔다
+        def height(size):
+            return 24 + lab + 16 + max(bullets_h(ctx, sd['points'], iw, size) for sd in sides) + 24
+        sizes = ctx.fit['compare']
+        size = next((z for z in sizes if y + height(z) <= BOTTOM + 1), sizes[-1])
+        top = y + max(0, (BOTTOM - y - height(size)) / 2)
+        bottom = top + height(size)
+        if bottom > BOTTOM + 1:
+            raise Overflow('견주기')
     for i, side in enumerate(sides):
         x = PAD_X + i * (cw + 48)
-        box(ctx, s, x, y, cw, bottom - y, fill='card', line='line', radius=20)
-        ix, iy = x + 36, y + 24
+        box(ctx, s, x, top, cw, bottom - top, fill='card', line='line', radius=20)
+        ix, iy = x + 36, top + 24
         text(ctx, s, ix, iy, iw, lab, side['label'], 44, 'teal', True, 1.3)
         iy += lab + 16
         if any_media:
-            by = BOTTOM - 24 - bullets_h(ctx, side['points'], iw)
+            by = BOTTOM - 24 - bullets_h(ctx, side['points'], iw, size)
             if side.get('media'):
                 picture(ctx, s, side['media'], ix, iy, iw, by - 16 - iy)
-            bullets(ctx, s, side['points'], ix, by, iw)
+            bullets(ctx, s, side['points'], ix, by, iw, size)
         else:
-            bullets(ctx, s, side['points'], ix, iy, iw)
+            bullets(ctx, s, side['points'], ix, iy, iw, size)
+
+
+def steps_row(ctx, sl, y, size, shared):
+    """그림 있는 단계를 한 줄로 늘어놓은 자리. 넘치거나 그림 틀이 너무 작으면 Overflow.
+    돌려주는 값: 칸마다 (x, 칸 폭, 그림 틀, 글 y) 와 가장 작게 그려지는 그림의 넓이"""
+    steps = sl['steps']
+    n = len(steps)
+    cw = (CW - 32 * (n - 1)) / n
+    bottom = BOTTOM - (shared_credit_h(ctx, shared) if shared else 0)
+    chh = 44 * 1.3 + 12
+    # 글의 첫 줄을 모든 칸에서 같은 높이에 둔다 (웹의 subgrid 와 같다)
+    ty = bottom - max(text_h(ctx, st['text'], size, cw, 1.35) for st in steps)
+    top = y + 30 + chh + 20
+    cells, low = [], float('inf')
+    for i, st in enumerate(steps):
+        x = PAD_X + i * (cw + 32)
+        fh = ty - 20 - top
+        m = st.get('media')
+        if m:
+            ph = fh - (0 if shared else credit_h(ctx, m, cw))
+            if min(cw, ph) < ctx.pic['shortSide'] - 0.5:
+                raise Overflow('단계')
+            pw, pph = fit_box(m, cw, ph)
+            low = min(low, pw * pph)
+        elif fh < 0:
+            raise Overflow('단계')
+        cells.append((x, cw, (x, top, cw, fh), ty))
+    return cells, low
+
+
+def steps_grid(ctx, sl, y, size, shared):
+    """그림 넷을 2 × 2 로 놓은 자리 (칸마다 그림 왼쪽, 이름표와 글 오른쪽). 웹 무대의 data-arrange="grid" 와 같은 치수."""
+    bottom = BOTTOM - (shared_credit_h(ctx, shared) if shared else 0)
+    cw = (CW - 48) / 2
+    ch = (bottom - y - 40) / 2
+    chh = 44 * 1.3 + 12
+    pw = (cw - 32) * 55 / 100
+    tw = cw - 32 - pw
+    cells, low = [], float('inf')
+    for i, st in enumerate(sl['steps']):
+        x = PAD_X + (i % 2) * (cw + 48)
+        cy = y + (i // 2) * (ch + 40)
+        inner = ch - 26
+        if chh + 16 + text_h(ctx, st['text'], size, tw, 1.35) > inner + 1:
+            raise Overflow('단계')
+        m = st['media']
+        ph = inner - (0 if shared else credit_h(ctx, m, pw))
+        if min(pw, ph) < ctx.pic['shortSide'] - 0.5:
+            raise Overflow('단계')
+        a, b = fit_box(m, pw, ph)
+        low = min(low, a * b)
+        cells.append((x, cy, cw, pw, tw, inner))
+    return cells, low
+
+
+def shared_credit_h(ctx, credit):
+    return 16 + text_h(ctx, credit, ctx.type['credit'], CW, 1.3)
 
 
 def lay_steps(ctx, s, sl, L):
     T = ctx.type
     y = title(ctx, s, sl['title'])
     steps = sl['steps']
-    if any(st.get('media') for st in steps):
-        n = len(steps)
-        cw = (CW - 32 * (n - 1)) / n
-        # 글의 첫 줄을 모든 칸에서 같은 높이에 둔다 (웹의 subgrid 와 같다)
-        ty = BOTTOM - max(text_h(ctx, st['text'], T['body'], cw, 1.35) for st in steps)
-        for i, st in enumerate(steps):
-            x = PAD_X + i * (cw + 32)
-            box(ctx, s, x, y, cw, 6, fill='teal', line=None, radius=0, shape=MSO_SHAPE.RECTANGLE)
-            _, chh = chip(ctx, s, x, y + 30, st['label'])
-            th = text_h(ctx, st['text'], T['body'], cw, 1.35)
-            text(ctx, s, x, ty, cw, th, st['text'], T['body'], 'navy', lh=1.35)
-            top = y + 30 + chh + 20
-            if st.get('media'):
-                picture(ctx, s, st['media'], x, top, cw, ty - 20 - top)
-            elif ty - 20 < top:
-                raise Overflow('단계')
+    pictured = [st['media'] for st in steps if st.get('media')]
+    if pictured:
+        # 단계 그림의 출처 표시가 모두 같으면 목록 아래에 한 번만 찍는다
+        credits = {m['credit'] for m in pictured}
+        shared = pictured[0]['credit'] if len(pictured) > 1 and len(credits) == 1 else None
+
+        def first_fit(plan):
+            for size in ctx.fit['stepsMedia']:
+                try:
+                    return (size,) + plan(ctx, sl, y, size, shared)
+                except Overflow:
+                    continue
+            return None
+        row = first_fit(steps_row)
+        # 그림이 넷이면 한 줄과 2 × 2 가운데 그림이 더 크게 그려지는 쪽 (웹 무대와 같은 규칙)
+        grid = first_fit(steps_grid) if len(steps) == 4 and len(pictured) == 4 else None
+        if grid and (not row or grid[2] > row[2]):
+            size, cells, _ = grid
+            for st, (x, cy, cw, pw, tw, inner) in zip(steps, cells):
+                box(ctx, s, x, cy, cw, 6, fill='teal', line=None, radius=0, shape=MSO_SHAPE.RECTANGLE)
+                tx = x + pw + 32
+                _, chh = chip(ctx, s, tx, cy + 26, st['label'])
+                th = text_h(ctx, st['text'], size, tw, 1.35)
+                text(ctx, s, tx, cy + 26 + chh + 16, tw, th, st['text'], size, 'navy', lh=1.35)
+                picture(ctx, s, st['media'], x, cy + 26, pw, inner, credit=not shared)
+        elif row:
+            size, cells, _ = row
+            for st, (x, cw, (fx, fy, fw, fh), ty) in zip(steps, cells):
+                box(ctx, s, x, y, cw, 6, fill='teal', line=None, radius=0, shape=MSO_SHAPE.RECTANGLE)
+                chip(ctx, s, x, y + 30, st['label'])
+                th = text_h(ctx, st['text'], size, cw, 1.35)
+                text(ctx, s, x, ty, cw, th, st['text'], size, 'navy', lh=1.35)
+                if st.get('media'):
+                    picture(ctx, s, st['media'], fx, fy, fw, fh, credit=not shared)
+        else:
+            raise Overflow('단계')
+        if shared:
+            sh = shared_credit_h(ctx, shared) - 16
+            text(ctx, s, PAD_X, BOTTOM - sh, CW, sh, shared, T['credit'], 'gray', lh=1.3, align='r')
     else:
         # 이름표 칸의 폭은 가장 긴 이름표에 맞춘다 (웹의 subgrid 와 같다)
         cw = max(text_w(ctx, st['label'], 44, True) / FIT + 36 for st in steps)
@@ -394,6 +545,7 @@ def lay_term(ctx, s, sl, L):
     mh = text_h(ctx, sl['meaning'], T['meaning'], mw, 1.4)
     ex = sl.get('example')
     eh = (T['label'] * 1.3 + 8 + text_h(ctx, ex, T['body'], mw - 80, 1.4) + 56) if ex else 0
+    # 쓰임 예 상자는 글상자 하나에 바탕을 칠하고 글에 맞춰 늘어나게 한다 (다른 글꼴로 열어 줄이 늘어도 글이 상자 밖으로 나가지 않는다)
     total = kh + th + 40 + mh + (56 + eh if ex else 0)
     y = PAD_T + (BOTTOM - PAD_T - total) / 2
     if y < PAD_T:
@@ -406,9 +558,10 @@ def lay_term(ctx, s, sl, L):
     y += mh
     if ex:
         y += 56
-        box(ctx, s, PAD_X, y, mw, eh, fill='paper', line=None, radius=20)
-        text(ctx, s, PAD_X + 40, y + 28, mw - 80, T['label'] * 1.3, ctx.copy['slide']['example'], T['label'], 'teal', True, 1.3)
-        text(ctx, s, PAD_X + 40, y + 28 + T['label'] * 1.3 + 8, mw - 80, eh - 56 - T['label'] * 1.3 - 8, ex, T['body'], 'navy', lh=1.4)
+        filled_text(ctx, s, PAD_X, y, mw, eh, 40, 28, [
+            (ctx.copy['slide']['example'], T['label'], 'teal', True, 1.3, 0),
+            (ex, T['body'], 'navy', False, 1.4, 8),
+        ])
 
 
 def lay_passage(ctx, s, sl, L):
@@ -430,7 +583,14 @@ def lay_activity(ctx, s, sl, L):
     y = title(ctx, s, sl['title'])
     aside = sl.get('minutes') is not None or sl.get('materials')
     lw = CW - 64 - 540 if aside else CW
-    numbered(ctx, s, sl['instructions'], PAD_X, y, lw, T['body'], 1.35, 20, BOTTOM)
+    ah = activity_aside_h(ctx, sl) if aside else 0
+    # 할 일은 크게 쓰고 넘치면 줄인다 (STAGE_FIT.activity). 목록과 상자를 한 덩어리로 남은 자리의 위아래 가운데에 둔다.
+    for size in ctx.fit['activity']:
+        lh_ = numbered_h(ctx, sl['instructions'], lw, size, 1.35, 20)
+        if y + max(lh_, ah) <= BOTTOM + 1:
+            break
+    y += max(0, (BOTTOM - y - max(lh_, ah)) / 2)
+    numbered(ctx, s, sl['instructions'], PAD_X, y, lw, size, 1.35, 20, BOTTOM)
     if aside:
         ax, aw = W - PAD_X - 540, 540
         iw = aw - 80
@@ -458,6 +618,18 @@ def lay_activity(ctx, s, sl, L):
                     text(ctx, s, ax + 40, my, iw, mh, m, T['body'], 'navy', lh=1.3)
                     my += mh + 8
             iy += h + 32
+
+
+def activity_aside_h(ctx, sl):
+    T = ctx.type
+    iw = 540 - 80
+    lab = T['label'] * 1.3
+    hs = []
+    if sl.get('minutes') is not None:
+        hs.append(lab + 8 + 72 * 1.15)
+    if sl.get('materials'):
+        hs.append(lab + 8 + sum(text_h(ctx, m, T['body'], iw, 1.3) for m in sl['materials']) + 8 * (len(sl['materials']) - 1))
+    return 64 + sum(hs) + 32 * (len(hs) - 1)
 
 
 def lay_quiz(ctx, s, sl, L):
@@ -535,32 +707,61 @@ LAYOUTS = {
 }
 
 
-def credit_slides(ctx, prs, L, total_before):
-    """마지막 장: 수업 화면에 실린 그림의 출처(creditFull)와 sheetFooter. 길면 여러 장으로 나눈다."""
-    cr = L['credits']
-    size, lh, gap = 28, 1.4, 20
-    foot = cr['footer']
-    fh = text_h(ctx, foot, 24, CW, 1.4)
-    items = [[it['text']] + [u for u in (it.get('sourceUrl'), it.get('licenceUrl')) if u] for it in cr['items']] or [[cr['empty']]]
-    pages, cur, top = [], [], PAD_T + 72 * 1.25 + 48
+CREDIT = {'size': 28, 'url': 24, 'lh': 1.4, 'gap': 20}
+
+
+def credit_pages(ctx, cr):
+    """출처 목록을 장으로 나눈다. 한 장을 그 장의 실제 자리만큼 채운 뒤에 다음 장을 연다 (docs/CONTRACT.md 8절).
+    돌려주는 값: [(제목, 장의 글 높이, [(줄 목록, 높이), ...]), ...]"""
+    size, url, lh, gap = CREDIT['size'], CREDIT['url'], CREDIT['lh'], CREDIT['gap']
+    fh = text_h(ctx, cr['footer'], 24, CW, 1.4)
     limit = BOTTOM - fh - 32
-    y = top
-    for it in items:
-        h = sum(text_h(ctx, t, size if i == 0 else 24, CW, lh) for i, t in enumerate(it))
-        if cur and y + h > limit:
-            pages.append(cur)
-            cur, y = [], top
-        cur.append((it, h))
-        y += h + gap
-    pages.append(cur)
+    items = [[it['text']] + [u for u in (it.get('sourceUrl'), it.get('licenceUrl')) if u] for it in cr['items']] or [[cr['empty']]]
+    measured = [(it, sum(text_h(ctx, t, size if i == 0 else url, CW, lh) for i, t in enumerate(it))) for it in items]
+
+    def heading(k, n):
+        return cr['heading'] + (' ' + cr['more'].replace('{n}', str(k)).replace('{total}', str(n)) if n > 1 else '')
+
+    def split(top_of):
+        pages, cur = [], []
+        y = top_of(0)
+        for it, h in measured:
+            if cur and y + h > limit:
+                pages.append(cur)
+                cur, y = [], top_of(len(pages))
+            cur.append((it, h))
+            y += h + gap
+        pages.append(cur)
+        return pages
+    # 제목의 높이는 장 수("(1/2)")에 따라 달라질 수 있으므로, 장 수가 바뀌지 않을 때까지 다시 나눈다
+    n = 1
+    for _ in range(4):
+        pages = split(lambda k: PAD_T + text_h(ctx, heading(k + 1, n), 72, CW, 1.25, True) + 48)
+        if len(pages) == n:
+            break
+        n = len(pages)
     for k, page in enumerate(pages):
+        top = PAD_T + text_h(ctx, heading(k + 1, len(pages)), 72, CW, 1.25, True) + 48
+        used = sum(h for _, h in page) + gap * (len(page) - 1)
+        if top + used > limit + 1 and len(page) > 1:
+            raise Overflow('그림 출처')
+    return [(heading(k + 1, len(pages)), page) for k, page in enumerate(pages)], fh
+
+
+def credit_slides(ctx, prs, L):
+    """마지막 장: 수업 화면에 실린 그림의 출처(creditList)와 sheetFooter. 길면 앞 장을 채운 뒤 다음 장을 연다."""
+    cr = L['credits']
+    size, url, lh, gap = CREDIT['size'], CREDIT['url'], CREDIT['lh'], CREDIT['gap']
+    pages, fh = credit_pages(ctx, cr)
+    foot = cr['footer']
+    for head, page in pages:
         s = new_slide(ctx, prs)
-        head = cr['heading'] + (' ' + cr['more'].replace('{n}', str(k + 1)).replace('{total}', str(len(pages))) if len(pages) > 1 else '')
         y = title(ctx, s, head)
-        for it, h in page:
+        for it, _ in page:
             for i, t in enumerate(it):
-                th = text_h(ctx, t, size if i == 0 else 24, CW, lh)
-                text(ctx, s, PAD_X, y, CW, th, t, size if i == 0 else 24, 'navy' if i == 0 else 'gray', lh=lh)
+                z = size if i == 0 else url
+                th = text_h(ctx, t, z, CW, lh)
+                text(ctx, s, PAD_X, y, CW, th, t, z, 'navy' if i == 0 else 'gray', lh=lh)
                 y += th
             y += gap
         hline(ctx, s, PAD_X, BOTTOM - fh - 16, W - PAD_X, BOTTOM - fh - 16)
@@ -579,19 +780,40 @@ def new_slide(ctx, prs):
     return s
 
 
+def properties(prs, doc):
+    """파일 정보(core.xml). python-pptx 틀에 든 남의 이름·날짜·설명을 지우고 이 자료의 것으로 채운다."""
+    cp = prs.core_properties
+    when = datetime.datetime.strptime(doc['date'], '%Y-%m-%dT%H:%M:%SZ')
+    cp.title = doc['title']
+    cp.author = doc['author']
+    cp.last_modified_by = doc['author']
+    cp.comments = ''
+    cp.subject = ''
+    cp.category = ''
+    cp.keywords = doc['keywords']
+    cp.created = when
+    cp.modified = when
+    cp.revision = 1
+
+
 def build(ctx, L):
     prs = Presentation()
     prs.slide_width, prs.slide_height = E(W), E(H)
-    n = len(L['slides'])
+    properties(prs, L['doc'])
     for sl in L['slides']:
         s = new_slide(ctx, prs)
         try:
             LAYOUTS[sl['layout']](ctx, s, sl, L)
         except Overflow as e:
             raise SystemExit(f'{L["id"]} 의 {sl["no"]}번 장({sl["layout"]})이 PPTX 한 장을 넘칩니다: {e}. 글을 줄입니다')
-        counter(ctx, s, sl['no'], n)
+        if L.get('draft') and sl['no'] != 1:
+            draft_notice(ctx, s, L['draft'])
+        counter(ctx, s, sl['counter'])
         s.notes_slide.notes_text_frame.text = '\n'.join(sl['notes'])
-    credit_slides(ctx, prs, L, n)
+    try:
+        credit_slides(ctx, prs, L)
+    except Overflow as e:
+        raise SystemExit(f'{L["id"]} 의 그림 출처 장을 그리지 못했습니다: {e}')
     os.makedirs(os.path.dirname(L['pptx']), exist_ok=True)
     raw = L['pptx'] + '.raw'
     prs.save(raw)

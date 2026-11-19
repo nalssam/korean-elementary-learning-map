@@ -24,13 +24,24 @@ node generators/pptx/build.mjs --out .cache/tests/x   # 다른 dist 폴더 (캐�
 
 ## 만들어지는 PPTX
 
-- 명세의 슬라이드 한 장이 PPTX 한 장입니다. 번호가 `flow.slides` 와 같습니다. 오른쪽 아래에 `4 / 12` 처럼 장 번호가 있습니다.
-- 글은 모두 고칠 수 있는 글상자입니다. 줄 간격은 고정값이고 자동 맞춤을 쓰지 않습니다.
-- 1번 장(표지)에 `footerNotice(lesson)` 이 찍힙니다.
+- 명세의 슬라이드 한 장이 PPTX 한 장입니다. 번호가 `flow.slides` 와 같습니다. 오른쪽 아래에 `4 / 12` 처럼 장 번호가 있습니다. 두 차시 묶음은 차시마다 따로 세어 `3차시 1 / 4` 로 적습니다 (`src/components/slides/counter.ts`).
+- 글은 모두 고칠 수 있는 글상자입니다. 줄 간격은 고정값입니다. 글자 크기를 줄이는 자동 맞춤은 쓰지 않습니다. 낱말 장의 '이렇게 써요' 상자만 글에 맞춰 상자가 늘어납니다 (다른 글꼴로 열어 줄이 늘어도 글이 상자 밖으로 나가지 않게).
+- 그림 없는 항목 장, 견주기 장, 활동 장, 그림 있는 단계 장의 글은 크게 쓰고 넘치면 한 단계씩 줄입니다 (`STAGE_FIT`). 웹 무대와 같은 크기 차례를 씁니다. 그림 틀의 짧은 변이 200px(`STAGE_PICTURE.shortSide`)보다 작아지면 넘친 것으로 셉니다.
+- 그림이 넷인 단계 장은 한 줄과 2 × 2 가운데 그림이 더 크게 그려지는 쪽으로 놓습니다. 단계 그림의 출처 표시가 모두 같으면 목록 아래에 한 번만 찍습니다.
+- 1번 장(표지)에 `footerNotice(lesson)` 이 찍힙니다. 공개하지 않은 차시는 2번 장부터 장마다 왼쪽 아래에 초안 표시가 있습니다.
+- 파일 정보(`docProps/core.xml`): 제목 `<차시 제목> 수업 화면`(초안은 앞에 `[검수 전 초안] `), 만든 이·마지막으로 고친 이 `SITE.author`, 키워드 `CC BY-NC-SA 4.0`, 판 1. 날짜는 공개된 차시는 승인한 날, 초안은 2026-01-01 로 고정합니다 (빌드할 때마다 파일이 달라지지 않게). `docProps/app.xml` 에는 장 수만 적고, 화면 크기에 4:3 이름(`type="screen4x3"`)을 남기지 않습니다.
 - 메모란은 `slideNotes(lesson, no)` 입니다. 퀴즈 장은 그 뒤에 `정답: …`, `풀이: …` 두 줄이 붙습니다 (화면에는 정답을 찍지 않습니다).
-- 마지막 장은 '그림 출처'입니다: `shownMedia(lesson, 'slides')` 의 `creditFull()` 과 그 주소, 맨 아래 `sheetFooter(lesson)`. 길면 여러 장으로 나뉩니다.
+- 마지막 장은 '그림 출처'입니다: `creditList(shownMedia(lesson, 'slides'))` 와 그 주소, 맨 아래 `sheetFooter(lesson)`. 수업 중에 띄우는 장이라 그림 제목은 넣지 않고, 같은 출처는 `그림 5장: …` 처럼 한 줄로 묶습니다. 길면 앞 장을 실제 자리만큼 채운 뒤에 다음 장을 엽니다 (앞 장에 들어갈 한 줄만 따로 남은 장을 만들지 않습니다).
 - 그림은 원본 비율 그대로 틀 안에 넣습니다. 자르기 값을 쓰지 않습니다. 그림 바로 아래에 `creditShort()` 를 찍습니다.
 - 색은 `src/styles/tokens.css` 의 것만 씁니다 (`lessons.json` 으로 넘어옵니다).
+
+## LibreOffice 로 열 때
+
+LibreOffice Impress 는 한글과 로마자·숫자·문장 부호 사이에 조금 넓은 틈을 둡니다 (Impress 의 문단 설정 '아시아 문자와 비아시아 문자 사이 간격'). PPTX(DrawingML)에는 이 간격을 끄는 속성이 없어서 파일 쪽에서 막을 수 없습니다. 파일의 글은 그대로이고, 웹 무대에는 이 틈이 없습니다. 글을 고쳐 틈을 메우지 않습니다. 아래는 LibreOffice 로 PDF 를 찍은 낱말 장입니다 (`( 본 것 )+`, `( 아는 것 )` 의 괄호 앞뒤).
+
+![LibreOffice 에서 괄호와 기호 앞뒤에 틈이 생긴 모습](libreoffice-spacing.png)
+
+넘침 시험(`tests/slides/pptx.test.ts`)은 이 틈까지 넣어 LibreOffice 로 찍은 글이 글상자 안에 있는지 봅니다 (줄바꿈을 셀 때 상자 폭의 95% 만 쓰는 까닭입니다).
 
 ## `.cache/lessons.json`
 
@@ -42,6 +53,8 @@ node generators/pptx/build.mjs --out .cache/tests/x   # 다른 dist 폴더 (캐�
   "colors": { "bg": "FBFAF6", "card": "FFFFFF", "navy": "132C3D", "teal": "18766B", "teal-soft": "E3F0EC", "coral": "D9734E", … }, // tokens.css 의 색 전부 (# 없이 대문자)
   "fonts": { "name": "Pretendard", "regular": "<절대 경로>/Pretendard-Regular.ttf", "bold": "<절대 경로>/Pretendard-Bold.ttf" },
   "type": { "cover": 104, "title": 72, "body": 44, … },          // 글자 크기 px (src/components/slides/copy.ts 의 STAGE_TYPE)
+  "fit": { "points": [56, 52, 48, 44], … },                      // 장에 맞게 줄어드는 글의 크기 차례 (STAGE_FIT)
+  "picture": { "compareMin": 360, "shortSide": 200 },            // 그림 틀의 크기 (STAGE_PICTURE)
   "copy": { "slide": { "term": "새 낱말", "quiz": "확인 퀴즈", … } }, // 장 안의 이름표 (SLIDE_COPY)
   "lessons": [
     {
@@ -49,10 +62,12 @@ node generators/pptx/build.mjs --out .cache/tests/x   # 다른 dist 폴더 (캐�
       "title": "…",
       "pptx": "<절대 경로>/.cache/files/5-2/1/01/slides.pptx",      // Python 이 쓰는 자리. build.mjs 가 dist 로 복사한다
       "cover": { "meta": "단원명 · 1차시 · 교과서 6~9쪽", "notice": "footerNotice(lesson)" },
+      "draft": "검수 전 초안입니다. …",                              // 공개하지 않은 차시만. 공개된 차시는 null
+      "doc": { "title": "[검수 전 초안] … 수업 화면", "author": "SITE.author", "keywords": "CC BY-NC-SA 4.0", "date": "2026-01-01T00:00:00Z" },
       "slides": [ /* 아래 */ ],
       "credits": {
         "heading": "그림 출처", "empty": "…", "more": "({n}/{total})",
-        "items": [ { "text": "creditFull().text", "sourceUrl": "…", "licenceUrl": "…" } ],
+        "items": [ { "text": "creditList() 의 text", "sourceUrl": "…", "licenceUrl": "…" } ],
         "footer": "sheetFooter(lesson)"
       }
     }
@@ -60,7 +75,7 @@ node generators/pptx/build.mjs --out .cache/tests/x   # 다른 dist 폴더 (캐�
 }
 ```
 
-장마다 `no`(1부터), `layout`, `notes`(메모란 줄들)가 있고, layout 에 따라 아래 칸이 더 있습니다. 그림(`media`)은 `{ "id": "5-2/1/01/stone", "file": "<절대 경로: jpg·png, SVG 는 바꾼 PNG>", "alt": "…", "credit": "creditShort()" }` 입니다.
+장마다 `no`(1부터), `layout`, `notes`(메모란 줄들), `counter`(장 번호 글, `slideCounter()`)가 있고, layout 에 따라 아래 칸이 더 있습니다. 그림(`media`)은 `{ "id": "5-2/1/01/stone", "file": "<절대 경로: jpg·png, SVG 는 바꾼 PNG>", "alt": "…", "credit": "creditShort()" }` 입니다.
 
 | layout | 칸 |
 |---|---|

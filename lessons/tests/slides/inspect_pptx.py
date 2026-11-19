@@ -41,5 +41,10 @@ for n in z.namelist():
         colors.update(re.findall(r'<a:srgbClr val="([0-9A-Fa-f]{6})"', x))
         faces.update(re.findall(r'typeface="([^"]+)"', x))
 out['colors'] = sorted(c.upper() for c in colors)
+cp = prs.core_properties
+out['core'] = {'title': cp.title, 'author': cp.author, 'last_modified_by': cp.last_modified_by, 'comments': cp.comments,
+               'keywords': cp.keywords, 'revision': cp.revision}
+out['raw'] = {'core': z.read('docProps/core.xml').decode(), 'app': z.read('docProps/app.xml').decode(),
+              'sldSz': (re.search(r'<p:sldSz[^>]*>', pres) or [''])[0]}
 out['faces'] = sorted(faces)
 print(json.dumps(out, ensure_ascii=False))

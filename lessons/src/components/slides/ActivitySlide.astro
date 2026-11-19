@@ -1,16 +1,17 @@
 ---
-// 활동 안내. 할 일은 왼쪽에 번호를 붙여, 시간과 준비물은 오른쪽 상자에 둔다.
-import { SLIDE_COPY } from './copy.ts';
+// 활동 안내. 할 일은 왼쪽에 번호를 붙여, 시간과 준비물은 오른쪽 상자에 둔다. 할 일은 크게(STAGE_FIT.activity) 쓰고 넘치면 줄인다.
+import { SLIDE_COPY, STAGE_FIT } from './copy.ts';
 import type { SlideProps } from './types.ts';
 
 type Props = SlideProps<'activity'>;
 const { slide } = Astro.props;
 const aside = slide.minutes !== undefined || slide.materials.length > 0;
+const fit = STAGE_FIT.activity;
 ---
-<div class:list={['sl-activity', aside && 'has-aside']}>
+<div class:list={['sl-activity', aside && 'has-aside']} data-fit={fit.join(' ')} style={`--fit: ${fit.at(-1)}`}>
   <h2 class="sl-title">{slide.title}</h2>
   <div class="sl-activity-body">
-    <ol class="sl-list sl-list-tight">
+    <ol class="sl-list sl-list-tight sl-fit">
       {slide.instructions.map((t, i) => <li><span class="sl-num" aria-hidden="true">{i + 1}</span><span class="sl-li-text">{t}</span></li>)}
     </ol>
     {aside && (

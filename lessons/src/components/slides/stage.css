@@ -45,6 +45,13 @@ body[data-kind='stage'] { background: var(--bg); }
   position: absolute; right: calc(48 * var(--u)); bottom: calc(36 * var(--u));
   font-size: calc(24 * var(--u)); line-height: 1; color: var(--gray); font-variant-numeric: tabular-nums;
 }
+/* 공개하지 않은 차시: 장마다 왼쪽 아래에 초안 표시 (STAGE_TYPE.draft) */
+.sl-draft {
+  position: absolute; left: calc(var(--pad-x) * var(--u)); bottom: calc(34 * var(--u)); max-width: calc(1400 * var(--u));
+  font-size: calc(28 * var(--u)); line-height: 1; color: var(--gray);
+}
+/* 장에 맞게 줄어드는 글 (copy.ts 의 STAGE_FIT). 스크립트가 data-fit 의 크기를 앞에서부터 해 보고 --fit 을 고른다. */
+.sl-fit { font-size: calc(var(--fit) * var(--u)); }
 
 /* ───────── 글자 ───────── */
 .sl-title { font-size: calc(72 * var(--u)); font-weight: 700; line-height: 1.25; margin-bottom: calc(48 * var(--u)); flex: none; }
@@ -62,12 +69,19 @@ body[data-kind='stage'] { background: var(--bg); }
 .sl-li-text { flex: 1; min-width: 0; }
 .sl-list-tight { gap: calc(20 * var(--u)); }
 
-/* 그림: 틀 안에 contain 으로 줄이고 자르지 않는다. 출처 표시는 그림 아래 오른쪽에 붙인다. */
-.slide .media { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
-.slide .media img { flex: 1 1 0; min-height: 0; width: 100%; height: 100%; max-width: 100%; object-fit: contain; object-position: center; }
+/* 그림: 틀(figure) 안에 contain 으로 줄이고 자르지 않는다. 그림과 출처 표시를 한 덩어리로 틀의 가운데에 두어
+   출처 표시가 그려진 그림 바로 아래에 붙는다 (그림은 폭에 맞춘 뒤, 높이가 모자라면 flex 로 줄어든다). */
+.slide .media { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 0; min-width: 0; }
+.slide .media img { flex: 0 1 auto; min-height: 0; width: 100%; height: auto; max-height: 100%; object-fit: contain; object-position: center; }
 .slide .media figcaption {
-  flex: none; justify-content: center; text-align: center;
+  flex: none; justify-content: center; text-align: center; max-width: 100%;
   margin-top: calc(10 * var(--u)); font-size: calc(24 * var(--u)); line-height: 1.3; color: var(--gray);
+}
+/* 그림 파일을 불러오지 못했을 때 그림 자리에 두는 틀 (Stage.astro 의 스크립트가 넣는다). 출처 표시는 그대로 둔다. */
+.slide .media .sl-missing {
+  flex: 1 1 auto; align-self: stretch; display: grid; place-items: center; min-height: calc(120 * var(--u)); padding: calc(24 * var(--u));
+  border: calc(3 * var(--u)) solid var(--line); border-radius: calc(20 * var(--u)); background: var(--card);
+  font-size: calc(30 * var(--u)); line-height: 1.3; color: var(--gray); text-align: center;
 }
 
 /* ───────── 표지 ───────── */
@@ -98,8 +112,12 @@ body[data-kind='stage'] { background: var(--bg); }
 
 /* ───────── 항목 ───────── */
 .sl-points-body { flex: 1; min-height: 0; display: flex; gap: calc(72 * var(--u)); }
-.sl-points-body .sl-list { flex: 1; min-width: 0; font-size: calc(48 * var(--u)); justify-content: flex-start; }
+.sl-points-body .sl-list { flex: 1; min-width: 0; justify-content: flex-start; }
 .sl-points.has-media .sl-points-body .sl-list { font-size: calc(44 * var(--u)); }
+/* 그림이 없으면 항목을 크게 쓰고 제목 아래 남은 자리의 위아래 가운데에 둔다 */
+.sl-points:not(.has-media) .sl-points-body { align-items: center; }
+.sl-points:not(.has-media) .sl-list { gap: calc(48 * var(--u)); }
+.sl-points:not(.has-media) .sl-list .sl-num { margin-top: calc((var(--fit) * 1.4 - 64) / 2 * var(--u)); }
 .sl-points-body .sl-list .sl-num { margin-top: calc(1 * var(--u)); }
 .sl-points-body > .media { flex: 0 0 calc(620 * var(--u)); }
 
@@ -112,10 +130,10 @@ body[data-kind='stage'] { background: var(--bg); }
 .sl-label { flex: none; align-self: flex-start; font-size: calc(44 * var(--u)); font-weight: 700; color: var(--teal); line-height: 1.3; }
 .sl-card > .media { flex: 1 1 0; }
 /* 그림이 없으면 카드는 글 높이만큼만 (두 카드는 같은 높이) */
-.sl-compare-body:not(.has-media) { flex: none; align-items: stretch; }
+.sl-compare-body:not(.has-media) { flex: none; align-items: stretch; margin-block: auto; }
 .sl-bullets { flex: none; display: flex; flex-direction: column; gap: calc(12 * var(--u)); line-height: 1.32; }
 .sl-bullets > li { position: relative; padding-left: calc(36 * var(--u)); }
-.sl-bullets > li::before { content: ''; position: absolute; left: 0; top: calc(25 * var(--u)); width: calc(14 * var(--u)); height: calc(14 * var(--u)); border-radius: 50%; background: var(--teal); }
+.sl-bullets > li::before { content: ''; position: absolute; left: 0; top: calc((var(--fit, 44) * 1.32 / 2 - 7) * var(--u)); width: calc(14 * var(--u)); height: calc(14 * var(--u)); border-radius: 50%; background: var(--teal); }
 
 /* ───────── 단계 ───────── */
 .sl-steps-list { flex: 1; min-height: 0; display: flex; }
@@ -131,6 +149,15 @@ body[data-kind='stage'] { background: var(--bg); }
 .sl-steps-list.is-across .sl-chip { justify-self: start; }
 .sl-steps-list.is-across .media, .sl-media-gap { flex: 1 1 0; min-height: 0; }
 .sl-step-text { line-height: 1.35; min-width: 0; }
+/* 그림 넷: 2 × 2. 칸마다 그림은 왼쪽, 이름표와 글은 오른쪽 (스크립트가 한 줄보다 그림이 크게 그려질 때만 고른다) */
+.sl-steps-list.is-across[data-arrange='grid'] { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); column-gap: calc(48 * var(--u)); row-gap: calc(40 * var(--u)); }
+.sl-steps-list.is-across[data-arrange='grid'] .sl-step { grid-row: auto; grid-template-rows: auto minmax(0, 1fr); grid-template-columns: minmax(0, 55fr) minmax(0, 45fr); column-gap: calc(32 * var(--u)); row-gap: calc(16 * var(--u)); padding-top: calc(20 * var(--u)); }
+.sl-steps-list.is-across[data-arrange='grid'] .sl-step > .media, .sl-steps-list.is-across[data-arrange='grid'] .sl-media-gap { grid-column: 1; grid-row: 1 / span 2; }
+.sl-steps-list.is-across[data-arrange='grid'] .sl-chip { grid-column: 2; grid-row: 1; }
+.sl-steps-list.is-across[data-arrange='grid'] .sl-step-text { grid-column: 2; grid-row: 2; }
+/* 단계 그림의 출처 표시가 모두 같으면 목록 아래에 한 번만 */
+.has-shared-credit .sl-step .media figcaption { display: none; }
+.sl-shared-credit { flex: none; margin-top: calc(16 * var(--u)); text-align: right; font-size: calc(24 * var(--u)); line-height: 1.3; color: var(--gray); }
 .sl-chip {
   display: inline-block; padding: calc(6 * var(--u)) calc(18 * var(--u)); border-radius: calc(40 * var(--u)); white-space: nowrap;
   background: var(--teal-soft); color: var(--teal); font-weight: 700; line-height: 1.3; text-align: center;
@@ -151,7 +178,7 @@ body[data-kind='stage'] { background: var(--bg); }
 .sl-source { flex: none; margin-top: calc(20 * var(--u)); font-size: calc(30 * var(--u)); color: var(--gray); line-height: 1.3; }
 
 /* ───────── 활동 ───────── */
-.sl-activity-body { flex: 1; min-height: 0; display: flex; gap: calc(64 * var(--u)); }
+.sl-activity-body { flex: 0 1 auto; min-height: 0; margin-block: auto; display: flex; gap: calc(64 * var(--u)); }
 .sl-activity-body .sl-list { flex: 1; min-width: 0; line-height: 1.35; }
 .sl-aside {
   flex: 0 0 calc(540 * var(--u)); align-self: flex-start; display: flex; flex-direction: column; gap: calc(32 * var(--u));
@@ -213,7 +240,7 @@ body[data-kind='stage'] { background: var(--bg); }
   font-size: var(--fs-sm); line-height: 1.2;
   opacity: 0; pointer-events: none; transition: opacity 0.2s;
 }
-.stage.is-awake .hud, .stage-js .hud:focus-within { opacity: 1; pointer-events: auto; }
+.stage.is-awake .hud, .stage-js .hud:has(:focus-visible) { opacity: 1; pointer-events: auto; }
 .stage.is-awake .screen { cursor: pointer; }
 .hud button, .hud a {
   display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid transparent; border-radius: var(--radius-sm);
@@ -225,6 +252,10 @@ body[data-kind='stage'] { background: var(--bg); }
 .hud kbd { font: inherit; font-size: var(--fs-xs); color: var(--gray); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; min-width: 1.6em; text-align: center; }
 .hud-count { margin: 0 4px; color: var(--gray); font-variant-numeric: tabular-nums; }
 .hud-gap { width: 1px; align-self: stretch; background: var(--line); margin: 4px 4px; }
+
+/* ───────── 화면 가리기 (B, .) ───────── */
+.stage-blank { position: fixed; inset: 0; z-index: 4; background: var(--bg); }
+.stage-blank[hidden] { display: none; }
 
 /* ───────── 교사 메모 (N) ───────── */
 .notes {
@@ -244,5 +275,5 @@ body[data-kind='stage'] { background: var(--bg); }
 .notes-hint { margin-top: 12px; color: var(--gray); font-size: var(--fs-md); }
 
 @media print {
-  .hud, .notes { display: none !important; }
+  .hud, .notes, .stage-blank { display: none !important; }
 }
