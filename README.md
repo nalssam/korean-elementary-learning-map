@@ -159,6 +159,10 @@ KR 별칭(`build:kr`, `test:kr`, `validate:kr`, `check:kr:content`, `check:kr:li
 - 저작자·영감 표시와 비승인 고지: [`NOTICE.md`](NOTICE.md)
 - 세부 출처와 권리 상태: [`PROVENANCE.md`](PROVENANCE.md)
 
+### `lessons/` 폴더는 조건이 다릅니다
+
+[`lessons/`](lessons/) 폴더는 이 저장소에 따로 놓은 초등 사회 수업 자료 프로젝트이고, 위 문단의 MIT 라이선스가 통째로 적용되지 않습니다. 코드는 [`lessons/LICENSE`](lessons/LICENSE)(MIT)를, 수업 자료는 [`lessons/LICENSE-CONTENT.md`](lessons/LICENSE-CONTENT.md)(CC BY-NC-SA 4.0)를 따릅니다. 그 안에 실린 남의 사진과 그림은 저마다 적힌 조건을 따르며, 출처는 [`lessons/NOTICE.md`](lessons/NOTICE.md)와 각 차시 명세에 있습니다.
+
 ### 한국 공식 자료 재사용 — 공개 공식 자료(cleared)
 
 교육부·국가교육위원회 고시와 별책, NCIC가 배포하는 공식 교육과정 문서는 국가가 공표한 공개 자료로, 누구나 원 출처(교육부·NCIC)에서 이용할 수 있습니다. 따라서 이 저장소는 해당 공식 출처의 권리 상태를 **공개 공식 자료(cleared)**로 기록합니다. 저장소의 **MIT 라이선스**는 저장소가 직접 저작한 산출물(빌드 스크립트, 검증기, 데이터셋, 온톨로지 변환 등)에 적용되며, 인용한 공식 문서 자체는 원 출처의 공공저작물 이용 조건을 따릅니다. 사용 시 원 출처 표시를 유지하세요. 이는 법률 자문이 아닙니다.
