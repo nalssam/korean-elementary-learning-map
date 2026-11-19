@@ -1,0 +1,51 @@
+# 시험용 가짜 차시표입니다. 실제 교과서와 관계없습니다.
+# 한 차시 묶음(01), 두 차시 묶음(02-03), no_play 묶음(04), 단원 정리 묶음(05), 명세가 없는 묶음(2단원 01)을 담았습니다.
+schema_version: 1
+curriculum: 시험용 교육과정
+textbook:
+  publisher: 시험용 출판사
+  author: 시험용 저자
+semesters:
+  - id: "3-1"
+    units: []
+  - id: "3-2"
+    units: []
+  - id: "4-1"
+    units: []
+  - id: "4-2"
+    units: []
+  - id: "5-1"
+    units: []
+  - id: "5-2"
+    blurb: 시험용 학기 소개
+    units:
+      - no: 1
+        title: 시험용 첫 단원
+        standards: ["6사04-01", "6사04-02"]
+        bundles:
+          - id: "01"
+            pages: [6, 9]
+            focus: 시험용 한 차시 묶음
+            role: intro
+          - id: "02-03"
+            pages: [10, 15]
+            focus: 시험용 두 차시 묶음
+            standards: ["6사04-02"]
+          - id: "04"
+            pages: [15, 19]
+            focus: 시험용 no_play 묶음
+          - id: "05"
+            pages: [20, 23]
+            focus: 시험용 단원 정리 묶음
+            role: review
+      - no: 2
+        title: 시험용 둘째 단원
+        standards: ["6사05-01"]
+        bundles:
+          - id: "01"
+            pages: [24, 27]
+            focus: 명세가 아직 없는 묶음
+  - id: "6-1"
+    units: []
+  - id: "6-2"
+    units: []

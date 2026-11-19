@@ -1,0 +1,35 @@
+---
+// 시험용 인쇄 페이지: 컬러링이 ready 인 차시에만 생긴다. 인쇄 틀(PrintLayout, Sheet)을 쓰는 본보기다 (docs/CONTRACT.md 7절).
+// 한 쪽: 머리에 제목, 본문에 그림과 그 아래 '찾아볼 것'(look_for).
+// 도안의 가로세로 비는 정해져 있지 않다. 그림은 본문에서 '찾아볼 것'과 출처 표시를 뺀 높이에 맞춰 줄인다 (세로로 긴 도안이 본문을 넘기지 않게).
+import Media from '#src/components/Media.astro';
+import PrintLayout from '#src/components/print/PrintLayout.astro';
+import Sheet from '#src/components/print/Sheet.astro';
+import { lessonPaths, loadLesson, printJobs } from '#lib/content.ts';
+
+export function getStaticPaths() { return lessonPaths('coloring'); }
+const lesson = loadLesson(Astro.props.id);
+const job = printJobs(lesson).find((j) => j.kind === 'coloring')!;
+const coloring = lesson.assets.coloring;
+---
+<PrintLayout lesson={lesson} job={job}>
+  {coloring.state === 'ready' && (
+    <Sheet lesson={lesson} job={job} no={1} title={coloring.title} name="student">
+      <div class="coloring">
+        <Media lesson={lesson} id={coloring.media} caption={false} class="coloring-picture" />
+        {coloring.look_for.length > 0 && (
+          <ul class="coloring-tasks">{coloring.look_for.map((task) => <li>{task}</li>)}</ul>
+        )}
+      </div>
+    </Sheet>
+  )}
+</PrintLayout>
+
+<style is:global>
+  /* 본문(.sheet-body)을 세로로 나눈다: 그림이 남는 높이를 모두 쓰고, '찾아볼 것'은 제 높이만 쓴다 */
+  .coloring { display: flex; flex-direction: column; height: 100%; }
+  .coloring-picture { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+  .coloring-picture img { flex: 1 1 0; min-height: 0; width: 100%; object-fit: contain; }
+  .coloring-picture figcaption { flex: none; }
+  .coloring-tasks { flex: none; margin: 3mm 0 0; padding-left: 6mm; font-size: 13pt; line-height: 1.5; }
+</style>

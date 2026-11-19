@@ -1,0 +1,208 @@
+# 시험용 가짜 명세입니다. 내용은 사실이 아니고 수업에 쓰는 자료가 아닙니다.
+# 한 차시 묶음의 본보기: 그림 한 장, 낱말 장, 카드(뒷면을 낱말 풀이에서 가져오는 카드 포함), 분류하기 웹 활동.
+schema_version: 1
+id: 5-2/1/01
+title: 시험용 한 차시
+tagline: 한 차시 묶음의 본보기입니다. 시험에서만 씁니다.
+status: draft
+
+objectives:
+  - 시험용 목표를 말한다.
+
+prepare:
+  - item: 시험용 준비물
+    qty: 모둠마다 1개
+
+terms:
+  new:
+    - term: 돌탑
+      meaning: 돌을 차곡차곡 쌓아 올린 것
+      facts: [f1]
+
+facts:
+  - id: f1
+    claim: 돌탑은 돌을 쌓아 만든다는 시험용 사실이다.
+    sources:
+      - name: 시험용 출처
+        title: 시험용 문서
+        url: https://example.org/fact/1
+        quote: 시험용 근거 구절 하나
+        accessed: "2026-11-18"
+  - id: f2
+    claim: 시험용 연표의 첫 해는 1392년이다.
+    sources:
+      - name: 시험용 출처
+        url: https://example.org/fact/2
+        quote: 시험용 근거 구절 둘
+        accessed: "2026-11-18"
+
+media:
+  - id: stone
+    kind: diagram
+    file: media/stone.svg
+    alt: 네모난 돌 세 개가 차곡차곡 쌓여 있는 그림
+    caption: 시험용 돌탑
+    credit:
+      holder: 시험용 그린이
+      licence: original
+    facts: [f1]
+
+flow:
+  - phase: 도입
+    minutes: 5
+    title: 시험용 도입
+    do:
+      - 그림을 띄웁니다.
+    ask:
+      - q: 무엇이 보이나요?
+        listen_for: 본 것을 말하는지 듣습니다.
+    uses: [slides]
+    slides: [1, 2]
+    facts: [f1]
+  - phase: 전개
+    minutes: 30
+    title: 시험용 전개
+    do:
+      - 학습지를 나누어 줍니다.
+      - 카드를 나누어 줍니다.
+    uses: [worksheet, cards, slides]
+    slides: [3, 3]
+    tip: 시험용 도움말
+  - phase: 정리
+    minutes: 5
+    title: 시험용 정리
+    do:
+      - 확인 퀴즈를 풉니다.
+    uses: [quiz, web_activity, slides]
+    slides: [4, 5]
+
+slides:
+  - layout: title
+    title: 시험용 한 차시
+    subtitle: 시험용 부제
+    notes: 시험용 진행 메모
+  - layout: picture
+    title: 무엇이 보이나요?
+    media: stone
+    caption: 돌 세 개
+    facts: [f1]
+  - layout: term
+    term: 돌탑
+    example: 돌 위에 돌을 올립니다.
+  - layout: quiz
+    item: 1
+  - layout: closing
+    title: 오늘 본 것을 말해 봅시다
+    points:
+      - 돌을 쌓으면 탑이 됩니다.
+
+worksheet:
+  title: 시험용 학습지
+  print:
+    per: student
+  pages:
+    - heading: 시험용 쪽
+      blocks:
+        - type: figure
+          media: stone
+          width: half
+        - type: prompt
+          text: 무엇이 보이는지 적어 봅시다.
+        - type: lines
+          count: 3
+        - type: sentence_frame
+          frame: 나는 ___을 보았다. 그래서 ___라고 생각한다.
+  guide:
+    - where: 문장 틀
+      text: 앞 칸에 본 것이 들어 있으면 됩니다.
+
+quiz:
+  items:
+    - type: ox
+      q: 돌탑은 돌을 쌓아 만든다.
+      answer: true
+      explain: 돌을 쌓아 올려 만듭니다.
+      facts: [f1]
+    - type: choice
+      q: 돌탑을 만드는 것은 무엇인가요?
+      choices: [돌, 물, 바람]
+      answer: 1
+      explain: 돌을 쌓습니다.
+      facts: [f1]
+    - type: short
+      q: 시험용 연표의 첫 해는 몇 년인가요?
+      answer: 1392
+      accept: [1392년]
+      explain: 1392년입니다.
+      facts: [f2]
+
+assets:
+  papercraft:
+    state: skip
+    reason: 시험용이라 만들지 않습니다.
+  coloring:
+    state: skip
+    reason: 시험용이라 만들지 않습니다.
+  making_kit:
+    state: skip
+    reason: 시험용이라 만들지 않습니다.
+  escape:
+    state: planned
+    idea: 시험용 계획
+  virtual3d:
+    state: skip
+    reason: 시험용이라 만들지 않습니다.
+  web_activity:
+    state: ready
+    title: 돌일까, 아닐까
+    instructions: 카드를 알맞은 상자에 넣어 봅시다.
+    activity:
+      kind: sort
+      bins:
+        - id: stone
+          label: 돌
+        - id: other
+          label: 돌이 아닌 것
+      items:
+        - text: 바위
+          bin: stone
+          why: 큰 돌입니다.
+        - text: 자갈
+          bin: stone
+        - text: 구름
+          bin: other
+        - text: 강물
+          bin: other
+      facts: [f1]
+  cards:
+    state: ready
+    title: 시험용 카드
+    cards:
+      - front: 돌탑
+        facts: [f1]
+      - front: 바위
+        back: 아주 큰 돌
+        facts: [f1]
+      - front: 자갈
+        back: 작고 둥근 돌
+        media: stone
+        facts: [f1]
+      - front: 1392
+        back: 시험용 연표의 첫 해
+        facts: [f2]
+    games:
+      - name: 뜻 듣고 맞히기
+        how: 뒷면을 읽으면 앞면을 맞힙니다.
+
+misconceptions:
+  - belief: 시험용 오개념
+    response: 시험용 받아 주는 말
+
+assessment:
+  look_for: 문장 틀의 앞 칸
+  where: 학습지
+
+teacher_notes:
+  - title: 시험용 메모
+    body:
+      - 시험용 메모 한 줄

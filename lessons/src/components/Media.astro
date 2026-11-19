@@ -1,0 +1,25 @@
+---
+// 그림 한 장. 계약 파일. 그림을 넣는 모든 페이지가 이것만 쓴다 (대체 글과 출처 표시를 빠뜨리지 않으려고).
+// 인쇄 페이지가 PDF 로 찍히기 전에 그림을 기다릴 수 있도록 loading="lazy" 를 붙이지 않는다.
+import { creditShort, getMedia, mediaRoute } from '#lib/content.ts';
+import type { Lesson } from '#schema/lesson.ts';
+import { href } from '#src/lib/url.ts';
+
+interface Props {
+  lesson: Lesson;
+  /** 그림 id. 같은 단원 앞 묶음의 그림은 "05/rain-gauge" */
+  id: string;
+  /** 명세의 caption 을 찍을지 (기본: 찍는다). 출처 표시는 늘 찍는다. */
+  caption?: boolean;
+  class?: string;
+}
+const { lesson, id, caption = true, class: cls } = Astro.props;
+const m = getMedia(lesson, id);
+---
+<figure class:list={['media', cls]}>
+  <img src={href(mediaRoute(lesson, id))} alt={m.alt} decoding="async" />
+  <figcaption>
+    {caption && m.caption && <span class="media-caption">{m.caption}</span>}
+    <span class="media-credit">{creditShort(m)}</span>
+  </figcaption>
+</figure>

@@ -1,0 +1,54 @@
+---
+// 모든 페이지의 <html>. 계약 파일.
+// 글꼴과 디자인 기준값을 여기 한 곳에서만 싣고, 검색 로봇 표시와 맨 아래 문구(AI 사용 표시·초안 표시)를 여기에서만 정한다.
+// 담당마다 만드는 틀(SiteLayout, PrintLayout, Stage, StudentLayout)은 모두 이 파일을 감싼다.
+import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
+import '../styles/tokens.css';
+import { footerNotice, isPublic, showDrafts } from '#lib/content.ts';
+import { SITE } from '#lib/site.ts';
+import type { Lesson } from '#schema/lesson.ts';
+
+interface Props {
+  /** <title> 앞부분. 뒤에 사이트 이름이 붙는다. */
+  title: string;
+  description?: string;
+  /** site: 사이트 화면 · print: 인쇄 페이지 · stage: 수업 화면 · student: 학생 페이지(퀴즈·웹 활동) */
+  kind: 'site' | 'print' | 'stage' | 'student';
+  /** 차시에 딸린 페이지이면 그 차시. 초안인지 보고 맨 아래 문구를 고른다. */
+  lesson?: Lesson;
+}
+const { title, description = SITE.tagline, kind, lesson } = Astro.props;
+const draft = lesson ? !isPublic(lesson) : false;
+// 미리 보기 빌드(SHOW_DRAFTS=1)는 통째로 검색에서 뺀다. 공개 빌드에서는 사이트 화면만 검색에 나온다.
+// 초안의 페이지는 어느 빌드에서든 검색에 내놓지 않는다 (lessonPaths() 를 쓰지 않은 페이지가 초안을 공개 빌드에 섞어 넣는 실수가 있어도).
+const robots = showDrafts() || draft ? 'noindex,nofollow' : kind === 'site' ? undefined : 'noindex';
+---
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} · {SITE.name}</title>
+    <meta name="description" content={description} />
+    {robots && <meta name="robots" content={robots} />}
+    <slot name="head" />
+  </head>
+  <body data-kind={kind} data-draft={draft ? 'true' : undefined}>
+    <slot />
+    {(kind === 'site' || kind === 'student') && <p class="site-notice">{footerNotice(lesson)}</p>}
+  </body>
+</html>
+
+<style is:global>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font); font-size: var(--fs-md); line-height: var(--lh); color: var(--navy); background: var(--bg); word-break: keep-all; overflow-wrap: anywhere; }
+  h1, h2, h3 { line-height: var(--lh-tight); text-wrap: balance; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .site-notice { margin: var(--s6) auto var(--s5); padding: 0 var(--s4); max-width: var(--content); font-size: var(--fs-xs); color: var(--gray); }
+  /* 그림은 자르지 않는다 (이용 조건이 변경을 금지한 사진이 있다). 틀에 맞출 때는 contain 으로 줄인다. */
+  .media { margin: 0; }
+  .media img { display: block; max-width: 100%; height: auto; object-fit: contain; }
+  .media figcaption { display: flex; flex-wrap: wrap; gap: 0 var(--s2); font-size: var(--fs-xs); color: var(--gray); }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+</style>

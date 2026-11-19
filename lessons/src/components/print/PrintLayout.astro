@@ -1,0 +1,28 @@
+---
+// 인쇄 페이지의 틀. 화면에서는 인쇄 안내와 버튼이 보이고, 인쇄할 때는 종이(.sheet)만 나온다.
+// 뼈대는 계약과 함께 들어왔고 인쇄물 담당이 이어서 채운다. props 는 바꾸지 않는다.
+import Base from '#src/layouts/Base.astro';
+import '#src/styles/print.css';
+import { lessonRoute } from '#lib/content.ts';
+import type { PrintJob } from '#lib/content.ts';
+import { printLine } from '#lib/site.ts';
+import type { Lesson } from '#schema/lesson.ts';
+import { href } from '#src/lib/url.ts';
+
+interface Props {
+  lesson: Lesson;
+  /** printJobs(lesson) 가운데 이 페이지의 것 */
+  job: PrintJob;
+}
+const { lesson, job } = Astro.props;
+---
+<Base title={`${lesson.title} ${job.label}`} kind="print" lesson={lesson}>
+  <div class="print-bar no-print">
+    <button type="button" onclick="window.print()">{job.label} 인쇄</button>
+    <a href={href(job.file)} download={job.download}>PDF 내려받기</a>
+    <a href={href(lessonRoute(lesson.id))}>차시 안내로 돌아가기</a>
+    <p>{printLine(job.print, job.pages)} · {job.print.paper}{job.print.materials.length > 0 && ` · 준비물: ${job.print.materials.join(', ')}`}</p>
+    {job.print.note && <p>{job.print.note}</p>}
+  </div>
+  <slot />
+</Base>

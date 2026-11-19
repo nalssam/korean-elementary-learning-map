@@ -1,0 +1,371 @@
+# 5학년 2학기 1단원 1차시 — 초안(draft). 사실 검증과 문장 다듬기를 거치기 전입니다.
+# 차시 번호·쪽수·성취기준은 차시표(content/registry.yaml)에 있습니다.
+schema_version: 1
+id: 5-2/1/01
+title: 고인돌, 누가 어떻게?
+tagline: 단원의 첫 시간입니다. 지식을 가르치기 전에, 옛사람의 생활을 알아내는 방법인 추론을 먼저 손에 쥐여 줍니다.
+status: draft
+
+objectives:
+  - 유적과 유물이 무엇인지 예를 들어 말한다.
+  - 눈으로 본 것과 짐작한 것을 구분하고, 본 것을 근거로 옛사람의 생활을 짐작한다.
+
+sensitivity:
+  level: none
+
+terms:
+  new:
+    - term: 유적
+      meaning: 옛사람이 남긴 자취 가운데 건물이나 무덤처럼 옮길 수 없는 것
+      facts: [f5]
+    - term: 유물
+      meaning: 옛사람이 남긴 물건 가운데 그릇이나 도구처럼 옮길 수 있는 것
+      facts: [f6]
+    - term: 추론
+      meaning: 이미 아는 것을 근거로 삼아 모르는 것을 짐작하는 일
+      facts: [f7]
+    - term: 고인돌
+      meaning: 큰 돌을 받쳐 올려 만든 옛 무덤
+      facts: [f1]
+
+facts:
+  - id: f1
+    claim: 고인돌은 큰 돌을 받쳐 올려 만든 옛 무덤이다.
+    sources:
+      - name: 유네스코 세계유산센터
+        title: Gochang, Hwasun and Ganghwa Dolmen Sites
+        url: https://whc.unesco.org/en/list/977
+        accessed: "2026-11-18"
+  - id: f2
+    claim: 탁자식 고인돌은 굄돌을 세우고 그 위에 넓은 덮개돌을 올린 모양이다.
+    sources:
+      - name: 유네스코 세계유산센터
+        title: Gochang, Hwasun and Ganghwa Dolmen Sites
+        url: https://whc.unesco.org/en/list/977
+        accessed: "2026-11-18"
+  # 초안: 아래 f3, f5, f6, f7 은 출처를 아직 달지 않았습니다. 사실 검증 때 공개 출처와 근거 구절을 채웁니다.
+  - id: f3
+    claim: 고인돌의 덮개돌은 굄돌을 세운 뒤 흙을 쌓아 언덕을 만들고, 통나무를 깔아 끌어 올린 다음 흙을 걷어 내는 차례로 올렸을 것으로 짐작한다.
+  - id: f4
+    claim: 서울 암사동 집터 유적에서 나온 빗살무늬 토기는 바닥이 뾰족하고 겉에 빗금 무늬가 새겨져 있다.
+    sources:
+      - name: 국립중앙박물관
+        title: 빗살무늬토기 (신수22891)
+        url: https://www.museum.go.kr/MUSEUM/contents/M0502000000.do?schM=view&searchId=search&relicId=4328
+        accessed: "2026-11-18"
+  - id: f5
+    claim: 유적은 옛사람이 남긴 자취 가운데 건물이나 무덤처럼 옮길 수 없는 것을 말한다.
+  - id: f6
+    claim: 유물은 옛사람이 남긴 물건 가운데 그릇이나 도구처럼 옮길 수 있는 것을 말한다.
+  - id: f7
+    claim: 추론은 이미 아는 것을 근거로 삼아 모르는 것을 짐작하는 일이다.
+
+media:
+  - id: dolmen-parts
+    kind: diagram
+    file: media/dolmen-parts.svg
+    alt: 탁자식 고인돌을 옆에서 본 그림. 굄돌 두 개가 서 있고 그 위에 넓은 덮개돌이 올라가 있다.
+    caption: 탁자식 고인돌의 생김새
+    credit:
+      holder: 몽당분필 날쌤
+      licence: original
+    facts: [f2]
+  - id: pottery-amsa
+    kind: photo
+    file: media/pottery-amsa.jpg
+    alt: 바닥이 뾰족하고 겉면에 빗금 무늬가 가득 새겨진 흙 그릇
+    credit:
+      holder: 국립중앙박물관
+      title: 빗살무늬토기 (신수22891)
+      source_url: https://www.museum.go.kr/MUSEUM/contents/M0502000000.do?schM=view&searchId=search&relicId=4328
+      licence: KOGL-1
+      # TODO(내용): 원본 페이지에서 이용 조건(공공누리 유형)을 다시 확인하고 이 날짜를 고친다
+      checked: "2026-11-18"
+    change: cropped
+
+flow:
+  - phase: 도입
+    minutes: 8
+    title: 고인돌 사진을 보고 첫 생각 적기
+    do:
+      - 고인돌 사진을 크게 띄우고 30초 동안 말없이 보게 합니다.
+      - 떠오른 생각을 한 줄씩 적어 칠판에 붙이게 합니다.
+      - 붙인 생각은 지우지 않고 수업이 끝날 때까지 둡니다.
+    ask:
+      - q: 이 큰 돌을 누가, 어떻게 올렸을까요?
+        listen_for: 맞고 틀림을 가리지 않습니다. 본 것을 말하는지, 짐작을 말하는지만 들어 둡니다.
+    uses: [slides]
+    slides: [1, 3]
+    facts: [f1]
+  - phase: 전개
+    minutes: 12
+    title: 고인돌을 세워 보며 차례 짐작하기
+    do:
+      - 모둠마다 고인돌 페이퍼크래프트를 나누어 줍니다.
+      - 굄돌을 먼저 세우고 덮개돌을 올리게 합니다.
+      - 차례 카드 네 장을 섞어 놓고, 왜 그 차례라고 생각하는지 근거를 먼저 말하게 합니다.
+    ask:
+      - q: 덮개돌을 굄돌 위로 올리려면 무엇이 더 있어야 할까요?
+        listen_for: 흙 언덕, 통나무, 많은 사람 같은 말이 나오면 "그렇게 생각한 까닭"을 되묻습니다.
+    uses: [papercraft, slides]
+    slides: [4, 6]
+    tip: 굄돌 둘, 막음돌, 덮개돌을 한 사람씩 맡게 합니다.
+    facts: [f2, f3]
+  - phase: 전개
+    minutes: 16
+    title: 유물 두 점에게 묻기
+    do:
+      - 학습지 1쪽에서 고인돌을 보고 본 것, 짐작한 것, 까닭을 나누어 적게 합니다.
+      - 학습지 2쪽에서 이름을 알려 주지 않은 유물 두 점을 같은 방법으로 살피게 합니다.
+      - 짝과 바꾸어 읽고, 까닭 칸에 본 것이 들어 있는지 확인하게 합니다.
+    ask:
+      - q: 그건 눈으로 본 것인가요, 머리로 생각한 것인가요?
+        listen_for: 본 것 칸에 짐작을 적은 아이가 스스로 옮겨 적는지 봅니다.
+    uses: [worksheet, slides]
+    slides: [7, 9]
+    facts: [f4]
+  - phase: 정리
+    minutes: 4
+    title: 처음 생각과 견주어 보기
+    do:
+      - 확인 퀴즈로 본 것과 짐작한 것을 구분하는지 확인합니다.
+      - 칠판에 남겨 둔 첫 생각으로 돌아가 달라진 점을 한 명이 말하게 합니다.
+    uses: [quiz, slides]
+    slides: [10, 11]
+
+slides:
+  - layout: title
+    title: 고인돌, 누가 어떻게?
+    subtitle: 옛사람이 남긴 것에게 묻는 시간
+    notes: 제목만 띄워 두고 자리를 정돈합니다. 오늘은 정답을 알려 주지 않는 시간이라고 미리 말해 둡니다.
+  - layout: picture
+    title: 무엇이 보이나요?
+    media: dolmen-parts
+    notes: 30초 동안 말없이 보게 합니다. 이름은 아직 알려 주지 않습니다.
+    facts: [f2]
+  - layout: question
+    kicker: 첫 생각
+    title: 이 큰 돌을 누가, 어떻게 올렸을까요?
+    hint: 생각을 한 줄로 적어 붙여 봅시다.
+    notes: 적은 종이는 칠판에 붙이고 수업이 끝날 때까지 지우지 않습니다.
+  - layout: term
+    term: 고인돌
+    example: 아래에서 받치는 돌이 굄돌, 위에 얹은 돌이 덮개돌입니다.
+    notes: 낱말 풀이는 짧게 읽고 넘어갑니다. 무덤이라는 말에 아이들이 놀라면 "왜 무덤을 이렇게 크게 만들었을까?"를 숙제처럼 남겨 둡니다.
+    facts: [f1, f2]
+  - layout: activity
+    title: 고인돌을 세워 봅시다
+    instructions:
+      - 굄돌 두 개를 접어 세웁니다.
+      - 덮개돌을 접어 굄돌 위에 올립니다.
+      - 차례 카드 네 장을 알맞은 차례로 놓습니다.
+    minutes: 12
+    materials: [가위, 풀]
+    notes: 차례 카드는 뒤집어 확인하기 전에 근거를 먼저 말하게 합니다.
+  - layout: steps
+    title: 덮개돌은 이렇게 올렸을 것으로 짐작합니다
+    steps:
+      - label: 하나
+        text: 땅을 파고 굄돌을 세웁니다.
+      - label: 둘
+        text: 굄돌이 묻히도록 흙을 쌓아 언덕을 만듭니다.
+      - label: 셋
+        text: 통나무를 깔고 덮개돌을 끌어 올립니다.
+      - label: 넷
+        text: 흙을 걷어 내면 고인돌이 드러납니다.
+    notes: 아이들이 놓은 차례와 견주어 봅니다. "짐작합니다"라는 말을 꼭 붙여 읽습니다. 본 사람이 없기 때문입니다.
+    facts: [f3]
+  - layout: term
+    term: 추론
+    example: 돌이 아주 크다(본 것) → 많은 사람이 함께 옮겼을 것이다(짐작한 것)
+    notes: 방금 한 일이 바로 추론이었다고 이름을 붙여 줍니다.
+  - layout: compare
+    title: 본 것과 짐작한 것은 다릅니다
+    left:
+      label: 눈으로 본 것
+      points:
+        - 돌기둥 위에 넓은 돌이 올라가 있다.
+        - 돌이 사람보다 훨씬 크다.
+    right:
+      label: 짐작한 것
+      points:
+        - 많은 사람이 함께 일했을 것이다.
+        - 힘 있는 사람의 무덤일 것이다.
+    notes: 학습지를 쓰기 전에 두 칸의 차이를 한 번 더 짚습니다.
+  - layout: picture
+    title: 이 물건은 어디에 썼을까요?
+    media: pottery-amsa
+    caption: 흙으로 빚어 구운 그릇
+    notes: 이름은 말하지 않습니다. 뾰족한 바닥과 겉면의 무늬를 보게 합니다. 다음 시간에 다시 만나는 유물입니다.
+    facts: [f4]
+  - layout: quiz
+    item: 1
+    notes: 손을 들어 답하게 합니다. 틀린 답이 나오면 "왜 그렇게 생각했나요?"를 먼저 묻습니다.
+  - layout: closing
+    title: 처음 생각이 달라졌나요?
+    points:
+      - 옛사람이 남긴 것을 보면 생활을 짐작할 수 있습니다.
+      - 짐작에는 까닭이 있어야 합니다.
+    notes: 칠판에 붙여 둔 첫 생각 가운데 하나를 골라 달라진 점을 듣고 마칩니다.
+
+worksheet:
+  title: 유물 탐정 수첩
+  subtitle: 본 것 · 짐작한 것 · 까닭
+  print:
+    per: student
+    sides: duplex
+  pages:
+    - heading: 돌에게 묻다
+      blocks:
+        - type: figure
+          media: dolmen-parts
+          width: half
+        - type: observe_infer
+          target: 고인돌
+        - type: sentence_frame
+          frame: 나는 ___라고 짐작했다. 왜냐하면 ___이 보이기 때문이다.
+    - heading: 유물에게 묻다
+      blocks:
+        - type: figure
+          media: pottery-amsa
+          width: third
+        - type: prompt
+          text: 이 물건을 곳곳이 살펴보고 표를 채워 봅시다.
+        - type: table
+          columns: [살펴볼 곳, 눈으로 본 것, 짐작한 것]
+          rows:
+            - [바닥, "", ""]
+            - [겉면, "", ""]
+            - [크기, "", ""]
+        - type: sentence_frame
+          frame: 이 물건은 ___에 썼을 것 같다. 왜냐하면 ___ 때문이다.
+  guide:
+    - where: 1쪽 문장 틀
+      text: 뒤 칸에 '눈으로 본 것' 칸에 적은 말이 들어 있으면 추론이 선 것입니다.
+    - where: 2쪽
+      text: 유물의 이름은 다음 시간에 배웁니다. 오늘은 모양과 흔적만 보게 합니다.
+
+quiz:
+  items:
+    - type: ox
+      q: 추론은 아무 까닭 없이 마음대로 상상하는 것이다.
+      answer: false
+      explain: 추론은 이미 아는 것을 근거로 삼아 짐작하는 일입니다.
+      facts: [f7]
+    - type: choice
+      q: 고인돌 그림을 보고 '눈으로 본 것'은 무엇인가요?
+      choices:
+        - 돌기둥 위에 넓은 돌이 올라가 있다.
+        - 힘 있는 사람의 무덤일 것이다.
+        - 많은 사람이 함께 일했을 것이다.
+      answer: 1
+      explain: 나머지 둘은 본 것을 바탕으로 짐작한 것입니다.
+      facts: [f2]
+    - type: ox
+      q: 고인돌은 옛사람이 만든 무덤이다.
+      answer: true
+      explain: 고인돌은 큰 돌을 받쳐 올려 만든 옛 무덤입니다.
+      facts: [f1]
+    - type: short
+      q: 옛사람이 남긴 것 가운데 그릇이나 도구처럼 옮길 수 있는 물건을 무엇이라고 하나요?
+      answer: 유물
+      explain: 옮길 수 없는 것은 유적, 옮길 수 있는 것은 유물입니다.
+      facts: [f5, f6]
+
+assets:
+  papercraft:
+    state: ready
+    title: 탁자식 고인돌 만들기
+    module: dolmen-table
+    pages: 3
+    print:
+      per: group
+      paper: A4 180g 이상 두꺼운 종이
+      materials: [가위, 풀]
+      note: 실제 크기(100%)로 인쇄합니다. '페이지에 맞추기'를 켜면 조각 크기가 서로 맞지 않습니다.
+    steps:
+      - 실선을 따라 조각을 오립니다.
+      - 점선을 따라 접습니다.
+      - 굄돌 두 개를 받침판에 세워 붙입니다.
+      - 덮개돌을 굄돌 위에 올립니다.
+    # 도안의 차례 카드 네 장에 찍는 문장 (수업 화면 6번 장과 같은 차례)
+    texts:
+      - 땅을 파고 굄돌을 세웁니다.
+      - 굄돌이 묻히도록 흙을 쌓아 언덕을 만듭니다.
+      - 통나무를 깔고 덮개돌을 끌어 올립니다.
+      - 흙을 걷어 내면 고인돌이 드러납니다.
+    try_it:
+      - 차례 카드 네 장을 섞은 뒤 알맞은 차례로 놓아 봅시다.
+    reflect:
+      - 이 돌을 옮기려면 몇 사람이 있어야 했을까요?
+    facts: [f2, f3]
+  coloring:
+    state: planned
+    idea: 강화 부근리 지석묘를 본뜬 선 그림. 사진 이용 조건을 먼저 확인한다.
+  making_kit:
+    state: skip
+    reason: 도입 차시라 추론 쓰기가 중심이고 시간이 없습니다.
+  escape:
+    state: planned
+    idea: "한 방: 유적·유물 구분과 고인돌 추론 문제"
+  virtual3d:
+    state: skip
+    reason: 페이퍼크래프트로 충분합니다. 이 단원의 3D 는 석굴암에 둡니다.
+  web_activity:
+    state: ready
+    title: 유적일까, 유물일까
+    instructions: 카드를 알맞은 상자에 넣어 봅시다.
+    activity:
+      kind: sort
+      bins:
+        - id: site
+          label: 유적
+        - id: object
+          label: 유물
+      items:
+        - text: 고인돌
+          bin: site
+          why: 땅에 세워져 있어 옮길 수 없습니다.
+        - text: 흙으로 빚은 그릇
+          bin: object
+          why: 들고 옮길 수 있는 물건입니다.
+        - text: 옛사람이 살던 집터
+          bin: site
+          why: 땅에 남은 자리라 옮길 수 없습니다.
+        - text: 돌로 만든 도구
+          bin: object
+          why: 손에 쥐고 쓰던 물건입니다.
+      facts: [f5, f6]
+  cards:
+    state: ready
+    title: 낱말 카드
+    cards:
+      - front: 유적
+        back: 건물이나 무덤처럼 옮길 수 없는 옛 자취
+        facts: [f5]
+      - front: 유물
+        back: 그릇이나 도구처럼 옮길 수 있는 옛 물건
+        facts: [f6]
+      - front: 추론
+        back: 아는 것을 근거로 모르는 것을 짐작하는 일
+        facts: [f7]
+      - front: 고인돌
+        back: 큰 돌을 받쳐 올려 만든 옛 무덤
+        facts: [f1]
+    games:
+      - name: 뜻 듣고 낱말 맞히기
+        how: 한 사람이 뒷면을 읽으면 나머지가 낱말을 맞힙니다.
+
+misconceptions:
+  - belief: 추론은 정답을 맞히는 것이다.
+    response: 오늘은 정답을 주지 않는 시간이라고 말해 줍니다. 까닭이 분명한 생각인지 아닌지만 가려 줍니다.
+
+assessment:
+  look_for: 문장 틀의 뒤 칸에 '눈으로 본 것'이 들어가 있는가
+  where: 학습지 1쪽 문장 틀
+
+teacher_notes:
+  - title: 자주 나오는 장면
+    body:
+      - 본 것 칸에 짐작을 적는 아이가 있을 수 있습니다. 고쳐 주지 말고 "눈으로 본 건가요, 머리로 생각한 건가요?" 하고 한 번만 묻습니다.
+      - 이미 이름을 아는 아이에게는 "이름 말고, 그렇게 생각한 까닭을 모둠에 설명해 줄래요?" 하고 역할을 줍니다.

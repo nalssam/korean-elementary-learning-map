@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-labelledby="t">
+  <title id="t">탁자식 고인돌을 옆에서 본 그림. 굄돌 두 개가 서 있고 그 위에 넓은 덮개돌이 올라가 있다.</title>
+  <rect width="640" height="400" fill="#fbfaf6"/>
+  <path d="M40 330 H600" stroke="#132c3d" stroke-width="3" stroke-linecap="round"/>
+  <path d="M170 330 L182 178 L222 172 L232 330 Z" fill="#d8d2c4" stroke="#132c3d" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M408 330 L416 176 L458 180 L468 330 Z" fill="#d8d2c4" stroke="#132c3d" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M96 176 L132 128 L330 112 L520 126 L552 168 L500 184 L150 186 Z" fill="#c4bcaa" stroke="#132c3d" stroke-width="3" stroke-linejoin="round"/>
+  <g font-family="Pretendard, 'Noto Sans KR', sans-serif" font-size="24" font-weight="700" fill="#132c3d">
+    <text x="320" y="92" text-anchor="middle">덮개돌</text>
+    <text x="320" y="270" text-anchor="middle">굄돌</text>
+  </g>
+  <g stroke="#18766b" stroke-width="2.5" fill="none" stroke-linecap="round">
+    <path d="M320 100 V118"/>
+    <path d="M284 262 H238"/>
+    <path d="M356 262 H404"/>
+  </g>
+</svg>

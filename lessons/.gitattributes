@@ -1,0 +1,7 @@
+# 줄 끝은 어느 컴퓨터에서나 LF 로 둔다.
+# Windows 의 Git 은 기본 설정으로 글 파일을 CRLF 로 꺼내 놓는다. 그러면 지문과 시험 결과가 컴퓨터마다 달라진다 (docs/CONTRACT.md 12절).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.pdf binary
+*.pptx binary

@@ -1,0 +1,12 @@
+---
+// 시험용 첫 화면: 차시가 없는 사이트 화면
+import Base from '#src/layouts/Base.astro';
+import { allBundles, lessonRoute, visibleLessons } from '#lib/content.ts';
+import { href } from '#src/lib/url.ts';
+---
+<Base title="시험용 첫 화면" kind="site">
+  <main data-pagefind-body>
+    <p id="bundles">{allBundles().length}</p>
+    <ul>{visibleLessons().map((l) => <li><a href={href(lessonRoute(l.id))}>{l.title}</a></li>)}</ul>
+  </main>
+</Base>

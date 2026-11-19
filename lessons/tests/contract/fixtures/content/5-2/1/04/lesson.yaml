@@ -1,0 +1,164 @@
+# 시험용 가짜 명세입니다. 내용은 사실이 아니고 수업에 쓰는 자료가 아닙니다.
+# no_play 묶음의 본보기: 피해를 담은 사실은 흐름·수업 화면·학습지에서만 가리키고, 카드는 낱말만 담습니다.
+schema_version: 1
+id: 5-2/1/04
+title: 시험용 무거운 차시
+tagline: 피해와 고통이 중심인 차시의 본보기입니다. 시험에서만 씁니다.
+status: draft
+
+objectives:
+  - 시험용 글을 읽고 생각을 쓴다.
+
+sensitivity:
+  level: no_play
+  note: 점수를 매기지 않고, 피해 장면을 그림으로 보여 주지 않습니다.
+
+terms:
+  new:
+    - term: 규칙 하나
+      meaning: 시험용 첫째 규칙
+      facts: [f1]
+    - term: 규칙 둘
+      meaning: 시험용 둘째 규칙
+      facts: [f1]
+    - term: 규칙 셋
+      meaning: 시험용 셋째 규칙
+      facts: [f1]
+    - term: 규칙 넷
+      meaning: 시험용 넷째 규칙
+      facts: [f1]
+
+facts:
+  - id: f1
+    claim: 시험용 규칙은 네 가지였다.
+    sources:
+      - name: 시험용 출처
+        url: https://example.org/fact/5
+        quote: 시험용 근거 구절 다섯
+        accessed: "2026-11-18"
+  - id: f2
+    painful: true
+    claim: 시험용 규칙 때문에 많은 사람이 어려움을 겪었다.
+    sources:
+      - name: 시험용 출처
+        url: https://example.org/fact/6
+        quote: 시험용 근거 구절 여섯
+        accessed: "2026-11-18"
+
+flow:
+  - phase: 도입
+    minutes: 10
+    title: 물음 세우기
+    do:
+      - 물음을 띄우고 혼자 생각하게 합니다.
+    uses: [slides]
+    slides: [1, 2]
+  - phase: 전개
+    minutes: 25
+    title: 글을 읽고 생각 쓰기
+    do:
+      - 학습지의 글을 읽고 생각을 쓰게 합니다.
+    uses: [worksheet, slides]
+    slides: [3, 3]
+    facts: [f1, f2]
+  - phase: 정리
+    minutes: 5
+    title: 쓴 글을 바꾸어 읽기
+    do:
+      - 짝과 바꾸어 읽게 합니다.
+    uses: [quiz, cards, web_activity]
+
+slides:
+  - layout: title
+    title: 시험용 무거운 차시
+  - layout: question
+    title: 그때 사람들은 어떤 하루를 보냈을까요?
+    facts: [f2]
+  - layout: points
+    title: 시험용 규칙 네 가지
+    points: [규칙 하나, 규칙 둘, 규칙 셋, 규칙 넷]
+    facts: [f1]
+
+worksheet:
+  title: 시험용 생각 쓰기
+  print:
+    per: student
+  pages:
+    - blocks:
+        - type: note
+          text: [시험용 규칙 때문에 많은 사람이 어려움을 겪었습니다.]
+          facts: [f2]
+        - type: prompt
+          text: 그때 사람들은 어떤 하루를 보냈을까요? 글에서 찾은 것을 근거로 써 봅시다.
+        - type: lines
+          count: 6
+  facts: [f2]
+
+quiz:
+  items:
+    - type: ox
+      q: 시험용 규칙은 네 가지였다.
+      answer: true
+      explain: 네 가지였습니다.
+      facts: [f1]
+    - type: ox
+      q: 시험용 규칙은 한 가지였다.
+      answer: false
+      explain: 네 가지였습니다.
+      facts: [f1]
+    - type: short
+      q: 시험용 규칙은 몇 가지였나요?
+      answer: 네 가지
+      accept: [4, 4가지, 넷]
+      explain: 네 가지였습니다.
+      facts: [f1]
+
+assets:
+  papercraft:
+    state: skip
+    reason: 피해를 놀이로 만들 수 있습니다.
+  coloring:
+    state: skip
+    reason: 피해와 고통을 다루는 차시라 색칠은 맞지 않습니다.
+  making_kit:
+    state: skip
+    reason: 피해를 체험하게 하는 활동은 맞지 않습니다.
+  escape:
+    state: skip
+    reason: 피해를 놀이로 다루지 않습니다.
+  virtual3d:
+    state: skip
+    reason: 소재가 무겁습니다.
+  web_activity:
+    state: ready
+    title: 어느 규칙일까요
+    instructions: 낱말을 알맞은 상자에 놓아 봅시다.
+    activity:
+      kind: sort
+      bins:
+        - id: first
+          label: 앞의 두 규칙
+        - id: last
+          label: 뒤의 두 규칙
+      items:
+        - text: 규칙 하나
+          bin: first
+        - text: 규칙 둘
+          bin: first
+        - text: 규칙 셋
+          bin: last
+        - text: 규칙 넷
+          bin: last
+      facts: [f1]
+  cards:
+    state: ready
+    title: 시험용 낱말 카드
+    cards:
+      - front: 규칙 하나
+        facts: [f1]
+      - front: 규칙 둘
+        facts: [f1]
+      - front: 규칙 셋
+        facts: [f1]
+      - front: 규칙 넷
+        facts: [f1]

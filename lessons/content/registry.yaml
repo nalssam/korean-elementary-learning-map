@@ -1,0 +1,176 @@
+# 차시표: 학기 → 단원 → 차시 묶음.
+# 단원명과 차시 번호·쪽수는 교과서(비상교육, 설규주)를 따르고, focus 는 우리 말로 쓴 한 줄입니다.
+# 교과서의 차시 제목을 옮겨 적지 않습니다.
+# focus 는 계획 글이라 사이트에 찍지 않습니다. 사이트에는 단원명과 학기 소개(blurb)만 실립니다.
+# 이 파일의 글(blurb, focus)을 고치면 베끼기 검사를 다시 받습니다. 기록(originality)은 손으로 적지 않고
+# npm run check:originality -- --registry --record 가 적습니다.
+#
+# 적는 법
+#   - 묶음 id 가 곧 차시 번호입니다: "01" 은 1차시, "03-04" 는 3~4차시. 폴더 이름이자 주소라서 공개한 뒤에는 바꾸지 않습니다.
+#   - pages 는 교과서 쪽수 [시작, 끝].
+#   - role 은 intro(단원 도입) · content(내용 차시) · review(단원 정리). 단원 카드 덱과 단원 정리지는 review 묶음의 명세에 적습니다.
+#   - 성취기준은 단원에 적습니다 (단원과 성취기준의 짝만 확인되어 있습니다). 묶음마다 나누는 일은 나중에 합니다.
+#   - 차시표가 아직 없는 학기는 units: [] 로 둡니다.
+schema_version: 1
+curriculum: 2022 개정 교육과정
+textbook:
+  publisher: 비상교육
+  author: 설규주
+semesters:
+  - id: "3-1"
+    units: []
+  - id: "3-2"
+    units: []
+  - id: "4-1"
+    units: []
+  - id: "4-2"
+    units: []
+  - id: "5-1"
+    units: []
+  - id: "5-2"
+    blurb: 선사 시대부터 6·25 전쟁까지, 옛사람들의 생활과 나라의 변화
+    units:
+      - no: 1
+        title: "유적과 유물로 살펴본 옛사람들의 생활"
+        standards: ["6사04-01", "6사04-02", "6사04-03"]
+        bundles:
+          - id: "01"
+            pages: [6, 9]
+            focus: "유적·유물을 보고 옛사람의 생활을 추론할 수 있다"
+            role: intro
+          - id: "02"
+            pages: [10, 11]
+            focus: "구석기 사람들은 뗀석기로 사냥·채집하며 옮겨 다니며 살았다"
+            role: content
+          - id: "03"
+            pages: [12, 13]
+            focus: "신석기 사람들은 농사를 짓고 움집에 정착해 살았다"
+            role: content
+          - id: "04-05"
+            pages: [14, 19]
+            focus: "청동기에 지배자가 나타나고 고조선이 세워졌다"
+            role: content
+          - id: "06-07"
+            pages: [20, 25]
+            focus: "삼국과 가야가 세워지고 차례로 전성기를 맞았다"
+            role: content
+          - id: "08-09"
+            pages: [26, 31]
+            focus: "신분, 고분, 불교문화, 대외 교류로 삼국·가야 생활을 안다"
+            role: content
+          - id: "10"
+            pages: [32, 35]
+            focus: "통일 신라의 불교문화와 해상 교류를 안다"
+            role: content
+          - id: "11"
+            pages: [36, 39]
+            focus: "발해는 고구려를 이었고 해동성국으로 불렸다"
+            role: content
+          - id: "12"
+            pages: [40, 44]
+            focus: "왕건이 후삼국을 통일하고 고려의 기틀을 다졌다"
+            role: content
+          - id: "13-14"
+            pages: [45, 49]
+            focus: "거란·몽골과의 전쟁과 벽란도 교류가 고려에 영향을 줬다"
+            role: content
+          - id: "15"
+            pages: [50, 52]
+            focus: "고려의 신분 구조와 여성의 지위, 고려청자를 안다"
+            role: content
+          - id: "16-17"
+            pages: [53, 57]
+            focus: "불교가 고려 사람들의 생활과 문화에 영향을 줬다"
+            role: content
+          - id: "18"
+            pages: [58, 61]
+            focus: "선사부터 고려까지 시대별 생활 변화를 정리한다"
+            role: review
+      - no: 2
+        title: "달라지는 시대, 변화하는 생활 모습"
+        standards: ["6사05-01", "6사05-02"]
+        bundles:
+          - id: "01"
+            pages: [62, 65]
+            focus: "조선이 한양을 수도로 정하고 도성을 계획해 세운 까닭"
+            role: intro
+          - id: "02"
+            pages: [66, 69]
+            focus: "이성계·정도전이 조선을 세우고 경국대전으로 다스림의 틀을 갖춤"
+            role: content
+          - id: "03-04"
+            pages: [70, 75]
+            focus: "신분에 따라 하는 일과 생활이 달랐고 유교 예절이 생활을 이끎"
+            role: content
+          - id: "05"
+            pages: [76, 80]
+            focus: "세종 때 훈민정음과 과학 기구로 백성의 삶을 돌봄"
+            role: content
+          - id: "06"
+            pages: [81, 85]
+            focus: "임진왜란·병자호란의 전개와 나라를 지키려 한 사람들"
+            role: content
+          - id: "07-08"
+            pages: [86, 93]
+            focus: "농업·상업이 발달하고 실학과 개혁으로 사회가 달라짐"
+            role: content
+          - id: "09-10"
+            pages: [94, 97]
+            focus: "서민이 즐긴 그림·소설·판소리·탈놀이에 생활과 바람이 담김"
+            role: content
+          - id: "11-12"
+            pages: [98, 102]
+            focus: "외세 앞에서 근대 국가를 세우려 한 여러 노력"
+            role: content
+          - id: "13"
+            pages: [103, 105]
+            focus: "개항 뒤 들어온 근대 문물로 생활이 달라짐"
+            role: content
+          - id: "14"
+            pages: [106, 109]
+            focus: "조선 건국부터 근대 문물까지 단원의 흐름을 한 줄로 이음"
+            role: review
+      - no: 3
+        title: "식민 통치와 저항, 전쟁이 바꾼 사회와 생활"
+        standards: ["6사06-01", "6사06-02"]
+        bundles:
+          - id: "01"
+            pages: [110, 113]
+            focus: "국권 침탈부터 6·25 전쟁까지 단원의 큰 흐름을 미리 본다"
+            role: intro
+          - id: "02"
+            pages: [114, 116]
+            focus: "을사늑약 뒤 의병·특사·국채 보상 운동 등 나라 지킴 노력"
+            role: content
+          - id: "03-04"
+            pages: [117, 121]
+            focus: "일제의 통치 방식 변화와 사람들이 겪은 어려움을 안다"
+            role: content
+          - id: "05"
+            pages: [122, 125]
+            focus: "3·1 운동의 전개와 대한민국 임시 정부 수립의 의미"
+            role: content
+          - id: "06-07"
+            pages: [126, 131]
+            focus: "무장 투쟁·실력 양성·민족 문화 지키기 등 독립운동 갈래"
+            role: content
+          - id: "08-09"
+            pages: [132, 137]
+            focus: "광복 뒤 38도선 분할과 신탁 통치 논쟁, 통일 정부 노력"
+            role: content
+          - id: "10"
+            pages: [138, 140]
+            focus: "5·10 총선거, 제헌 헌법, 대한민국 정부 수립 과정"
+            role: content
+          - id: "11-12"
+            pages: [141, 147]
+            focus: "6·25 전쟁의 전개와 정전, 전쟁이 남긴 분단과 이산"
+            role: content
+          - id: "13"
+            pages: [148, 151]
+            focus: "단원 전체 흐름을 연표로 정리하고 배운 것을 확인한다"
+            role: review
+  - id: "6-1"
+    units: []
+  - id: "6-2"
+    units: []
