@@ -2,7 +2,9 @@
 // 이 파일이 가져오는 패키지에 형식 선언이 빠지면 `npm run typecheck` 가 실패한다 (담당이 제 폴더에 `declare module` 을 적어 넣지 않게).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import QRCode from 'qrcode';
 import * as c from '#lib/content.ts';
@@ -26,7 +28,21 @@ test('QR 코드: qrcode 패키지로 종이에 박을 주소를 그림으로 만
 test('올리기 전 검사(.githooks)는 npm ci 가 켠다', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(c.ROOT, 'package.json'), 'utf8'));
   // git 저장소가 아닌 곳(내려받은 압축 파일)에서도 npm ci 가 멈추지 않아야 한다. `|| exit 0` 은 sh 와 Windows 의 cmd 에서 모두 된다.
-  assert.equal(pkg.scripts.prepare, 'git config core.hooksPath lessons/.githooks || exit 0');
+  // 학습 지도 저장소 전체의 설정이라, 누가 이미 정해 둔 core.hooksPath 는 덮어쓰지 않는다 (있으면 첫 명령이 그 값을 찍고 성공한다).
+  // 출력을 /dev/null 로 버리지 않는 것은 Windows 의 cmd 에 그 자리가 없어서다 (버리려다 실패하면 덮어쓴다).
+  assert.equal(pkg.scripts.prepare, 'git config core.hooksPath || git config core.hooksPath lessons/.githooks || exit 0');
+  const sh = (dir: string, cmd: string) => execSync(cmd, { cwd: dir, encoding: 'utf8', env: { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' } });
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hooks-'));
+  try {
+    sh(dir, 'git init -q');
+    sh(dir, pkg.scripts.prepare);
+    assert.equal(sh(dir, 'git config core.hooksPath').trim(), 'lessons/.githooks');
+    sh(dir, 'git config core.hooksPath .husky');
+    sh(dir, pkg.scripts.prepare);
+    assert.equal(sh(dir, 'git config core.hooksPath').trim(), '.husky');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
   assert.ok(pkg.devDependencies['@types/qrcode']);
 });
 

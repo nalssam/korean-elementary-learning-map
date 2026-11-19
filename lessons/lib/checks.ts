@@ -118,7 +118,7 @@ export function factIssues(lesson: Lesson): string[] {
     if (b.reader !== 'child' || b.where === 'title') continue;
     const allowed = new Set(b.refs.flatMap((r) => numbersIn(getFact(lesson, r).claim)));
     for (const text of truths.get(b.where) ?? b.texts) for (const n of new Set(numbersIn(text))) {
-      if (!allowed.has(n)) out.push(`${b.where}: 숫자 "${n}" 이(가) 가리킨 사실(${b.refs.join(', ') || '없음'})의 문장에 없습니다 — 「${text.length > 40 ? text.slice(0, 40) + '…' : text}」`);
+      if (!allowed.has(n)) out.push(`${b.where}: 숫자 "${n}" — 가리킨 사실(${b.refs.join(', ') || '없음'})의 문장에 이 숫자가 없습니다 (「${text.length > 40 ? text.slice(0, 40) + '…' : text}」)`);
     }
   }
 

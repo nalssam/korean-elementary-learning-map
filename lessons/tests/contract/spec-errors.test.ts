@@ -49,8 +49,8 @@ const cases: [string, string, (l: Raw) => void, string[]][] = [
   ['필수 칸을 빠뜨림', ONE, (l) => { delete l.tagline; }, ['tagline: 꼭 있어야 하는 칸이 빠졌습니다']],
   ['값 없는 칸', ONE, (l) => { l.flow[1].tip = null; }, ['flow · 2번째 · tip', '칸 이름만 있고 값이 없습니다']],
   ['OX 의 답은 true·false', ONE, (l) => { l.quiz.items[0].answer = 'X'; }, ['quiz · items · 1번째 · answer', 'true 또는 false 를 씁니다 (지금: "X")']],
-  ['고르기의 답은 1부터', ONE, (l) => { l.quiz.items[1].answer = 0; }, ['quiz · items · 2번째 · answer', '1 이상이어야 합니다 (지금: 0)']],
-  ['고르기의 답이 보기 수를 넘음', ONE, (l) => { l.quiz.items[1].answer = 4; }, ['answer 는 choices 의 순서 번호입니다']],
+  ['고르기의 답은 1부터', ONE, (l) => { l.quiz.items[1].answer = 0; }, ['quiz · items · 2번째 · answer: 보기가 3개이므로 1~3 가운데 하나를 적습니다 (지금: 0)']],
+  ['고르기의 답이 보기 수를 넘음', ONE, (l) => { l.quiz.items[1].answer = 4; }, ['quiz · items · 2번째 · answer: 보기가 3개이므로 1~3 가운데 하나를 적습니다 (지금: 4)']],
   ['날짜 형식', ONE, (l) => { l.facts[0].sources[0].accessed = '2026년 11월 18일'; }, ['accessed', '날짜는 "2026-11-18"처럼 씁니다']],
   ['달력에 없는 날짜', ONE, (l) => { l.facts[0].sources[0].accessed = '2026-13-45'; }, ['달력에 없는 날짜입니다']],
   ['schema_version 이 다름', ONE, (l) => { l.schema_version = 2; }, ['schema_version: 이 칸에는 1 을 적습니다', 'scripts/migrate/']],
@@ -159,13 +159,16 @@ const cases: [string, string, (l: Raw) => void, string[]][] = [
   ['저장소 밖 파일(url)은 받지 않는다', ONE, (l) => { l.media[0].url = 'https://example.org/big.mp4'; }, ['모르는 칸 이름입니다: url']],
   ['손으로 적는 출처 표시는 없다', ONE, (l) => { l.media[0].credit.line = '그림: 아무개'; l.media[0].modified = true; }, ['모르는 칸 이름입니다: line', '모르는 칸 이름입니다: modified']],
   ['미국식 철자 license', TWO, (l) => { const c = l.media[1].credit; c.license = c.licence; delete c.licence; }, ['모르는 칸 이름입니다: license']],
-  ['이용 조건을 우리말로 적음', TWO, (l) => { l.media[1].credit.licence = '공공누리 1유형'; }, ['쓸 수 있는 값: original, KOGL-1']],
+  ['이용 조건을 우리말로 적음', TWO, (l) => { l.media[1].credit.licence = '공공누리 1유형'; }, ['이 사이트는 퍼블릭 도메인·CC0, 공공누리 제1유형, CC BY, CC BY-SA 그림만 씁니다 (지금: 공공누리 1유형). 다른 그림을 찾습니다']],
+  ['이용 조건을 빠뜨림', TWO, (l) => { delete l.media[1].credit.licence; }, ['media · 2번째 · credit · licence: 꼭 있어야 하는 칸이 빠졌습니다. 쓸 수 있는 값: original, PD, CC0, KOGL-1, CC-BY, CC-BY-SA']],
   ['남의 자료에 확인한 날이 없음', TWO, (l) => { delete l.media[1].credit.checked; }, ['남의 자료는 credit.checked 을 적습니다']],
   ['남의 자료에 제목·주소가 없음', TWO, (l) => { delete l.media[1].credit.title; delete l.media[1].credit.source_url; }, ['남의 자료는 credit.title 을 적습니다', '남의 자료는 credit.source_url 을 적습니다']],
   ['본떠 그린 것을 original 로 적음', ONE, (l) => { l.media[0].change = 'traced'; }, ['original 이 아닙니다']],
-  ['변경 금지 자료를 자름 (공공누리 3유형)', ONE, (l) => { l.media.push(photo({ credit: { ...photo().credit, licence: 'KOGL-3' }, change: 'cropped' })); }, ['변경 금지 조건(공공누리 3·4유형, CC ND)의 자료는 자르거나 본떠 그릴 수 없습니다']],
-  ['변경 금지 자료를 본뜸 (CC BY-ND)', ONE, (l) => { l.media.push(photo({ kind: 'drawing', file: 'media/x.svg', credit: { ...photo().credit, licence: 'CC-BY-ND', licence_url: 'https://creativecommons.org/licenses/by-nd/4.0/' }, change: 'traced' })); }, ['변경 금지 조건']],
-  ['CC BY-SA 는 본떠 그리지 않는다', TWO, (l) => { l.media[2].change = 'traced'; l.media[2].kind = 'drawing'; }, ['CC BY-SA 자료는 본떠 그리지 않습니다']],
+  // 쓰는 그림은 퍼블릭 도메인·CC0, 공공누리 제1유형, CC BY, CC BY-SA 뿐이다. 고쳐 쓸 수 없거나 다시 쓰는 데 조건이 붙는 것은 받지 않는다.
+  ...['KOGL-2', 'KOGL-4', 'CC-BY-NC', 'CC-BY-NC-SA', 'CC-BY-ND', 'permission'].map((lic): [string, string, (l: Raw) => void, string[]] =>
+    [`받지 않는 이용 조건 (${lic})`, ONE, (l) => { l.media.push(photo({ credit: { ...photo().credit, licence: lic } })); }, ['media · 2번째 · credit · licence', `이 사이트는 퍼블릭 도메인·CC0, 공공누리 제1유형, CC BY, CC BY-SA 그림만 씁니다 (지금: ${lic}). 다른 그림을 찾습니다`]]),
+  ['CC BY-SA 그림을 자름', TWO, (l) => { l.media[2].change = 'cropped'; }, ['media · 3번째 · change', 'CC BY-SA 그림은 자르거나 본뜨지 않고 그대로 씁니다 (change: none). 고치지 않고 쓰거나 다른 그림을 찾습니다']],
+  ['CC BY-SA 그림을 본뜸', TWO, (l) => { l.media[2].change = 'traced'; l.media[2].kind = 'drawing'; }, ['media · 3번째 · change', 'CC BY-SA 그림은 자르거나 본뜨지 않고 그대로 씁니다 (change: none)']],
   ['CC 자료에 이용 조건 주소가 없음', TWO, (l) => { delete l.media[2].credit.licence_url; }, ['CC 자료는 이용 조건 주소를 적습니다']],
   ['CC 코드와 주소가 다름', TWO, (l) => { l.media[2].credit.licence_url = 'https://creativecommons.org/licenses/by/3.0/'; }, ['licence(CC-BY-SA)와 licence_url 이 서로 다릅니다']],
   ['CC 주소가 다른 곳', TWO, (l) => { l.media[2].credit.licence_url = 'https://example.org/licenses/by-sa/3.0/'; }, ['https://creativecommons.org/licenses/… 주소를 씁니다']],
@@ -175,7 +178,6 @@ const cases: [string, string, (l: Raw) => void, string[]][] = [
   ['직접 만든 그림에 CC 주소', TWO, (l) => { l.media[0].credit.licence_url = 'https://creativecommons.org/licenses/by-nc-sa/4.0/'; }, ['licence_url 은 CC 자료에만 적습니다. 이 칸을 지우거나 licence(original)를 고칩니다']],
   ['CC0 에 다른 CC 조건의 주소', TWO, (l) => { Object.assign(l.media[2].credit, { licence: 'CC0', licence_url: 'https://creativecommons.org/licenses/by-sa/4.0/' }); }, ['licence(CC0)에는 https://creativecommons.org/publicdomain/zero/1.0/ 주소만 적을 수 있습니다']],
   ['저작권 없음(PD)에는 까닭', ONE, (l) => { l.media.push(photo({ credit: { ...photo().credit, licence: 'PD' } })); }, ['저작권이 없다고 본 까닭(PD)']],
-  ['따로 허락받은 자료에는 허락 범위', ONE, (l) => { l.media.push(photo({ credit: { ...photo().credit, licence: 'permission' } })); }, ['허락 범위(permission)']],
   ['사람이 나오는 그림에는 초상 확인', ONE, (l) => { l.media.push(photo({ person: true })); }, ['초상 확인(person)을 credit.note 에 적습니다']],
   ['직접 그린 사실 그림은 사실을 가리킨다', ONE, (l) => { delete l.media[0].facts; }, ['media · 1번째 · facts', '직접 그린 사실 그림은 근거로 삼은 사실 id 를 적습니다']],
   ['직접 그린 그림은 SVG', ONE, (l) => { l.media[0].file = 'media/stone.png'; }, ['직접 그린 그림은 SVG 파일로 둡니다']],
@@ -327,18 +329,25 @@ test('같은 문항을 두 차시에서 띄우면 lesson 을 고치라는 말로
   }
 });
 
+test('고르기의 답이 보기 수를 넘으면 한 줄로, 실제 보기 수를 들어 알린다', () => {
+  // 예전에는 "4 이하여야 합니다"(보기가 셋인데 틀린 범위)와 "answer 는 choices 의 순서 번호입니다" 두 줄이 나왔다
+  const lines = failsWith(mutated(ONE, (l) => { l.quiz.items[1].answer = 5; })).split('\n').filter((s) => s.includes('answer'));
+  assert.equal(lines.length, 1, lines.join('\n'));
+  assert.ok(lines[0].endsWith('quiz · items · 2번째 · answer: 보기가 3개이므로 1~3 가운데 하나를 적습니다 (지금: 5)'), lines[0]);
+});
+
 test('꼴이 틀린 칸에는 그 한 줄만 알려 준다 (길이·개수 문구를 덧붙이지 않는다)', () => {
   // 목록 자리에 글 한 줄을 적으면 "6자까지만 씁니다" 같은 엉뚱한 둘째 문구가 따라 나오고 있었다
   const only = (change: (l: Raw) => void, where: string) => {
     const lines = failsWith(mutated(ONE, change)).split('\n').filter((s) => s.includes(` · ${where}: `));
     assert.equal(lines.length, 1, lines.join('\n'));
-    assert.match(lines[0], /목록\(- 로 시작하는 줄\) 자리에 ".+" 이\(가\) 들어 있습니다$/);
+    assert.match(lines[0], /목록\(- 로 시작하는 줄\)을 적는 칸입니다 \(지금: ".+"\)$/);
   };
   only((l) => { l.flow[1].do = '사진을 띄우고 무엇이 보이는지 묻습니다.'; }, 'flow · 2번째 · do');
   only((l) => { l.objectives = '시험용 목표를 말한다.'; }, 'objectives');
   only((l) => { l.quiz.items[1].choices = '돌, 물, 바람'; }, 'quiz · items · 2번째 · choices');
   // 꼴이 맞는 칸의 길이·개수 문구는 그대로 나온다
-  failsWith(mutated(ONE, (l) => { l.objectives = ['가', '나', '다', '라']; l.flow[1].do = '한 줄'; }), '3개까지만 적습니다 (지금 4개)', '목록(- 로 시작하는 줄) 자리에');
+  failsWith(mutated(ONE, (l) => { l.objectives = ['가', '나', '다', '라']; l.flow[1].do = '한 줄'; }), '3개까지만 적습니다 (지금 4개)', '목록(- 로 시작하는 줄)을 적는 칸입니다');
 });
 
 test('빈 파일과 UTF-8 이 아닌 파일', () => {

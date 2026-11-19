@@ -8,7 +8,7 @@
 //   2. 차시표                 loadRegistry · allBundles · findBundle · bundleOf · findByPage · unitPages
 //   3. 차시 명세              loadLesson · lessonIds · orphanLessons · visibleLessons · lessonPaths
 //   4. 주소와 이름            lessonRoute · fileRoute · absoluteUrl · downloadName · 표시용 이름표
-//   5. 가리키는 것 풀기       getMedia · mediaRoute · mediaFile · shownMedia · getFact · termMeaning · creditShort · creditFull
+//   5. 가리키는 것 풀기       getMedia · mediaRoute · mediaFile · shownMedia · getFact · termMeaning · creditShort · creditFull · creditList
 //   6. 흐름·퀴즈·인쇄물       flowByLesson · quizByLesson · answerText · slideNotes · worksheetKey · printJobs · pptxFile · deckCards · scored · splitFrame · xmlText
 //   7. 검수와 공개            sealsOf · reviewState · publishGaps · registryOriginality · reviewedOn · footerNotice · sheetFooter
 //   8. 성취기준               standardSummary · standardsOf
@@ -78,15 +78,20 @@ export function cacheDir(argv?: readonly string[]): string {
   return dist === path.join(ROOT, 'dist') ? path.join(ROOT, '.cache') : `${dist}.cache`;
 }
 
-/** 명세에 고칠 곳이 있을 때 던진다. issues 는 교사가 읽는 한 줄씩이다. */
+/**
+ * 명세에 고칠 곳이 있을 때 던진다. issues 는 교사가 읽는 한 줄씩이다.
+ * category 는 검사가 이 줄들을 어느 갈래로 보여 줄지다: 형식(명세의 꼴과 가리키는 것) 또는 검수 기록(공개 조건이 모자람).
+ */
 export class SpecError extends Error {
   file: string;
   issues: string[];
-  constructor(file: string, issues: string[]) {
+  category: '형식' | '검수 기록';
+  constructor(file: string, issues: string[], category: '형식' | '검수 기록' = '형식') {
     super(`${path.relative(ROOT, file) || file}\n` + issues.map((i) => `  - ${i}`).join('\n'));
     this.name = 'SpecError';
     this.file = file;
     this.issues = issues;
+    this.category = category;
   }
 }
 
@@ -94,9 +99,10 @@ export class SpecError extends Error {
 
 interface Issue { code: string; path: (string | number)[]; message: string; [k: string]: unknown }
 
+// 값의 꼴마다 "무엇을 적는 칸인가". 조사(을/를)를 변수 뒤에 붙이지 않으려고 문장째 둔다.
 const KO_TYPE: Record<string, string> = {
-  string: '글', number: '숫자', int: '소수점 없는 숫자', boolean: 'true 또는 false',
-  array: '목록(- 로 시작하는 줄)', object: '묶음(칸 이름: 값)', tuple: '[시작, 끝] 꼴의 목록',
+  string: '글을 적는 칸입니다', number: '숫자를 적는 칸입니다', int: '소수점 없는 숫자를 적는 칸입니다', boolean: 'true 또는 false 를 적는 칸입니다',
+  array: '목록(- 로 시작하는 줄)을 적는 칸입니다', object: '묶음(칸 이름: 값)을 적는 칸입니다', tuple: '[시작, 끝] 꼴의 목록을 적는 칸입니다',
 };
 const show = (v: unknown) => { const s = JSON.stringify(v) ?? String(v); return s.length > 40 ? s.slice(0, 40) + '…' : s; };
 const valueAt = (raw: unknown, p: (string | number)[]) => p.reduce<unknown>((n, k) => (n == null ? n : (n as Record<string | number, unknown>)[k]), raw);
@@ -112,7 +118,7 @@ function explain(i: Issue, raw: unknown): string {
       if (at === null) return '칸 이름만 있고 값이 없습니다. 값을 적거나 칸을 지웁니다';
       if (custom) return custom;
       if (i.expected === 'boolean') return `true 또는 false 를 씁니다 (지금: ${show(at)})`;
-      return `${KO_TYPE[String(i.expected)] ?? String(i.expected)} 자리에 ${show(at)} 이(가) 들어 있습니다`;
+      return `${KO_TYPE[String(i.expected)] ?? `${String(i.expected)} 꼴을 적는 칸입니다`} (지금: ${show(at)})`;
     case 'invalid_value':
       if (custom) return custom;
       return wrongValue(at) + `쓸 수 있는 값: ${list(i.values)}`;
@@ -315,6 +321,8 @@ interface Entry {
   /** 아래 둘은 처음 물을 때 채운다. 읽은 값이 그대로인 동안에는 그림 파일을 다시 읽지 않는다. */
   seal?: string;
   gaps?: string[];
+  /** gaps 가운데 "서로 다른 두 확인자의 confirmed 가 모자란 사실" 줄과 그 사실 id. 로더가 한 줄로 묶어 알린다. */
+  unconfirmed?: { line: string; id: string }[];
 }
 
 const isLocal = (ref: string) => !ref.includes('/');
@@ -499,7 +507,12 @@ function loadEntry(id: string): Entry {
       const edited = Object.values(reviewStateOf(id, entry)).includes('stale');
       // 이 묶음은 그대로인데 가리키는 앞 묶음이 다시 검수에 들어간 것이면, 할 일은 "이 묶음도 draft 로"이다. 문구만으로는 알 수 없어서 덧붙인다.
       const waiting = entry.refs.some((ref) => { const from = readEntry(ref); return from.lesson.status !== 'published' || gapsOf(ref, from).length > 0; });
-      throw new SpecError(lessonFile(id), [...gaps.map((g) => `status: 공개(published)할 수 없습니다. ${g}`), ...(edited ? [REOPEN_HINT] : waiting ? [WAIT_HINT] : [])]);
+      // 사실마다 같은 문구가 열아홉 줄 나오지 않게, 확인이 모자란 사실은 한 줄로 묶는다 (publishGaps() 는 사실마다 한 줄을 그대로 준다)
+      const short = new Set((entry.unconfirmed ?? []).map((u) => u.line));
+      const ids = (entry.unconfirmed ?? []).map((u) => u.id);
+      const lines = gaps.filter((g) => !short.has(g)).map((g) => `status: 공개(published)할 수 없습니다. ${g}`);
+      if (ids.length) lines.push(`status: 공개하려면 사실마다 서로 다른 두 확인자의 기록이 있어야 합니다. 아직 모자란 사실: ${ids.join(', ')} (npm run sign -- ${id} check <사실 id>)`);
+      throw new SpecError(lessonFile(id), [...lines, ...(edited ? [REOPEN_HINT] : waiting ? [WAIT_HINT] : [])], '검수 기록');
     }
   }
   return entry;
@@ -551,7 +564,26 @@ export function isPublic(lesson: Lesson): boolean {
  * 공개 빌드에서는 공개된 차시만 나온다.
  */
 export function visibleLessons(): Lesson[] {
-  return lessonIds().map(loadLesson).filter((l) => isPublic(l) || showDrafts());
+  if (!devServer()) return lessonIds().map(loadLesson).filter((l) => isPublic(l) || showDrafts());
+  // astro dev 에서는 고칠 곳이 있는 묶음 하나 때문에 모든 페이지가 500 이 되지 않게, 그 묶음만 빼고 터미널에 알린다.
+  // 빌드와 npm run check 는 그대로 멈춘다 (여기를 지나지 않는다).
+  const out: Lesson[] = [];
+  for (const id of lessonIds()) {
+    try {
+      const l = loadLesson(id);
+      if (isPublic(l) || showDrafts()) out.push(l);
+    } catch (e) {
+      if (!(e instanceof SpecError)) throw e;
+      if (!devWarned.has(e.message)) { devWarned.add(e.message); console.error(`[명세] ${id} 묶음을 빼고 보여 줍니다. 고칠 곳:\n${e.message}`); }
+    }
+  }
+  return out;
+}
+// 같은 알림을 페이지마다 되풀이하지 않는다
+const devWarned = new Set<string>();
+/** astro dev 로 돌고 있는가. astro.config.mjs 가 초안을 켜는 조건과 같다 (명령이 dev 일 때만). */
+function devServer(): boolean {
+  return process.argv[2] === 'dev';
 }
 
 /** "5-2/1/03-04" → { semester: "5-2", unit: "1", bundle: "03-04" }. 주소 조각이라 모두 글이다. */
@@ -720,19 +752,60 @@ export function creditShort(m: Media): string {
   return `${kind}: ${m.credit.holder} · ${licenceName(m.credit)}${m.change === 'cropped' ? ' · 일부를 잘라 씀' : ''}${ai}`;
 }
 
-/** 제목·소장처·이용 조건·주소가 모두 든 출처 표시. 안내 페이지의 '출처'와 PPTX 마지막 장에 넣는다. */
-export function creditFull(m: Media): { text: string; sourceUrl?: string; licenceUrl?: string } {
+// 공공누리 제1유형의 안내 페이지. 공공누리 그림은 licence_url 을 적지 않으므로(CC 주소만 받는다) 출처 목록이 걸 주소를 여기에 둔다.
+const KOGL1_URL = 'https://www.kogl.or.kr/info/licenseType1.do';
+
+// 출처 표시의 조각. creditFull() 과 creditList() 가 같은 말을 쓰도록 한 곳에서 만든다.
+function creditParts(m: Media): { kind: string; title?: string; body: string; sourceUrl?: string; licenceUrl?: string } {
   const kind = mediaKindLabel(m);
   if (m.credit.licence === 'original') {
-    return { text: `${kind}: ${m.credit.holder}, ${licenceName(m.credit)}${m.ai_generated ? ', AI로 만든 그림' : ''}`, licenceUrl: SITE.licence.url };
+    return { kind, body: `${m.credit.holder}, ${licenceName(m.credit)}${m.ai_generated ? ', AI로 만든 그림' : ''}`, licenceUrl: SITE.licence.url };
   }
-  const change = (m.change === 'traced' ? `, ${SITE.author}이(가) 본떠 그림` : m.change === 'cropped' ? ', 일부를 잘라 씀' : '')
+  const change = (m.change === 'traced' ? `, ${SITE.author}이 본떠 그림` : m.change === 'cropped' ? ', 일부를 잘라 씀' : '')
     + (m.ai_generated && m.change !== 'traced' ? ', AI로 만든 그림' : '');
   return {
-    text: `${m.change === 'traced' ? '원본' : kind}: 「${m.credit.title ?? ''}」, ${m.credit.holder}, ${licenceName(m.credit)}${change}`,
+    kind: m.change === 'traced' ? '원본' : kind,
+    title: m.credit.title,
+    body: `${m.credit.holder}, ${licenceName(m.credit)}${change}`,
     sourceUrl: m.credit.source_url,
-    licenceUrl: m.credit.licence_url,
+    licenceUrl: m.credit.licence_url ?? (m.credit.licence === 'KOGL-1' ? KOGL1_URL : undefined),
   };
+}
+
+/** 제목·소장처·이용 조건·주소가 모두 든 출처 표시. 차시 안내 페이지의 '출처'에 넣는다 (PPTX 마지막 장은 제목을 뺀 creditList()). */
+export function creditFull(m: Media): { text: string; sourceUrl?: string; licenceUrl?: string } {
+  const { kind, title, body, sourceUrl, licenceUrl } = creditParts(m);
+  return {
+    text: `${kind}: ${m.credit.licence === 'original' ? '' : `「${title ?? ''}」, `}${body}`,
+    ...(sourceUrl ? { sourceUrl } : {}),
+    ...(licenceUrl ? { licenceUrl } : {}),
+  };
+}
+
+/** creditList() 의 한 줄 */
+export interface CreditLine { text: string; sourceUrl?: string; licenceUrl?: string; count: number }
+
+/**
+ * 수업 중에 띄우는 출처 목록. PPTX 마지막 장에 넣는다 (`creditList(shownMedia(lesson, 'slides'))`).
+ * creditFull() 에서 「제목」을 뺀 것이다. creditShort() 처럼, 수업에서 아직 이름을 알려 주지 않는 유물이 있어서다 (제목은 안내 페이지의 '출처'에 있다).
+ * 글·출처 주소·이용 조건 주소가 모두 같은 그림은 한 줄로 묶고 첫 낱말 뒤에 장수를 붙인다. 예: "그림 5장: 몽당분필 날쌤, CC BY-NC-SA 4.0"
+ * 차례는 처음 나온 차례다.
+ */
+export function creditList(media: readonly Media[]): CreditLine[] {
+  const lines = new Map<string, { kind: string; body: string; sourceUrl?: string; licenceUrl?: string; count: number }>();
+  for (const m of media) {
+    const { kind, body, sourceUrl, licenceUrl } = creditParts(m);
+    const key = JSON.stringify([kind, body, sourceUrl ?? '', licenceUrl ?? '']);
+    const hit = lines.get(key);
+    if (hit) hit.count += 1;
+    else lines.set(key, { kind, body, sourceUrl, licenceUrl, count: 1 });
+  }
+  return [...lines.values()].map(({ kind, body, sourceUrl, licenceUrl, count }) => ({
+    text: `${kind}${count > 1 ? ` ${count}장` : ''}: ${body}`,
+    ...(sourceUrl ? { sourceUrl } : {}),
+    ...(licenceUrl ? { licenceUrl } : {}),
+    count,
+  }));
 }
 
 // ═════════════════════════════ 6. 흐름·퀴즈·인쇄물 ═════════════════════════════
@@ -953,6 +1026,7 @@ function gapsOf(id: string, entry: Entry): string[] {
   if (entry.gaps) return entry.gaps;
   const { lesson } = entry;
   const out: string[] = [];
+  const unconfirmed: { line: string; id: string }[] = [];
   const state = reviewStateOf(id, entry);
   for (const k of REVIEW_KINDS) {
     const name = `${REVIEW_LABEL[k]}(${k})`;
@@ -974,14 +1048,28 @@ function gapsOf(id: string, entry: Entry): string[] {
   }
   for (const f of lesson.facts) {
     const now = factSeal(f);
-    const who = new Set(f.checks.filter((c) => c.verdict === 'confirmed' && c.seal === now).map((c) => c.by));
+    // 이름은 reviewerKey() 로 견준다. "ai:검증자A" 와 "AI:검증자a", 사이에 보이지 않는 글자를 넣은 이름을 두 사람으로 세지 않는다.
+    const who = new Set(f.checks.filter((c) => c.verdict === 'confirmed' && c.seal === now).map((c) => reviewerKey(c.by)));
     const last = f.checks.at(-1);
     if (f.sources.length === 0) out.push(`사실 ${f.id}: 공개 출처가 없습니다`);
     else if (!f.sources.some((s) => s.quote)) out.push(`사실 ${f.id}: 출처의 근거 구절(quote)이 없습니다`);
-    if (who.size < 2) out.push(`사실 ${f.id}: 지금 문장을 확인한 이가 ${who.size}명입니다. 서로 다른 둘의 confirmed 확인이 필요합니다`);
+    if (who.size < 2) {
+      const line = `사실 ${f.id}: 지금 문장을 확인한 이가 ${who.size}명입니다. 서로 다른 둘의 confirmed 확인이 필요합니다`;
+      out.push(line);
+      unconfirmed.push({ line, id: f.id });
+    }
     else if (!(last && last.verdict === 'confirmed' && last.seal === now)) out.push(`사실 ${f.id}: 마지막 확인 기록이 지금 문장의 confirmed 가 아닙니다 (이의가 남아 있습니다)`);
   }
+  entry.unconfirmed = unconfirmed;
   return (entry.gaps = out);
+}
+
+/**
+ * 확인자 이름을 견줄 때 쓰는 열쇠. "서로 다른 두 사람"을 셀 때와 scripts/sign.mjs 가 같은 사람의 기록인지 볼 때 쓴다.
+ * 유니코드 정규화(NFKC)를 거쳐 소문자로 바꾸고, 빈칸과 보이지 않는 글자(폭 없는 빈칸·이음 글자·BOM·여린 하이픈)를 뺀다.
+ */
+export function reviewerKey(by: string): string {
+  return by.normalize('NFKC').toLowerCase().replace(/[\s\u00AD\u180E\u200B-\u200F\u2060-\u2064\uFEFF]/g, '');
 }
 
 /**
@@ -1015,11 +1103,11 @@ export function reviewedOn(lesson: Lesson): string | undefined {
 
 /**
  * 화면 맨 아래 문구. 공개되지 않은 차시에는 "교사가 검수한"이라고 쓰지 않는다.
- * 차시가 없는 페이지(첫 화면, 학기, 단원)는 인자 없이 부른다. 그런 페이지도 미리 보기(SHOW_DRAFTS=1, astro dev)에서는 초안을 늘어놓고 링크하므로
- * "교사가 검수한 자료"라고 쓰지 않고 초안이 섞여 있다고 밝힌다.
+ * 차시가 없는 페이지(첫 화면, 학기, 단원, 소개)는 인자 없이 부른다. 그런 페이지는 그 자체가 검수한 자료가 아니므로 "교사가 검수한 자료"라고 쓰지 않는다.
+ * 공개 빌드에서는 SITE.siteNotice(검수한 것만 공개한다)를, 초안을 늘어놓고 링크하는 미리 보기(SHOW_DRAFTS=1, astro dev)에서는 SITE.previewNotice 를 준다.
  */
 export function footerNotice(lesson?: Lesson): string {
-  if (!lesson) return showDrafts() ? SITE.previewNotice : SITE.aiNotice;
+  if (!lesson) return showDrafts() ? SITE.previewNotice : SITE.siteNotice;
   return isPublic(lesson) ? SITE.aiNotice : SITE.draftNotice;
 }
 

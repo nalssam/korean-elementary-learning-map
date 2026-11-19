@@ -143,7 +143,12 @@ test('검수를 모두 거친 차시는 공개된다', () => {
 test('검수 기록 없이 published 라고만 적으면 읽지 못한다', () => {
   t.edit(ONE, (l) => { l.status = 'published'; });
   const message = failsWith(() => c.loadLesson(ONE), 'status: 공개(published)할 수 없습니다. 사실 대조(fact) 기록이 없습니다', '날쌤 승인(owner) 기록이 없습니다',
-    '사실 f1: 지금 문장을 확인한 이가 0명입니다');
+    '공개하려면 사실마다 서로 다른 두 확인자의 기록이 있어야 합니다. 아직 모자란 사실: f1, f2 (npm run sign -- 5-2/1/01 check <사실 id>)');
+  // 사실마다 같은 줄을 늘어놓지 않는다 (publishGaps() 는 사실마다 한 줄을 준다)
+  assert.ok(!message.includes('확인한 이가'), message);
+  assert.equal(c.publishGaps(ONE).filter((g) => g.includes('확인한 이가 0명')).length, 2);
+  // 검사가 형식이 아니라 검수 기록 갈래로 보여 주도록 갈래를 싣는다
+  assert.throws(() => c.loadLesson(ONE), (e: unknown) => e instanceof c.SpecError && e.category === '검수 기록');
   for (const k of REVIEW_KINDS) assert.ok(message.includes(`(${k}) 기록이 없습니다`), k);
   t.reset();
 });
@@ -151,7 +156,7 @@ test('검수 기록 없이 published 라고만 적으면 읽지 못한다', () =
 test('지문 없이 손으로 적은 pass 는 치지 않는다', () => {
   sign(ONE, { publish: false });
   t.edit(ONE, (l) => { for (const r of l.reviews) delete r.seal; for (const f of l.facts) for (const ch of f.checks) delete ch.seal; l.status = 'published'; });
-  failsWith(() => c.loadLesson(ONE), '사실 대조(fact)를 통과한 뒤에 내용이 바뀌었습니다', '사실 f1: 지금 문장을 확인한 이가 0명입니다');
+  failsWith(() => c.loadLesson(ONE), '사실 대조(fact)를 통과한 뒤에 내용이 바뀌었습니다', '공개하려면 사실마다 서로 다른 두 확인자의 기록이 있어야 합니다. 아직 모자란 사실: f1, f2 ');
   t.reset();
 });
 
@@ -159,9 +164,9 @@ test('공개한 뒤에 고치면 다시 검수해야 한다', () => {
   // 아이가 읽는 문장을 고침 → 명세 전체의 검수가 무효
   publishedFails(ONE, (l) => { l.slides[1].title = '고친 제목'; }, '사실 대조(fact)를 통과한 뒤에 내용이 바뀌었습니다', '날쌤 승인(owner)를 통과한 뒤에 내용이 바뀌었습니다', 'npm run sign');
   // 사실의 문장을 고침 → 그 사실의 확인도 무효
-  publishedFails(ONE, (l) => { l.facts[1].claim = '시험용 연표의 첫 해는 1995년이다.'; }, '사실 f2: 지금 문장을 확인한 이가 0명입니다. 서로 다른 둘의 confirmed 확인이 필요합니다');
+  publishedFails(ONE, (l) => { l.facts[1].claim = '시험용 연표의 첫 해는 1995년이다.'; }, '공개하려면 사실마다 서로 다른 두 확인자의 기록이 있어야 합니다. 아직 모자란 사실: f2 (');
   // 출처를 바꿔 끼움
-  publishedFails(ONE, (l) => { l.facts[0].sources[0].url = 'https://example.org/blog/1'; }, '사실 f1: 지금 문장을 확인한 이가 0명입니다');
+  publishedFails(ONE, (l) => { l.facts[0].sources[0].url = 'https://example.org/blog/1'; }, '공개하려면 사실마다 서로 다른 두 확인자의 기록이 있어야 합니다. 아직 모자란 사실: f1 (');
   // 정답을 고침
   publishedFails(ONE, (l) => { l.quiz.items[0].answer = false; }, '베끼기 검사(originality)를 통과한 뒤에 내용이 바뀌었습니다');
   // 그림 파일만 바꿔 끼움
@@ -200,8 +205,17 @@ test('혼자서는 공개할 수 없다', () => {
   // 한 사람이 두 번 확인
   sign(ONE, { publish: false, checkers: ['ai:검증자A', 'ai:검증자A'] });
   t.edit(ONE, (l) => { l.status = 'published'; });
-  failsWith(() => c.loadLesson(ONE), '사실 f1: 지금 문장을 확인한 이가 1명입니다. 서로 다른 둘의 confirmed 확인이 필요합니다');
+  failsWith(() => c.loadLesson(ONE), '공개하려면 사실마다 서로 다른 두 확인자의 기록이 있어야 합니다. 아직 모자란 사실: f1, f2 (');
+  assert.ok(c.publishGaps(ONE).includes('사실 f1: 지금 문장을 확인한 이가 1명입니다. 서로 다른 둘의 confirmed 확인이 필요합니다'));
   t.reset();
+  // 대소문자, 앞뒤·사이의 빈칸, 보이지 않는 글자만 다른 이름도 한 사람이다
+  for (const pair of [['ai:A', 'AI:a'], ['ai:검증자A', 'ai:검증자\u200BA'], ['ai:검증자A', ' ai:검증자 A '], ['ai:검증자A', 'ａｉ:검증자Ａ']]) {
+    sign(ONE, { publish: false, checkers: pair });
+    assert.ok(c.publishGaps(ONE).includes('사실 f1: 지금 문장을 확인한 이가 1명입니다. 서로 다른 둘의 confirmed 확인이 필요합니다'), pair.join(' / '));
+    t.reset();
+  }
+  assert.equal(c.reviewerKey('AI:검증자\u200DＡ '), c.reviewerKey('ai:검증자a'));
+  assert.notEqual(c.reviewerKey('ai:검증자A'), c.reviewerKey('ai:검증자B'));
   // 승인은 사람이
   sign(ONE, { publish: false, owner: 'ai:claude' });
   t.edit(ONE, (l) => { l.status = 'published'; });
@@ -281,7 +295,7 @@ test('공개된 차시에 출처 없는 사실을 보태도 지문과 남은 검
   sign(ONE);
   t.edit(ONE, (l) => { l.facts.push({ id: 'f9', claim: '새로 보탠 사실 문장이다.' }); l.slides[0].facts = ['f9']; });
   // 페이지와 빌드는 멈추고, 남은 것을 한꺼번에 알려 준다 (출처 한 줄에 가려지지 않는다)
-  failsWith(() => c.loadLesson(ONE), '사실 f9: 공개 출처가 없습니다', '사실 f9: 지금 문장을 확인한 이가 0명입니다', '사실 대조(fact)를 통과한 뒤에 내용이 바뀌었습니다', '공개된 차시를 고칠 때는');
+  failsWith(() => c.loadLesson(ONE), '사실 f9: 공개 출처가 없습니다', '공개하려면 사실마다 서로 다른 두 확인자의 기록이 있어야 합니다. 아직 모자란 사실: f9 (', '사실 대조(fact)를 통과한 뒤에 내용이 바뀌었습니다', '공개된 차시를 고칠 때는');
   assert.match(c.sealsOf(ONE).lesson, /^[0-9a-f]{12}$/);
   assert.match(c.sealsOf(ONE).facts.f9, /^[0-9a-f]{12}$/);
   assert.equal(c.reviewState(ONE).fact, 'stale');
@@ -424,7 +438,7 @@ test('전개도 모듈 파일도 명세의 지문에 들어간다', () => {
       l.assets.papercraft = { state: 'ready', title: '시험용 만들기', module: name, pages: 2, print: { per: 'group' }, steps: ['자릅니다.', '붙입니다.'] };
     });
     assert.equal(c.papercraftModuleFile(c.loadLesson(ONE)), file);
-    assert.equal(c.papercraftModuleFile(c.loadLesson(TWO)), undefined);
+    assert.equal(c.papercraftModuleFile(c.loadLesson('5-2/1/04')), undefined);
     const none = c.sealsOf(ONE).lesson;
     fs.mkdirSync(modules, { recursive: true });
     fs.writeFileSync(file, 'export default { sheets: () => [{ title: "하나", sub: "", svg: "<svg/>" }] };\n');

@@ -39,11 +39,12 @@ test('lessonPaths: 주소 조각은 모두 글이고, props 로는 id 만 넘긴
   assert.deepEqual(c.lessonPaths()[1], { params: { semester: '5-2', unit: '1', bundle: '02-03' }, props: { id: '5-2/1/02-03' } });
   assert.equal(c.lessonPaths().length, 4);
   assert.deepEqual(c.lessonPaths('coloring').map((p) => p.props.id), ['5-2/1/02-03']);
-  assert.deepEqual(c.lessonPaths('papercraft'), []);
+  // 페이퍼크래프트가 ready 인 시험용 명세는 두 차시 묶음 하나다 (안내 페이지의 버튼과 /<id>/papercraft/ 를 시험한다)
+  assert.deepEqual(c.lessonPaths('papercraft').map((p) => p.props.id), ['5-2/1/02-03']);
   assert.equal(c.lessonPaths('cards').length, 4);
   assert.equal(c.lessonPaths('web_activity').length, 4);
   for (const p of c.lessonPaths()) for (const v of Object.values(p.params)) assert.equal(typeof v, 'string');
-  assert.deepEqual(c.readyAssets(two()), ['coloring', 'making_kit', 'web_activity', 'cards']);
+  assert.deepEqual(c.readyAssets(two()), ['papercraft', 'coloring', 'making_kit', 'web_activity', 'cards']);
 });
 
 test('flowByLesson: 차시마다 따로, 차시마다 40분', () => {
@@ -86,8 +87,11 @@ test('slideNotes: notes 가 없으면 그 장을 쓰는 흐름 단계의 title·
 
 test('printJobs: 쪽수는 계산하고, 빈 칸은 기본값으로 채운다', () => {
   const jobs = c.printJobs(two());
-  assert.deepEqual(jobs.map((j) => [j.kind, j.pages]), [['worksheet', 2], ['coloring', 1], ['cards', 2]]);
-  const [ws, coloring, cards] = jobs;
+  assert.deepEqual(jobs.map((j) => [j.kind, j.pages]), [['worksheet', 2], ['papercraft', 3], ['coloring', 1], ['cards', 2]]);
+  const [ws, papercraft, coloring, cards] = jobs;
+  // 페이퍼크래프트는 늘 A4 세로·단면이다. 적지 않은 종이는 기본값으로 채운다.
+  assert.deepEqual(papercraft.print, { per: 'group', sides: 'single', orientation: 'portrait', bw_ok: true, paper: 'A4 보통 용지', materials: ['가위', '풀'] });
+  assert.equal(papercraft.route, '/5-2/1/02-03/papercraft/');
   assert.deepEqual(ws.print, { per: 'student', sides: 'duplex', orientation: 'landscape', bw_ok: true, paper: 'A4 보통 용지', materials: [] });
   assert.deepEqual(coloring.print, PRINT_DEFAULT.coloring);
   // 카드는 늘 A4 세로 양면. 적은 칸만 바뀐다.
@@ -174,9 +178,10 @@ test('출처 표시는 creditShort·creditFull 이 만든다', () => {
     licenceUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
   });
   assert.deepEqual(c.creditFull(c.getMedia(l, 'stone-line')), {
-    text: '원본: 「시험용 큰 돌」, 시험용 박물관, 공공누리 제1유형, 몽당분필 날쌤이(가) 본떠 그림',
+    text: '원본: 「시험용 큰 돌」, 시험용 박물관, 공공누리 제1유형, 몽당분필 날쌤이 본떠 그림',
     sourceUrl: 'https://example.org/item/1',
-    licenceUrl: undefined,
+    // 공공누리 그림은 licence_url 을 적지 않는다. 출처 목록이 걸 조건 안내 페이지는 따로 채운다.
+    licenceUrl: 'https://www.kogl.or.kr/info/licenseType1.do',
   });
   assert.deepEqual(c.creditFull(c.getMedia(l, 'map')), { text: '지도: 시험용 그린이, CC BY-NC-SA 4.0', licenceUrl: SITE.licence.url });
   assert.equal(c.licenceName({ holder: 'x', licence: 'CC-BY', licence_url: 'https://creativecommons.org/licenses/by/2.0/kr/' }), 'CC BY 2.0 KR');
@@ -193,6 +198,25 @@ test('출처 표시는 creditShort·creditFull 이 만든다', () => {
   assert.equal(c.creditShort({ ...c.getMedia(l, 'sample'), credit: { ...c.getMedia(l, 'sample').credit, licence_url: 'https://creativecommons.org/licenses/by-sa/3.0/deed.ko' } }), '사진: 시험용 사진가 · CC BY-SA 3.0');
 });
 
+test('creditList: 수업 중에 띄우는 출처 목록은 제목을 빼고, 같은 출처를 한 줄로 묶는다', () => {
+  const l = two();
+  const [sample, map, line] = ['sample', 'map', 'stone-line'].map((id) => c.getMedia(l, id));
+  // 직접 그린 그림 셋은 한 줄이 되고 장수가 붙는다. 처음 나온 차례를 지킨다.
+  const list = c.creditList([map, sample, map, line, map]);
+  assert.deepEqual(list, [
+    { text: '지도 3장: 시험용 그린이, CC BY-NC-SA 4.0', licenceUrl: SITE.licence.url, count: 3 },
+    { text: '사진: 시험용 사진가, CC BY-SA 3.0', sourceUrl: 'https://example.org/item/2', licenceUrl: 'https://creativecommons.org/licenses/by-sa/3.0/', count: 1 },
+    { text: '원본: 시험용 박물관, 공공누리 제1유형, 몽당분필 날쌤이 본떠 그림', sourceUrl: 'https://example.org/item/1', licenceUrl: 'https://www.kogl.or.kr/info/licenseType1.do', count: 1 },
+  ]);
+  // 수업에서 아직 이름을 알려 주지 않는 유물이 있어서 「제목」은 넣지 않는다 (안내 페이지의 creditFull() 에만 있다)
+  for (const m of [sample, map, line]) assert.ok(!c.creditList([m])[0].text.includes('「'), m.id);
+  assert.ok(c.creditFull(sample).text.includes('「시험용 사진」'));
+  // 출처 주소가 다르면 글이 같아도 묶지 않는다
+  const other = { ...sample, credit: { ...sample.credit, source_url: 'https://example.org/item/3' } };
+  assert.deepEqual(c.creditList([sample, other]).map((x) => x.count), [1, 1]);
+  assert.deepEqual(c.creditList([]), []);
+});
+
 test('AI 로 만든 그림은 누가 만들었든 출처 표시에 그렇게 밝힌다', () => {
   const sample = c.getMedia(two(), 'sample');
   // 남이 만든 AI 그림 (CC0)
@@ -206,7 +230,7 @@ test('AI 로 만든 그림은 누가 만들었든 출처 표시에 그렇게 밝
   assert.equal(c.creditFull(ours).text, '그림: 몽당분필 날쌤, CC BY-NC-SA 4.0, AI로 만든 그림');
   // 본떠 그린 것은 우리가 그린 그림이다
   assert.equal(c.creditShort({ ...theirs, change: 'traced' }), '그림: 몽당분필 날쌤 · 어느 누리집 자료를 본떠 그림 (CC0)');
-  assert.equal(c.creditFull({ ...theirs, change: 'traced' }).text, '원본: 「시험용 장면」, 어느 누리집, CC0, 몽당분필 날쌤이(가) 본떠 그림');
+  assert.equal(c.creditFull({ ...theirs, change: 'traced' }).text, '원본: 「시험용 장면」, 어느 누리집, CC0, 몽당분필 날쌤이 본떠 그림');
 });
 
 test("shownMedia: 안내 페이지의 '출처'와 PPTX 마지막 장에 올릴 그림", () => {
@@ -226,11 +250,13 @@ test("shownMedia: 안내 페이지의 '출처'와 PPTX 마지막 장에 올릴 �
 
 test('초안의 맨 아래 문구와 지문', () => {
   assert.equal(c.footerNotice(one()), SITE.draftNotice);
-  // 차시가 없는 페이지(첫 화면·학기·단원): 미리 보기 빌드에서는 초안이 섞여 있다고 밝히고, 공개 빌드에서만 "교사가 검수한 자료"라고 쓴다
+  // 차시가 없는 페이지(첫 화면·학기·단원·소개): 미리 보기 빌드에서는 초안이 섞여 있다고 밝히고,
+  // 공개 빌드에서도 "교사가 검수한 자료"라고 쓰지 않는다 (그 페이지 자체는 검수한 자료가 아니다). 검수한 것만 공개한다고 밝힌다.
   assert.equal(c.footerNotice(), SITE.previewNotice);
   assert.ok(!SITE.previewNotice.includes('검수한'));
   delete process.env.SHOW_DRAFTS;
-  try { assert.equal(c.footerNotice(), SITE.aiNotice); } finally { process.env.SHOW_DRAFTS = '1'; }
+  try { assert.equal(c.footerNotice(), SITE.siteNotice); } finally { process.env.SHOW_DRAFTS = '1'; }
+  assert.equal(SITE.siteNotice, '차시 자료는 AI 도구로 초안을 만들고, 교사가 검수한 것만 공개합니다.');
   assert.equal(c.sheetFooter(one()), SITE.draftNotice);
   const seals = c.sealsOf('5-2/1/01');
   assert.match(seals.lesson, /^[0-9a-f]{12}$/);
@@ -267,7 +293,7 @@ test('글 뽑기: 빠지는 글이 없다', () => {
     'slides[1].kicker', 'slides[3].points[0]', 'worksheet.title', 'worksheet.pages[0].heading', 'worksheet.pages[0].blocks[1].text[0]',
     'worksheet.pages[0].blocks[2].rows[0][0]', 'worksheet.pages[1].blocks[0].points[1].when', 'worksheet.pages[1].blocks[0].points[1].what', 'worksheet.pages[1].blocks[1].pairs[0].right',
     'worksheet.pages[1].blocks[2].columns[3][0].label', 'quiz.items[0].q', 'quiz.items[0].explain', 'quiz.items[1].choices[0]', 'quiz.items[2].answer',
-    'assets.coloring.look_for[0]', 'assets.making_kit.steps[0]', 'assets.making_kit.safety', 'assets.web_activity.activity.spots[0].why', 'assets.cards.cards[1].back']) {
+    'assets.coloring.look_for[0]', 'assets.papercraft.title', 'assets.papercraft.steps[0]', 'assets.papercraft.texts[0]', 'assets.papercraft.try_it[0]', 'assets.papercraft.reflect[0]', 'assets.making_kit.steps[0]', 'assets.making_kit.safety', 'assets.web_activity.activity.spots[0].why', 'assets.cards.cards[1].back']) {
     assert.ok(child.includes(p), `childStrings 에 없음: ${p}`);
   }
   assert.ok(paths(c.childStrings(review())).includes('assets.cards.collect[0].label'));
@@ -289,7 +315,7 @@ test('글 뽑기: 빠지는 글이 없다', () => {
     assert.ok(t1.includes(p), `teacherStrings 에 없음: ${p}`);
   }
   // 제작 기록: 만들지 않는 까닭과 계획, 근거 구절은 사이트에 보여 주지 않는다
-  for (const p of ['assets.papercraft.reason', 'assets.virtual3d.idea', 'facts[0].sources[0].quote']) assert.ok(record.includes(p), `recordStrings 에 없음: ${p}`);
+  for (const p of ['assets.escape.reason', 'assets.virtual3d.idea', 'facts[0].sources[0].quote']) assert.ok(record.includes(p), `recordStrings 에 없음: ${p}`);
   for (const p of [...child, ...teacher]) assert.ok(!record.includes(p), `두 목록에 겹침: ${p}`);
 });
 

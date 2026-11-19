@@ -6,6 +6,10 @@
 //  - src/styles/print.css          쪽의 치수 (작게 둔다. Astro 가 4KB 보다 작은 CSS 를 HTML 안에 넣는데, 계약 시험이 그 자리에서 이 파일을 찾는다)
 //  - src/components/print/sheet.css 머리·바닥글의 모양과 화면의 인쇄 안내. 따로 실리도록 주소(?url)로 가져와 <link> 로 건다
 import Base from '#src/layouts/Base.astro';
+// 인쇄 페이지는 Pretendard 의 고정 굵기 글꼴을 쓴다 (tokens.css 의 body[data-kind='print'] 가 --font 를 바꾼다).
+// 가변 글꼴로 찍으면 Chromium 이 PDF 에 Type 3 글꼴 수십 벌을 넣는다. 고정 굵기 글꼴은 CID 글꼴로 들어가 PDF 의 글을 고르고 찾을 수 있다.
+// 글꼴 CSS 는 크다(500KB 남짓). 쪽의 치수(print.css)와 한 파일로 묶이지 않게 주소로 가져와 <link> 로 따로 건다.
+import staticFontCss from 'pretendard/dist/web/static/pretendard-dynamic-subset.css?url';
 import '#src/styles/print.css';
 import sheetCss from './sheet.css?url';
 import { footerNotice, isPublic, lessonRoute } from '#lib/content.ts';
@@ -24,6 +28,7 @@ const { lesson, job } = Astro.props;
 const { print } = job;
 ---
 <Base title={`${lesson.title} ${job.label}`} kind="print" lesson={lesson}>
+  <link slot="head" rel="stylesheet" href={staticFontCss} />
   <link slot="head" rel="stylesheet" href={sheetCss} />
   <div class="print-bar no-print">
     <div class="print-bar-in" data-orientation={print.orientation}>

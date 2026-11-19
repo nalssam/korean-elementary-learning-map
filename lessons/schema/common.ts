@@ -94,26 +94,20 @@ export const MediaRef = z.string().regex(/^(?:\d{2}(?:-\d{2})?\/)?[a-z0-9]+(?:-[
 export const Seal = z.string().regex(/^[0-9a-f]{12}$/, '지문은 손으로 적지 않습니다. npm run sign 이 적습니다');
 
 /**
- * 이용 조건.
+ * 이용 조건. 남의 그림은 다시 쓰고 고쳐 쓸 수 있는 조건의 것만 쓴다.
  * - original: 이 프로젝트에서 직접 만든 것 (CC BY-NC-SA 4.0 으로 공개)
- * - KOGL-1~4: 공공누리 1~4유형
- * - CC0, CC-BY, CC-BY-SA, CC-BY-NC, CC-BY-NC-SA, CC-BY-ND, CC-BY-NC-ND
- * - PD: 저작권이 없다 (credit.note 에 그렇게 본 까닭을 적는다)
- * - permission: 권리자에게 따로 허락받음 (credit.note 에 허락 범위를 적는다)
+ * - PD: 저작권이 없다 (credit.note 에 그렇게 본 까닭을 적는다) · CC0
+ * - KOGL-1: 공공누리 제1유형 (출처 표시)
+ * - CC-BY, CC-BY-SA: CC BY-SA 그림은 자르거나 본뜨지 않고 그대로 쓴다 (lesson.ts 의 Media 가 막는다)
+ * 공공누리 2~4유형, CC 의 NC·ND 조건, 따로 받은 허락은 받지 않는다. 고쳐 쓰거나 다른 사람이 다시 쓰는 데 걸리는 조건이라
+ * 이 사이트의 자료와 함께 내놓을 수 없다. 같은 그림을 찾지 못하면 다른 그림을 찾는다.
  */
-export const Licence = z.enum([
-  'original',
-  'KOGL-1', 'KOGL-2', 'KOGL-3', 'KOGL-4',
-  'CC0', 'CC-BY', 'CC-BY-SA', 'CC-BY-NC', 'CC-BY-NC-SA', 'CC-BY-ND', 'CC-BY-NC-ND',
-  'PD',
-  'permission',
-]);
+export const LICENCES = ['original', 'PD', 'CC0', 'KOGL-1', 'CC-BY', 'CC-BY-SA'] as const;
+export const Licence = z.enum(LICENCES, {
+  // 칸이 빠졌거나 값이 없는 것(undefined·null)은 로더의 기본 문구("꼭 있어야 하는 칸이 빠졌습니다")가 알린다
+  error: (iss) => (iss.input == null ? undefined : `이 사이트는 퍼블릭 도메인·CC0, 공공누리 제1유형, CC BY, CC BY-SA 그림만 씁니다 (지금: ${typeof iss.input === 'string' ? iss.input : JSON.stringify(iss.input)}). 다른 그림을 찾습니다`),
+});
 export type Licence = z.infer<typeof Licence>;
-
-/** 자르거나 본떠 그릴 수 없는 이용 조건 (변경 금지) */
-export const NO_DERIVATIVE: readonly Licence[] = ['KOGL-3', 'KOGL-4', 'CC-BY-ND', 'CC-BY-NC-ND'];
-/** 본떠 그릴 수 없는 이용 조건. CC BY-SA 를 본뜬 그림은 CC BY-SA 로만 내놓을 수 있어 이 사이트의 조건(CC BY-NC-SA)과 맞지 않는다. */
-export const NO_TRACE: readonly Licence[] = [...NO_DERIVATIVE, 'CC-BY-SA'];
 
 /**
  * 인쇄 안내. 화면의 인쇄 안내 줄과 안내 페이지의 준비물이 여기에서 나온다.

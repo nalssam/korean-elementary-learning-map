@@ -10,7 +10,7 @@
   --gray: #586875;        /* 설명·바닥글 */
   --teal: #18766b;        /* 포인트·링크·번호 */
   --teal-soft: #e3f0ec;   /* 띠·칩 바탕 */
-  --coral: #d9734e;       /* 강조 한 군데 */
+  --coral: #b25532;       /* 강조 한 군데. --bg 위 글자 4.7:1, 흰 글자를 얹어도 4.9:1 */
   --coral-soft: #fbeee8;
   --focus: #0b5fff;       /* 키보드 초점 */
 
@@ -47,4 +47,10 @@
   --page-margin: 10mm;
   --sheet-head: 22mm;     /* 인쇄물 머리(제목, 반·이름 칸) 높이 */
   --sheet-foot: 6mm;      /* 인쇄물 바닥글 높이 */
+}
+
+/* 인쇄 페이지는 고정 굵기 Pretendard 로 찍는다 (PrintLayout.astro 가 싣는다).
+   가변 글꼴로 찍은 PDF 에는 Chromium 이 Type 3 글꼴을 수십 벌 넣어, 글을 고르거나 찾기 어렵고 파일이 커진다. */
+body[data-kind='print'] {
+  --font: Pretendard, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', sans-serif;
 }

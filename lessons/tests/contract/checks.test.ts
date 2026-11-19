@@ -49,27 +49,27 @@ test('가리킨 사실에 없는 숫자를 잡는다', () => {
       l.assets.cards.cards.push({ front: '첫 해', back: '시험용 연표는 1995년에 시작한다.', facts: ['f2'] });
     });
     assert.equal(out.length, 3);
-    assert.ok(out[0].startsWith('quiz.items[3]: 숫자 "1995" 이(가) 가리킨 사실(f2)의 문장에 없습니다 — 「1995년」'), out[0]);
+    assert.ok(out[0].startsWith('quiz.items[3]: 숫자 "1995" — 가리킨 사실(f2)의 문장에 이 숫자가 없습니다 (「1995년」)'), out[0]);
     assert.ok(out[1].includes('「1995년입니다.」'));
     assert.ok(out[2].startsWith('assets.cards.cards[4]: 숫자 "1995"'));
     // 연도가 든 문장이 연도와 관계없는 사실을 가리킴
     out = issues('5-2/1/01', (l) => { l.quiz.items[0] = { type: 'ox', q: '돌탑은 1392년에 쌓았다.', answer: true, explain: '1392년입니다.', facts: ['f1'] }; });
     assert.equal(out.length, 2);
-    assert.ok(out[0].includes('가리킨 사실(f1)의 문장에 없습니다'));
+    assert.ok(out[0].includes('가리킨 사실(f1)의 문장에 이 숫자가 없습니다'));
     // 사실을 가리키지 않는 자리의 숫자 (수업 화면)
     out = issues('5-2/1/01', (l) => { l.slides[4].points = ['1392년에 시작했습니다.']; });
-    assert.deepEqual(out, ['slides[4]: 숫자 "1392" 이(가) 가리킨 사실(없음)의 문장에 없습니다 — 「1392년에 시작했습니다.」']);
+    assert.deepEqual(out, ['slides[4]: 숫자 "1392" — 가리킨 사실(없음)의 문장에 이 숫자가 없습니다 (「1392년에 시작했습니다.」)']);
     // 학습지의 표와 풀이
     out = issues('5-2/1/02-03', (l) => { l.worksheet.guide.push({ where: '표', text: '답은 1443년입니다.' }); });
     assert.equal(out.length, 1);
     assert.ok(out[0].startsWith('worksheet: 숫자 "1443"'));
     // 다른 묶음의 사실을 가리켜도 그 문장과 대조한다
     out = issues('5-2/1/05', (l) => { l.quiz.items[1].explain = '1393년입니다.'; });
-    assert.deepEqual(out, ['quiz.items[1]: 숫자 "1393" 이(가) 가리킨 사실(01/f2)의 문장에 없습니다 — 「1393년입니다.」']);
+    assert.deepEqual(out, ['quiz.items[1]: 숫자 "1393" — 가리킨 사실(01/f2)의 문장에 이 숫자가 없습니다 (「1393년입니다.」)']);
     // 연표의 when 은 늘 찍힌다. 사실과 다른 해를 적으면 잡는다.
     out = issues('5-2/1/02-03', (l) => { l.worksheet.pages[1].blocks[0].points[1].when = '1995년'; });
     assert.equal(out.length, 1);
-    assert.ok(out[0].startsWith('worksheet: 숫자 "1995" 이(가) 가리킨 사실(') && out[0].endsWith('의 문장에 없습니다 — 「1995년」'), out[0]);
+    assert.ok(out[0].startsWith('worksheet: 숫자 "1995" — 가리킨 사실(') && out[0].endsWith('의 문장에 이 숫자가 없습니다 (「1995년」)'), out[0]);
     // "약 70만 년 전" 같은 큰 수
     out = issues('5-2/1/01', (l) => {
       l.facts[1].claim = '시험용 돌은 약 70만 년 전의 것이다.';
@@ -77,7 +77,7 @@ test('가리킨 사실에 없는 숫자를 잡는다', () => {
       l.assets.cards.cards[3] = { front: '오래된 돌', back: '약 70만 년 전의 돌', facts: ['f2'] };
     });
     assert.equal(out.length, 2);
-    assert.ok(out[0].startsWith('quiz.items[2]: 숫자 "5만" 이(가) 가리킨 사실(f2)의 문장에 없습니다'), out[0]);
+    assert.ok(out[0].startsWith('quiz.items[2]: 숫자 "5만" — 가리킨 사실(f2)의 문장에 이 숫자가 없습니다'), out[0]);
 
     // 날짜: 해는 맞고 날이 다른 문항과 카드
     out = issues('5-2/1/01', (l) => {
@@ -85,7 +85,7 @@ test('가리킨 사실에 없는 숫자를 잡는다', () => {
       l.quiz.items[2] = { type: 'ox', q: '시험용 연표의 첫 날은 1945년 8월 16일이다.', answer: true, explain: '1945년 8월 15일입니다.', facts: ['f2'] };
       l.assets.cards.cards[3] = { front: '첫 날', back: '8월15일', facts: ['f2'] };
     });
-    assert.deepEqual(out, ['quiz.items[2]: 숫자 "8월16일" 이(가) 가리킨 사실(f2)의 문장에 없습니다 — 「시험용 연표의 첫 날은 1945년 8월 16일이다.」']);
+    assert.deepEqual(out, ['quiz.items[2]: 숫자 "8월16일" — 가리킨 사실(f2)의 문장에 이 숫자가 없습니다 (「시험용 연표의 첫 날은 1945년 8월 16일이다.」)']);
 
     // 거짓으로 낸 OX 문장과 고르기의 틀린 보기는 일부러 틀린 숫자를 담으므로 보지 않는다
     out = issues('5-2/1/01', (l) => {
@@ -109,7 +109,7 @@ test('어디에서도 쓰지 않는 그림은 걸린다 (쓰지 않아도 사이
   try {
     t.edit('5-2/1/02-03', (l) => {
       l.media.push({ id: 'extra', kind: 'photo', file: 'media/sample.png', alt: '쓰지 않는 사진',
-        credit: { holder: '시험용 박물관', title: '시험용 유물', source_url: 'https://example.org/item/9', licence: 'KOGL-3', checked: '2026-11-18' } });
+        credit: { holder: '시험용 박물관', title: '시험용 유물', source_url: 'https://example.org/item/9', licence: 'KOGL-1', checked: '2026-11-18' } });
     });
     const l = c.loadLesson('5-2/1/02-03');
     assert.deepEqual(sourceIssues(l), ['media.extra: 어디에서도 쓰지 않는 그림입니다. 쓰는 자리를 적거나 media 에서 지웁니다 (쓰지 않아도 사이트에 실리고, 출처 표시는 찍히지 않습니다)']);

@@ -119,8 +119,8 @@ test('공개 빌드 (하위 경로, 공개된 차시만)', () => {
     assert.match(home, /<link rel="stylesheet" href="\/korean-elementary\/_astro\/[^"]+\.css">/);
     // 사이트 화면은 검색에 나오고, 학생 페이지는 나오지 않는다
     assert.ok(!home.includes('name="robots"'));
-    // 공개 빌드에는 공개된 차시만 실리므로 차시가 없는 페이지도 "교사가 검수한 자료"라고 쓴다
-    assert.ok(home.includes(`<p class="site-notice">${SITE.aiNotice}</p>`) && !home.includes(SITE.previewNotice));
+    // 차시가 없는 페이지는 그 자체가 검수한 자료가 아니므로 "검수한 것만 공개한다"고 쓴다 (공개된 차시의 페이지만 aiNotice)
+    assert.ok(home.includes(`<p class="site-notice">${SITE.siteNotice}</p>`) && !home.includes(SITE.previewNotice) && !home.includes(SITE.aiNotice));
     const kit = read(out, '5-2/1/01/index.html');
     assert.ok(!kit.includes('name="robots"'));
     assert.match(read(out, '5-2/1/01/quiz/index.html'), /<meta name="robots" content="noindex">/);

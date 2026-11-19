@@ -129,6 +129,10 @@ test('인쇄 페이지: 인쇄 모양으로 재어 일곱 조건을 모두 채�
 
     // 조건 3·5: 찍은 PDF 의 쪽수와 쪽 크기. PDF 의 글은 조각을 사이에 아무것도 넣지 않고 이은 뒤 빈칸을 모두 빼고 견준다.
     const pdf = await page.pdf({ preferCSSPageSize: true, printBackground: true });
+    // 고정 굵기 Pretendard 로 찍혀 글꼴이 CID 글꼴로 들어간다. 가변 글꼴로 찍으면 Type 3 글꼴 수십 벌이 들어가 글을 고르고 찾기 어렵다.
+    const raw = Buffer.from(pdf).toString('latin1');
+    assert.ok(!/\/Subtype\s*\/Type3\b/.test(raw), 'PDF 에 Type 3 글꼴이 있습니다 (인쇄 페이지가 가변 글꼴로 찍혔습니다)');
+    assert.match(raw, /\/Subtype\s*\/CIDFontType[02]\b/);
     const task = getDocument({ data: new Uint8Array(pdf), verbosity: 0 });
     const doc = await task.promise;
     assert.equal(doc.numPages, job.pages);

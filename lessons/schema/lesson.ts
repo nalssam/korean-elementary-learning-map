@@ -13,7 +13,7 @@
 // 이 파일은 명세 하나만 보고 알 수 있는 것을 검사한다. 차시표나 다른 묶음, 파일, 지문을 봐야 하는 검사는 lib/content.ts 가 한다.
 import { z } from 'zod';
 import {
-  BundleId, DateStr, FactId, FactRefs, FactRefs1, LessonId, Licence, MediaRef, NO_DERIVATIVE, NO_TRACE,
+  BundleId, DateStr, FactId, FactRefs, FactRefs1, LessonId, Licence, MediaRef,
   PrintSpec, SchemaVersion, Seal, Slug, T, Text, Url, lessonsOf,
 } from './common.ts';
 
@@ -115,9 +115,9 @@ export const Media = so({
   } else {
     for (const k of ['title', 'source_url', 'checked'] as const) if (!m.credit[k]) issue(['credit', k], `남의 자료는 credit.${k} 을 적습니다`);
   }
-  if ((lic === 'permission' || lic === 'PD' || m.person) && !m.credit.note) issue(['credit', 'note'], '허락 범위(permission), 저작권이 없다고 본 까닭(PD), 초상 확인(person)을 credit.note 에 적습니다');
-  if (m.change !== 'none' && NO_DERIVATIVE.includes(lic)) issue(['change'], '변경 금지 조건(공공누리 3·4유형, CC ND)의 자료는 자르거나 본떠 그릴 수 없습니다. 고치지 않고 쓰거나 다른 자료를 찾습니다');
-  else if (m.change === 'traced' && NO_TRACE.includes(lic)) issue(['change'], 'CC BY-SA 자료는 본떠 그리지 않습니다 (본뜬 그림도 CC BY-SA 로만 내놓을 수 있습니다). 고치지 않고 쓰거나 다른 자료를 찾습니다');
+  if ((lic === 'PD' || m.person) && !m.credit.note) issue(['credit', 'note'], '저작권이 없다고 본 까닭(PD), 초상 확인(person)을 credit.note 에 적습니다');
+  // CC BY-SA 는 고친 것도 CC BY-SA 로만 내놓을 수 있다. 이 사이트의 조건(CC BY-NC-SA)과 섞이지 않게 원본 그대로만 쓴다.
+  if (lic === 'CC-BY-SA' && m.change !== 'none') issue(['change'], 'CC BY-SA 그림은 자르거나 본뜨지 않고 그대로 씁니다 (change: none). 고치지 않고 쓰거나 다른 그림을 찾습니다');
   if (m.change === 'traced' && m.kind === 'photo') issue(['kind'], '본떠 그린 것은 kind 를 drawing 으로 적습니다');
   // 이용 조건 주소. 출처 표시의 판("CC BY-SA 3.0")이 이 주소에서 나오므로 licence 와 어긋나면 틀린 조건이 찍힌다.
   const pathOf = (u: string) => { try { return new URL(u).pathname; } catch { return undefined; } };
@@ -297,8 +297,12 @@ const quizBase = {
 };
 export const QuizItem = z.discriminatedUnion('type', [
   so({ type: z.literal('ox'), answer: z.boolean(), ...quizBase }),
-  so({ type: z.literal('choice'), choices: z.array(T(30)).min(3).max(4), answer: z.number().int().min(1).max(4), ...quizBase })
-    .refine((i) => i.answer <= i.choices.length, { path: ['answer'], message: 'answer 는 choices 의 순서 번호입니다 (1부터)' }),
+  // answer 의 범위는 보기 수에 달려 있어 한 곳(아래)에서만 알린다. 칸에 .max(4) 를 걸면 보기가 셋일 때 "4 이하"라는 틀린 문구가 하나 더 나온다.
+  so({ type: z.literal('choice'), choices: z.array(T(30)).min(3).max(4), answer: z.number().int(), ...quizBase })
+    .superRefine((i, ctx) => {
+      const n = i.choices.length;
+      if (i.answer < 1 || i.answer > n) ctx.addIssue({ code: 'custom', path: ['answer'], message: `보기가 ${n}개이므로 1~${n} 가운데 하나를 적습니다 (지금: ${i.answer})` });
+    }),
   so({ type: z.literal('short'), answer: T(14), accept: z.array(T(14)).default([]), ...quizBase }),
 ]);
 export type QuizItem = z.infer<typeof QuizItem>;

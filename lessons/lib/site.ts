@@ -6,7 +6,7 @@ import type { AssetKind, Media, OptionalAssetKind, ReviewKind } from '../schema/
 const author = '몽당분필 날쌤';
 const licence = { name: 'CC BY-NC-SA 4.0', url: 'https://creativecommons.org/licenses/by-nc-sa/4.0/deed.ko' };
 const aiNotice = 'AI 도구로 초안을 만들고 교사가 검수한 자료입니다.';
-const licenceNote = '출처를 따로 적은 사진·그림은 그 조건을 따릅니다.';
+const licenceNote = '출처를 따로 적은 사진·그림은 이 조건이 아니라 저마다 적힌 조건을 따릅니다.';
 
 export const SITE = {
   /** 사이트 이름 (임시. 날쌤이 정하면 여기 한 곳만 고친다) */
@@ -21,10 +21,13 @@ export const SITE = {
   aiNotice,
   /** 공개되지 않은 차시의 화면·인쇄물·PPTX 에 aiNotice 대신 넣는 문구 */
   draftNotice: '검수 전 초안입니다. 수업에 쓰지 마세요.',
+  /** 공개 빌드에서 차시가 없는 페이지(첫 화면·학기·단원·소개)의 맨 아래 문구. 그 페이지 자체는 검수한 자료가 아니므로 aiNotice 를 쓰지 않는다. footerNotice() 가 고른다. */
+  siteNotice: '차시 자료는 AI 도구로 초안을 만들고, 교사가 검수한 것만 공개합니다.',
   /** 미리 보기(SHOW_DRAFTS=1, astro dev)에서 차시가 없는 페이지(첫 화면·학기·단원)에 aiNotice 대신 넣는 문구. footerNotice() 가 고른다. */
   previewNotice: '검수 전 초안이 섞여 있는 미리 보기입니다.',
   /** 공개된 차시의 인쇄물 바닥글. 직접 쓰지 말고 sheetFooter() 로 얻는다. */
-  printFooter: `${author} · ${licence.name} (${licenceNote}) · ${aiNotice}`,
+  // ·로 잇는 한 줄이라 괄호 안에 마침표 있는 문장을 넣지 않는다
+  printFooter: `${author} · ${licence.name} (따로 적은 사진·그림은 그 조건) · ${aiNotice}`,
   repo: 'https://github.com/nalssam/korean-elementary-learning-map',
   /** 오류 제보 양식 주소. 날쌤이 정하면 채운다. 비어 있으면 깃허브 이슈 링크만 보여 준다. */
   reportUrl: '',
@@ -63,19 +66,11 @@ export type PagedAssetKind = Extract<keyof typeof ASSET_ROUTE, OptionalAssetKind
 /** 이용 조건의 우리말 이름. CC 는 판(4.0 등)이 licence_url 에서 붙는다 (lib/content.ts 의 licenceName). */
 export const LICENCE_LABEL: Record<Licence, string> = {
   original: licence.name,
-  'KOGL-1': '공공누리 제1유형',
-  'KOGL-2': '공공누리 제2유형',
-  'KOGL-3': '공공누리 제3유형',
-  'KOGL-4': '공공누리 제4유형',
+  PD: '저작권 없음(퍼블릭 도메인)',
   CC0: 'CC0',
+  'KOGL-1': '공공누리 제1유형',
   'CC-BY': 'CC BY',
   'CC-BY-SA': 'CC BY-SA',
-  'CC-BY-NC': 'CC BY-NC',
-  'CC-BY-NC-SA': 'CC BY-NC-SA',
-  'CC-BY-ND': 'CC BY-ND',
-  'CC-BY-NC-ND': 'CC BY-NC-ND',
-  PD: '저작권 없음(퍼블릭 도메인)',
-  permission: '권리자 허락 (다시 쓰려면 따로 허락받아야 합니다)',
 };
 
 /** 출처 표시의 첫 낱말 */
