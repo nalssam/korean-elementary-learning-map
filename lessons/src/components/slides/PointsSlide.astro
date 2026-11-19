@@ -1,0 +1,17 @@
+---
+// 짧은 항목 2~4개. 곁그림이 있으면 오른쪽에 둔다.
+import Media from '#src/components/Media.astro';
+import type { SlideProps } from './types.ts';
+
+type Props = SlideProps<'points'>;
+const { lesson, slide } = Astro.props;
+---
+<div class:list={['sl-points', slide.media && 'has-media']}>
+  <h2 class="sl-title">{slide.title}</h2>
+  <div class="sl-points-body">
+    <ol class="sl-list">
+      {slide.points.map((p, i) => <li><span class="sl-num" aria-hidden="true">{i + 1}</span><span class="sl-li-text">{p}</span></li>)}
+    </ol>
+    {slide.media && <Media lesson={lesson} id={slide.media} caption={false} class="sl-media" />}
+  </div>
+</div>

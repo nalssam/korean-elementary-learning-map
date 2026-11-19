@@ -1,0 +1,48 @@
+---
+// 명세의 슬라이드 한 장 = 화면 한 장. layout 에 맞는 컴포넌트를 고르고, 교사 메모(slideNotes)를 장 안에 숨겨 둔다.
+import { answerText, slideNotes } from '#lib/content.ts';
+import type { Lesson, Slide } from '#schema/lesson.ts';
+import ActivitySlide from './ActivitySlide.astro';
+import ClosingSlide from './ClosingSlide.astro';
+import CompareSlide from './CompareSlide.astro';
+import PassageSlide from './PassageSlide.astro';
+import PictureSlide from './PictureSlide.astro';
+import PointsSlide from './PointsSlide.astro';
+import QuestionSlide from './QuestionSlide.astro';
+import QuizSlide from './QuizSlide.astro';
+import StepsSlide from './StepsSlide.astro';
+import TermSlide from './TermSlide.astro';
+import TitleSlide from './TitleSlide.astro';
+import { NOTE_COPY, STAGE_COPY } from './copy.ts';
+
+interface Props { lesson: Lesson; slide: Slide; no: number; total: number }
+const { lesson, slide, no, total } = Astro.props;
+const notes = slideNotes(lesson, no);
+const quiz = slide.layout === 'quiz' ? lesson.quiz.items[slide.item - 1] : undefined;
+---
+<section class="slide" id={`s${no}`} data-no={no} data-layout={slide.layout} data-quiz={quiz ? 'true' : undefined}
+  aria-roledescription="장" aria-label={STAGE_COPY.slideLabel(no, total)}>
+  <div class="slide-in">
+    {slide.layout === 'title' && <TitleSlide lesson={lesson} slide={slide} no={no} />}
+    {slide.layout === 'question' && <QuestionSlide lesson={lesson} slide={slide} no={no} />}
+    {slide.layout === 'picture' && <PictureSlide lesson={lesson} slide={slide} no={no} />}
+    {slide.layout === 'points' && <PointsSlide lesson={lesson} slide={slide} no={no} />}
+    {slide.layout === 'compare' && <CompareSlide lesson={lesson} slide={slide} no={no} />}
+    {slide.layout === 'steps' && <StepsSlide lesson={lesson} slide={slide} no={no} />}
+    {slide.layout === 'term' && <TermSlide lesson={lesson} slide={slide} no={no} />}
+    {slide.layout === 'passage' && <PassageSlide lesson={lesson} slide={slide} no={no} />}
+    {slide.layout === 'activity' && <ActivitySlide lesson={lesson} slide={slide} no={no} />}
+    {slide.layout === 'quiz' && <QuizSlide lesson={lesson} slide={slide} no={no} />}
+    {slide.layout === 'closing' && <ClosingSlide lesson={lesson} slide={slide} no={no} />}
+    <p class="sl-counter" aria-hidden="true">{no} / {total}</p>
+  </div>
+  <div class="slide-notes" hidden>
+    {notes.length ? <ul>{notes.map((n) => <li>{n}</li>)}</ul> : <p>{NOTE_COPY.empty}</p>}
+    {quiz && (
+      <dl>
+        <dt>{NOTE_COPY.answer}</dt><dd>{answerText(quiz)}</dd>
+        <dt>{NOTE_COPY.explain}</dt><dd>{quiz.explain}</dd>
+      </dl>
+    )}
+  </div>
+</section>

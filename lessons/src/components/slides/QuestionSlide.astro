@@ -1,0 +1,16 @@
+---
+// 큰 질문 하나. 곁그림(지어낸 그림도 된다)이 있으면 오른쪽에 둔다.
+import Media from '#src/components/Media.astro';
+import type { SlideProps } from './types.ts';
+
+type Props = SlideProps<'question'>;
+const { lesson, slide } = Astro.props;
+---
+<div class:list={['sl-question', slide.media && 'has-media']}>
+  <div class="sl-question-text">
+    {slide.kicker && <p class="sl-kicker sl-kicker-accent">{slide.kicker}</p>}
+    <h2 class="sl-question-title">{slide.title}</h2>
+    {slide.hint && <p class="sl-hint">{slide.hint}</p>}
+  </div>
+  {slide.media && <Media lesson={lesson} id={slide.media} caption={false} class="sl-media" />}
+</div>

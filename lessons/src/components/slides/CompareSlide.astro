@@ -1,0 +1,22 @@
+---
+// 둘을 나란히 견주기. 양쪽에 같은 짜임(이름표, 그림, 항목)을 둔다.
+import Media from '#src/components/Media.astro';
+import type { SlideProps } from './types.ts';
+
+type Props = SlideProps<'compare'>;
+const { lesson, slide } = Astro.props;
+const sides = [slide.left, slide.right];
+const anyMedia = sides.some((s) => s.media);
+---
+<div class="sl-compare">
+  <h2 class="sl-title">{slide.title}</h2>
+  <div class:list={['sl-compare-body', anyMedia && 'has-media']}>
+    {sides.map((side) => (
+      <section class="sl-card">
+        <h3 class="sl-label">{side.label}</h3>
+        {side.media && <Media lesson={lesson} id={side.media} caption={false} class="sl-media" />}
+        <ul class="sl-bullets">{side.points.map((p) => <li>{p}</li>)}</ul>
+      </section>
+    ))}
+  </div>
+</div>

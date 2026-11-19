@@ -1,0 +1,13 @@
+---
+// 그림 한 장을 크게. 명세의 그림 설명 대신 장의 caption 을 찍는다 (docs/CONTRACT.md 6절).
+import Media from '#src/components/Media.astro';
+import type { SlideProps } from './types.ts';
+
+type Props = SlideProps<'picture'>;
+const { lesson, slide } = Astro.props;
+---
+<div class="sl-picture">
+  <h2 class="sl-title">{slide.title}</h2>
+  <Media lesson={lesson} id={slide.media} caption={false} class="sl-media sl-media-big" />
+  {slide.caption && <p class="sl-caption">{slide.caption}</p>}
+</div>
