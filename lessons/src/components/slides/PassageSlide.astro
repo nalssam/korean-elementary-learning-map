@@ -1,5 +1,6 @@
 ---
 // 읽기 자료 한 편. 제목, 문단, 글 아래 source 한 줄을 그대로 찍는다 (docs/CONTRACT.md 5절).
+import { keepParticle } from '#lib/site.ts';
 import { getPassage } from '#lib/content.ts';
 import type { SlideProps } from './types.ts';
 
@@ -8,7 +9,7 @@ const { lesson, slide } = Astro.props;
 const p = getPassage(lesson, slide.passage);
 ---
 <div class="sl-passage">
-  <h2 class="sl-title">{p.title}</h2>
-  <div class="sl-passage-text">{p.text.map((t) => <p>{t}</p>)}</div>
+  <h2 class="sl-title">{keepParticle(p.title)}</h2>
+  <div class="sl-passage-text">{p.text.map((t) => <p>{keepParticle(t)}</p>)}</div>
   <p class="sl-source">{p.source}</p>
 </div>

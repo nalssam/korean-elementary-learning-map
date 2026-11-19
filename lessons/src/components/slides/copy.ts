@@ -1,7 +1,7 @@
 // 수업 화면과 PPTX 가 같이 쓰는 문구와 글자 크기.
 // 웹 무대(Stage.astro 와 장 컴포넌트)와 PPTX 생성기(generators/pptx/build.mjs → .cache/lessons.json → Python)가 이 파일 하나에서 가져간다.
 // Python 쪽에 문구를 다시 적지 않으려는 것이다 (docs/CONTRACT.md 8절).
-import { ASSET_LABEL } from '#lib/site.ts';
+import { ASSET_LABEL, MARK, MARK_LABEL } from '#lib/site.ts';
 
 /** 장 안에 찍히는 이름표 */
 export const SLIDE_COPY = {
@@ -11,8 +11,10 @@ export const SLIDE_COPY = {
   example: '이렇게 써요',
   /** 퀴즈 장의 머리 */
   quiz: ASSET_LABEL.quiz,
-  /** OX 문항의 두 칸 */
-  ox: { yes: 'O', no: 'X' },
+  /** ○× 문항의 두 칸. 기호와 읽는 말은 lib 의 것을 쓴다 (R17) */
+  ox: MARK,
+  /** ○× 칸을 화면 읽기 프로그램이 읽는 말 */
+  oxLabel: MARK_LABEL,
   /** 단답 문항의 빈칸 앞 */
   shortAnswer: '답',
   /** 드러난 정답에 붙는 표 */
@@ -111,6 +113,55 @@ export const STAGE_FIT = {
   activity: [52, 48, 44],
   /** 그림 있는 단계 장의 글 */
   stepsMedia: [44, 40, 36],
+  /** 그림 곁의 항목 (STAGE_SIDE). 44 아래 크기는 그림 칸을 가장 좁게 해도 글이 넘칠 때만 쓴다 */
+  pointsMedia: [48, 44, 40, 36],
+  /** 그림 곁의 큰 질문 (제목이라 72 아래로는 내리지 않는다) */
+  questionMedia: [80, 72],
+} as const;
+
+/**
+ * 글 곁에 그림 하나를 두는 장 (질문·항목). 제목 아래를 두 칸으로 나눠 글은 왼쪽, 그림은 오른쪽에 둔다 (R12).
+ * 그림 칸은 무대 폭의 42% 보다 넓고, 그림은 칸에 들어가는 만큼 크게 그린다. 글 덩어리와 그림은 위아래 가운데를 맞춘다.
+ */
+export const STAGE_SIDE = {
+  /** 그림 칸의 폭 후보 (무대 px). 넓은 것부터 해 보고 글이 들어가는 가장 넓은 칸을 쓴다. 가장 좁은 것도 무대 폭의 42% 를 넘는다 */
+  picture: [1120, 1008, 936, 864],
+  /** 글 칸과 그림 칸 사이 */
+  gap: 72,
+  /** 그림 칸이 지켜야 하는 무대 폭의 몫 (tests/slides 가 본다) */
+  minShare: 0.42,
+  /** 이 크기보다 작은 글은 그림 칸을 가장 좁게 해도 넘칠 때만 쓴다 */
+  body: 44,
+  /**
+   * 먼저 이 줄 수를 넘지 않는 짜임을 찾는다 (항목 하나, 질문 제목). 좁은 칸에서 항목이 세 줄로 쪼개지면 읽기 어렵다.
+   * 이때 그림 칸은 가장 좁은 후보까지 줄이지 않는다. 어느 짜임도 이것을 지킬 수 없으면 줄 수를 보지 않고 다시 고른다.
+   */
+  maxLines: { points: 2, question: 3 },
+} as const;
+
+/**
+ * 글 곁에 그림을 두는 장에서 해 볼 [그림 칸 폭, 글 크기] 차례. 웹 무대의 스크립트와 build_pptx.py 가 같은 차례로 해 보고 처음 들어가는 것을 쓴다.
+ * 그림을 먼저 크게 하고(넓은 칸부터), 그 칸에서 글을 큰 것부터 줄인다. 본문 크기(44)까지 줄여도 안 들어가면 가장 좁은 칸에서 더 줄인다.
+ * 가장 넓은 칸(무대의 58%)은 글이 아주 짧을 때만 쓴다: 가장 큰 글 크기로만 해 보고, 글 한 덩이가 maxLines 보다 한 줄 적게 들어갈 때만 고른다.
+ */
+export function sideCandidates(sizes: readonly number[]): [number, number][] {
+  const big = sizes.filter((z) => z >= STAGE_SIDE.body);
+  const small = sizes.filter((z) => z < STAGE_SIDE.body);
+  const [widest, ...rest] = STAGE_SIDE.picture;
+  return [
+    [widest, sizes[0]],
+    ...rest.flatMap((pic) => big.map((z): [number, number] => [pic, z])),
+    ...small.map((z): [number, number] => [STAGE_SIDE.picture.at(-1)!, z]),
+  ];
+}
+
+/**
+ * 그림 넷을 2 × 2 로 놓는 단계 장 (R13). 칸마다 그림은 왼쪽, 이름표와 글은 오른쪽이다.
+ * 칸 폭 가운데 그림 칸이 차지하는 몫(%) 후보. 큰 것부터 해 보고 글이 들어가는 가장 큰 몫을 쓴다.
+ * 63% 는 600 × 380 도해가 1920 × 1080 무대의 2 × 2 칸 높이를 다 쓰는 폭이다 (그림이 500px 보다 넓게 그려진다).
+ */
+export const STAGE_STEPS = {
+  gridShare: [63, 58, 54],
 } as const;
 
 /** 그림 틀의 크기 (무대 px) */

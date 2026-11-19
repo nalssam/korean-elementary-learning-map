@@ -23,6 +23,9 @@ export const SMALL_LABEL = { media: 'small-label', text: '덮개돌' } as const;
 
 const L = longText;
 
+/** 닫는 따옴표 뒤에 조사가 붙은 퀴즈 문제 (넘침 시험용 명세의 마지막 퀴즈 장) */
+export const QUOTED_QUESTION = '옛 그릇을 보고 한 말 가운데 ‘눈으로 본 것’은 무엇인가요?';
+
 /** 바꿔 넣는 장들. 앞에서부터 차례로 장 번호가 붙는다. */
 function stressSlides(): Raw[] {
   const pts = (n: number, len: number, seed = 0) => Array.from({ length: n }, (_, i) => L(len, seed + i * 2));
@@ -30,6 +33,11 @@ function stressSlides(): Raw[] {
     { layout: 'question', kicker: L(12), title: L(40, 1), hint: L(40, 2) },
     { layout: 'question', kicker: L(12), title: L(40, 1), hint: L(40, 2), media: 'tall' },
     { layout: 'question', kicker: L(12), title: L(40, 1), hint: L(40, 2), media: 'wide' },
+    // 글 곁에 보통 비율(600 × 380)의 그림 하나 (R12): 짧은 글과 가장 긴 글
+    { layout: 'question', title: '길은 어디로 이어질까요?', media: 'labelled' },
+    { layout: 'question', kicker: L(12), title: L(40, 1), hint: L(40, 2), media: 'labelled' },
+    { layout: 'points', title: L(16, 5), points: ['바닥판 위에 받침돌 두 개를 세웁니다.', '덮개돌을 그 위에 얹습니다.'], media: 'labelled' },
+    { layout: 'points', title: L(30, 5), points: pts(4, 40, 1), media: 'labelled' },
     { layout: 'picture', title: L(30, 3), media: 'wide', caption: L(40, 4) },
     { layout: 'picture', title: L(30, 3), media: 'tall', caption: L(40, 4) },
     { layout: 'points', title: L(30, 5), points: pts(4, 40) },
@@ -53,6 +61,7 @@ function stressSlides(): Raw[] {
     { layout: 'quiz', item: 6 },
     { layout: 'quiz', item: 7 },
     { layout: 'quiz', item: 8 },
+    { layout: 'quiz', item: 9 },
     { layout: 'title', title: L(30, 10), subtitle: L(40, 11) },
     { layout: 'closing', title: L(30, 12), points: pts(3, 40) },
     { layout: 'closing', title: L(30, 12) },
@@ -79,6 +88,8 @@ export function makeStress(dir: string, raw: Raw): number {
     { type: 'choice', q: L(80, 2), choices: [L(30, 5), L(30, 6), L(30, 7)], answer: 2, explain: L(40), facts: ['f1'] },
     { type: 'ox', q: L(80, 3), answer: false, explain: L(40), facts: ['f1'] },
     { type: 'short', q: L(80, 4), answer: L(14), explain: L(40), facts: ['f1'] },
+    // 닫는 따옴표 바로 뒤의 조사 (R18): 화면에서 ’ 와 은 이 다른 줄로 갈리지 않아야 한다
+    { type: 'choice', q: QUOTED_QUESTION, choices: ['아래쪽에 작은 구멍이 있다.', '깨진 곳을 고쳐 썼을 것이다.', '물을 담아 두었을 것이다.'], answer: 1, explain: L(40), facts: ['f1'] },
   );
   // 1번 장(표지)도 가장 긴 글로
   raw.slides[0] = { layout: 'title', title: L(30), subtitle: L(40, 1) };

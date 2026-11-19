@@ -1,20 +1,25 @@
 ---
-// 짧은 항목 2~4개. 곁그림이 있으면 오른쪽에 둔다.
+// 짧은 항목 2~4개.
+// 곁그림이 있으면 제목 아래를 두 칸으로 나눠 항목은 왼쪽, 그림은 오른쪽에 둔다 (R12, copy.ts 의 STAGE_SIDE).
+// 그림 칸의 폭과 글 크기는 Stage.astro 의 스크립트가 sideCandidates() 의 차례대로 해 보고 고른다.
 // 그림이 없으면 항목을 크게(STAGE_FIT.points) 쓰고 제목 아래 남은 자리의 위아래 가운데에 둔다.
+import { keepParticle } from '#lib/site.ts';
 import Media from '#src/components/Media.astro';
-import { STAGE_FIT } from './copy.ts';
+import { STAGE_FIT, STAGE_SIDE, sideCandidates } from './copy.ts';
 import type { SlideProps } from './types.ts';
 
 type Props = SlideProps<'points'>;
 const { lesson, slide } = Astro.props;
-const fit = slide.media ? undefined : STAGE_FIT.points;
+const fit = slide.media ? STAGE_FIT.pointsMedia : STAGE_FIT.points;
+const side = slide.media ? sideCandidates(fit) : undefined;
+const style = `--fit: ${fit.at(-1)}${side ? `; --pic: ${STAGE_SIDE.picture.at(-1)}` : ''}`;
 ---
-<div class:list={['sl-points', slide.media && 'has-media']} data-fit={fit?.join(' ')} style={fit ? `--fit: ${fit.at(-1)}` : undefined}>
-  <h2 class="sl-title">{slide.title}</h2>
-  <div class="sl-points-body">
-    <ol class:list={['sl-list', fit && 'sl-fit']}>
-      {slide.points.map((p, i) => <li><span class="sl-num" aria-hidden="true">{i + 1}</span><span class="sl-li-text">{p}</span></li>)}
+<div class:list={['sl-points', slide.media && 'has-media']} data-fit={fit.join(' ')} data-side={side ? JSON.stringify(side) : undefined} data-max-lines={side ? STAGE_SIDE.maxLines.points : undefined} style={style}>
+  <h2 class="sl-title">{keepParticle(slide.title)}</h2>
+  <div class:list={['sl-points-body', slide.media && 'sl-side']}>
+    <ol class="sl-list sl-fit">
+      {slide.points.map((p, i) => <li><span class="sl-num" aria-hidden="true">{i + 1}</span><span class="sl-li-text">{keepParticle(p)}</span></li>)}
     </ol>
-    {slide.media && <Media lesson={lesson} id={slide.media} caption={false} class="sl-media" />}
+    {slide.media && <Media lesson={lesson} id={slide.media} caption={false} class="sl-media sl-side-media" />}
   </div>
 </div>

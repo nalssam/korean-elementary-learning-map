@@ -1,6 +1,7 @@
 ---
 // 퀴즈 문항 하나. 정답은 처음에 가려 두고, 다음 글쇠를 누르면 드러난다 (Stage.astro 의 스크립트가 data-revealed 를 붙인다).
 // 점수·축하 효과는 쓰지 않는다. 맞는 칸에 '정답' 표만 붙는다.
+import { keepParticle } from '#lib/site.ts';
 import type { SlideProps } from './types.ts';
 import { SLIDE_COPY } from './copy.ts';
 
@@ -10,26 +11,26 @@ const item = lesson.quiz.items[slide.item - 1];
 ---
 <div class:list={['sl-quiz', `is-${item.type}`]}>
   <p class="sl-kicker">{SLIDE_COPY.quiz}</p>
-  <h2 class="sl-quiz-q">{item.q}</h2>
+  <h2 class="sl-quiz-q">{keepParticle(item.q)}</h2>
   {item.type === 'choice' && (
     <ol class:list={['sl-choices', item.choices.length === 3 && 'is-three']}>
       {item.choices.map((c, i) => (
         <li class="sl-choice" data-answer={i + 1 === item.answer ? 'true' : undefined}>
-          <span class="sl-num" aria-hidden="true">{i + 1}</span><span class="sl-li-text">{c}</span>{i + 1 === item.answer && <span class="sl-correct">{SLIDE_COPY.correct}</span>}
+          <span class="sl-num" aria-hidden="true">{i + 1}</span><span class="sl-li-text">{keepParticle(c)}</span>{i + 1 === item.answer && <span class="sl-correct">{SLIDE_COPY.correct}</span>}
         </li>
       ))}
     </ol>
   )}
   {item.type === 'ox' && (
     <ul class="sl-ox">
-      <li class="sl-ox-cell" data-answer={item.answer ? 'true' : undefined}><span class="sl-ox-glyph">{SLIDE_COPY.ox.yes}</span>{item.answer && <span class="sl-correct">{SLIDE_COPY.correct}</span>}</li>
-      <li class="sl-ox-cell" data-answer={!item.answer ? 'true' : undefined}><span class="sl-ox-glyph">{SLIDE_COPY.ox.no}</span>{!item.answer && <span class="sl-correct">{SLIDE_COPY.correct}</span>}</li>
+      <li class="sl-ox-cell" data-answer={item.answer ? 'true' : undefined}><span class="sl-ox-glyph" role="img" aria-label={SLIDE_COPY.oxLabel.yes}>{SLIDE_COPY.ox.yes}</span>{item.answer && <span class="sl-correct">{SLIDE_COPY.correct}</span>}</li>
+      <li class="sl-ox-cell" data-answer={!item.answer ? 'true' : undefined}><span class="sl-ox-glyph" role="img" aria-label={SLIDE_COPY.oxLabel.no}>{SLIDE_COPY.ox.no}</span>{!item.answer && <span class="sl-correct">{SLIDE_COPY.correct}</span>}</li>
     </ul>
   )}
   {item.type === 'short' && (
     <div class="sl-short">
       <span class="sl-short-label">{SLIDE_COPY.shortAnswer}</span>
-      <span class="sl-short-blank"><span class="sl-short-answer">{item.answer}</span></span>
+      <span class="sl-short-blank"><span class="sl-short-answer">{keepParticle(item.answer)}</span></span>
     </div>
   )}
 </div>

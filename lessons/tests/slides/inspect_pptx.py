@@ -26,6 +26,7 @@ for s in prs.slides:
                 'crop': [sh.crop_left, sh.crop_right, sh.crop_top, sh.crop_bottom],
                 'inside': sh.left >= 0 and sh.top >= 0 and sh.left + sh.width <= prs.slide_width and sh.top + sh.height <= prs.slide_height,
                 'alt': sh._element.nvPicPr.cNvPr.get('descr'),
+                'box': [sh.left / EMU_PT, sh.top / EMU_PT, (sh.left + sh.width) / EMU_PT, (sh.top + sh.height) / EMU_PT],
             })
     notes = s.notes_slide.notes_text_frame.text if s.has_notes_slide else ''
     out['slides'].append({'texts': texts, 'boxes': boxes, 'pictures': pics, 'notes': notes})
