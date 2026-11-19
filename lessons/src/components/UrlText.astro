@@ -1,0 +1,9 @@
+---
+// 손으로 옮겨 적을 주소 (QR 카드, 수업 화면의 QR 창). 주소 속 '-' 에서 줄이 바뀌면 줄 끝 붙임표로 읽혀
+// 'learning-map' 을 'learningmap' 으로 옮겨 적기 쉽다. 그래서 '/' 뒤에서만 줄을 바꾼다 (C3-10).
+// '/' 와 '/' 사이의 조각은 한 덩이로 묶고, 조각 사이에만 <wbr> 을 둔다. 글자는 그대로라 복사해도 같은 주소다.
+interface Props { url: string }
+const { url } = Astro.props;
+const parts = url.split(/(?<=\/)(?!\/)/);
+---
+{parts.map((p, i) => <Fragment>{i > 0 && <wbr />}<span class="url-part" style="white-space:nowrap">{p}</span></Fragment>)}

@@ -131,8 +131,9 @@ body[data-kind='stage'] { background: var(--bg); }
 /* ───────── 항목 ───────── */
 .sl-points-body:not(.sl-side) { flex: 1; min-height: 0; display: flex; }
 .sl-points-body .sl-list { flex: 1; min-width: 0; justify-content: flex-start; }
-/* 그림이 없으면 항목을 크게 쓰고 제목 아래 남은 자리의 위아래 가운데에 둔다 */
-.sl-points:not(.has-media) .sl-points-body { align-items: center; }
+/* 그림이 없으면 항목을 크게 쓰고 제목 아래 48 만큼 내려 위에 맞춘다 (C3-05). 장을 넘겨도 목록이 같은 높이에서 시작한다.
+   PPTX 는 build_pptx.py 의 BODY_DROP. 할 일 장(.sl-activity-body)도 같다. */
+.sl-points:not(.has-media) .sl-points-body { align-items: flex-start; padding-top: calc(48 * var(--u)); }
 .sl-points:not(.has-media) .sl-list { gap: calc(48 * var(--u)); }
 /* 번호 동그라미는 첫 줄의 가운데에 (줄 높이가 동그라미보다 낮으면 위를 맞춘다) */
 .sl-points-body .sl-list .sl-num { margin-top: calc(max(1, (var(--fit) * 1.4 - 64) / 2) * var(--u)); }
@@ -182,7 +183,7 @@ body[data-kind='stage'] { background: var(--bg); }
   grid-row: auto; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr);
   column-gap: calc(20 * var(--u)); row-gap: calc(16 * var(--u)); padding-top: calc(16 * var(--u));
 }
-.sl-steps-list.is-across[data-arrange='grid'] .sl-chip { grid-column: 1; grid-row: 1; align-self: start; font-size: calc(var(--fit) * var(--u)); }
+.sl-steps-list.is-across[data-arrange='grid'] .sl-chip { grid-column: 1; grid-row: 1; align-self: start; font-size: calc(var(--fit) * var(--u)); box-sizing: border-box; min-width: calc(var(--chip-em, 1) * 1em + 36 * var(--u)); }
 .sl-steps-list.is-across[data-arrange='grid'] .sl-step-text { grid-column: 2; grid-row: 1; padding-top: calc(6 * var(--u)); }
 .sl-steps-list.is-across[data-arrange='grid'] .sl-step > .media, .sl-steps-list.is-across[data-arrange='grid'] .sl-media-gap { grid-column: 1 / -1; grid-row: 2; }
 /* 단계 그림의 출처 표시가 모두 같으면 목록 아래에 한 번만 */
@@ -208,7 +209,7 @@ body[data-kind='stage'] { background: var(--bg); }
 .sl-source { flex: none; margin-top: calc(20 * var(--u)); font-size: calc(30 * var(--u)); color: var(--gray); line-height: 1.3; }
 
 /* ───────── 활동 ───────── */
-.sl-activity-body { flex: 0 1 auto; min-height: 0; margin-block: auto; display: flex; gap: calc(64 * var(--u)); }
+.sl-activity-body { flex: 0 1 auto; min-height: 0; margin-top: calc(48 * var(--u)); margin-bottom: auto; display: flex; gap: calc(64 * var(--u)); }
 .sl-activity-body .sl-list { flex: 1; min-width: 0; line-height: 1.35; }
 .sl-aside {
   flex: 0 0 calc(540 * var(--u)); align-self: flex-start; display: flex; flex-direction: column; gap: calc(32 * var(--u));
@@ -336,10 +337,10 @@ body[data-kind='stage'] { background: var(--bg); }
 .qr-item { display: flex; flex-direction: column; align-items: center; gap: clamp(8px, 1.4vh, 16px); min-width: 0; }
 .qr-name { margin: 0; font-size: clamp(20px, 3.4vh, 40px); font-weight: 700; color: var(--teal); line-height: 1.2; }
 .qr-item .qr { display: block; width: min(40vh, 30vw); height: auto; aspect-ratio: 1; }
-.qr-addr { margin: 0; max-width: min(40vh + 120px, 40vw); font-size: clamp(14px, 2vh, 24px); line-height: 1.35; color: var(--navy); text-align: center; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.qr-addr { margin: 0; max-width: min(40vh + 120px, 40vw); font-size: clamp(14px, 2vh, 24px); line-height: 1.35; color: var(--navy); text-align: center; overflow-wrap: normal; font-variant-numeric: tabular-nums; }
 .qr-close {
   position: absolute; top: 12px; right: 12px; padding: 8px 14px; border: 1px solid var(--line); border-radius: var(--radius-sm);
-  background: var(--card); color: var(--navy); font: inherit; font-size: var(--fs-sm); cursor: pointer;
+  background: var(--card); color: var(--navy); font: inherit; font-size: clamp(18px, 2.4vh, 28px); font-weight: 700; cursor: pointer;
 }
 .qr-close:hover { background: var(--teal-soft); }
 

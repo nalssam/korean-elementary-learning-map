@@ -26,8 +26,8 @@ const ORIENTATION = { portrait: '세로', landscape: '가로' };
 const KINDS = ['worksheet', 'papercraft', 'coloring', 'cards'];
 /** 본문의 마지막 블록과 바닥글 글자 사이의 가장 작은 틈(mm). docs/CONTRACT.md 7절 (R29). src/components/print/layout.ts 의 FOOT_GAP_MM 과 같은 값이다. */
 const FOOT_GAP_MM = 6;
-// 바닥글 앞의 틈을 어기면 멈추는 인쇄물. 페이퍼크래프트는 전개도 쪽이 아직 틈을 남기지 않아 알리기만 한다 (담당이 맞추면 여기에 더한다).
-const GAP_STOPS = new Set(['worksheet', 'cards', 'coloring']);
+// 바닥글 앞의 틈을 어기면 멈추는 인쇄물. 모든 인쇄물이 틈을 지킨다 (전개도는 net.ts 의 DRAW_BOTTOM, 만드는 법 쪽은 footReserve).
+const GAP_STOPS = new Set(['worksheet', 'cards', 'coloring', 'papercraft']);
 
 // ───────────────────────────── 인자 ─────────────────────────────
 

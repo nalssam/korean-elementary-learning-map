@@ -6,7 +6,8 @@
 // 실제 크기(100%)로 찍혀야 조각이 서로 맞는다. 인쇄 틀(PrintLayout, Sheet)은 그대로 쓴다.
 import PrintLayout from '#src/components/print/PrintLayout.astro';
 import Sheet from '#src/components/print/Sheet.astro';
-import { lessonPaths, loadLesson, printJobs } from '#lib/content.ts';
+import { lessonPaths, loadLesson, printJobs, sheetFooter } from '#lib/content.ts';
+import { footReserve } from '#src/components/print/layout.ts';
 import { keepParticle } from '#lib/site.ts';
 import { textWidth } from '../../../../../generators/papercraft/net.ts';
 
@@ -64,7 +65,9 @@ const textH = (lines: number, tight: boolean) => [
   block(8, pc.try_it, (s) => rows(s, 4.23, 185) * (tight ? 5.9 : 6.3), tight ? 0.8 : 1.5),
   block(8, pc.reflect, (s) => rows(s, 4.23, 190) * (tight ? 5.9 : 6.3) + lines * 10, tight ? 2 : 3),
 ].filter((h) => h > 0).reduce((t, h) => t + h + (tight ? 3.5 : 5), 0);
-const room = 247 - (fig ? fig.min : 0);
+// 바닥글 앞의 틈(6mm, R29)을 남기려고 만드는 법 덩이 아래에 비워 두는 높이 (.pc-guide 의 padding-bottom)
+const reserve = footReserve(`${sheetFooter(lesson)} · ${job.pages}/${job.pages}`);
+const room = 247 - reserve - (fig ? fig.min : 0);
 const tight = textH(1, false) > room;
 const writeLines = [3, 2, 1].find((n) => textH(n, tight) <= room) ?? 1;
 const over = textH(1, tight) - room;
@@ -80,7 +83,7 @@ const kp = keepParticle;
     </Sheet>
   ))}
   <Sheet lesson={lesson} job={job} no={job.pages} title={pc.title} sub="만드는 법" name={name}>
-    <div class:list={['pc-guide', { 'pc-tight': tight }]}>
+    <div class:list={['pc-guide', { 'pc-tight': tight }]} style={`--foot-reserve:${reserve}mm`}>
       <p class="pc-need">
         <span class="pc-tag">준비물</span>
         <span>{[job.print.paper, ...materials].join(', ')}</span>
@@ -128,7 +131,7 @@ const kp = keepParticle;
 <style is:global>
   /* 만드는 법 쪽. 본문(190 × 249mm)을 세로로 나눈다: 글은 제 높이만 쓰고, 완성 모습 그림이 남는 높이를 쓴다.
      흑백으로 뽑아도 읽히게 색 대신 굵기와 테두리로 나눈다. 지시문 13pt, 본문 12pt 이상, 쓰는 줄 간격 10mm (7절). */
-  .pc-guide { display: flex; flex-direction: column; height: 100%; color: var(--ink); }
+  .pc-guide { display: flex; flex-direction: column; box-sizing: border-box; height: 100%; padding-bottom: var(--foot-reserve, 0mm); color: var(--ink); }
   /* 덩이 사이: 5mm 에서 남는 높이를 나눠 10mm 까지 벌린다. 그래도 남으면 쪽 아래에 남긴다 (덩이가 쪽 위아래로 흩어지지 않게). */
   .pc-gap { flex: 1 1 0; min-height: 5mm; max-height: 10mm; }
   .pc-guide h2 { margin: 0 0 2mm; font-size: 13pt; font-weight: 700; line-height: 1.3; }

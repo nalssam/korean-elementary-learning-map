@@ -19,7 +19,7 @@
 //
 // 이 파일에 적는 글은 조각 이름, 조립 표시, 그림의 이름표뿐이다. 아이가 읽는 문장(차례 카드)은 명세의 texts 에서 받는다.
 import {
-  BODY_H, BODY_W, FONT_FAMILY, INK, INK_DIM, LEGEND_H, RULE, SPOT_DASH,
+  BODY_W, DRAW_BOTTOM, FONT_FAMILY, INK, INK_DIM, LEGEND_H, RULE, SPOT_DASH,
   fit, grainAround, mark, markBox, rect, render, spot, tab, text, textBox, textWidth, wave,
   type Join, type Piece, type Plan, type Pt, type Seg, type TextOpts,
 } from '../net.ts';
@@ -125,7 +125,7 @@ function capstone(ox: number, oy: number, marks: string[]): Piece {
   m(ox + CH / 2, y1 + CH / 2 - 1, x0 + 3.6, y1 + CH / 2, 1);
   m(x1 + CH / 2, yb + CH / 2 + 1, x1 - 3.6, yb + CH / 2, 2);
   m(x1 + CH / 2, y1 + CH / 2 - 1, x1 - 3.6, y1 + CH / 2, 3);
-  m(x0 + CL / 2, oy + CTAB / 2 + 0.3, x0 + CL / 2, ye - 3.6, 4);
+  m(x0 + CL / 2, oy + CTAB / 2, x0 + CL / 2, ye - 3.6, 4);
   return { name: '덮개돌', faces, art: dress(waves, labels, ms), joins };
 }
 
@@ -159,7 +159,7 @@ function support(ox: number, oy: number, no: number, marks: [string, string]): P
   ];
   const ms: MarkAt[] = [
     { x: xe + TAB / 2, y: yB + h / 2, s: marks[0], role: 'tab' }, { x: ox + 3.6, y: yB + h - 5, s: marks[0], role: 'target' },
-    { x: (xs[1] + xs[2]) / 2, y: oy + TOP_TAB / 2 + 0.3, s: marks[1], role: 'tab' }, { x: (xs[3] + xs[4]) / 2, y: yB + 3.8, s: marks[1], role: 'target' },
+    { x: (xs[1] + xs[2]) / 2, y: oy + TOP_TAB / 2, s: marks[1], role: 'tab' }, { x: (xs[3] + xs[4]) / 2, y: yB + 3.8, s: marks[1], role: 'target' },
   ];
   return { name, faces, art: dress(waves, labels, ms), joins };
 }
@@ -267,7 +267,7 @@ function card(ox: number, oy: number, w: number, h: number, s: string, no: numbe
 function sheet1(): Plan {
   const capW = CL + 2 * CH, capH = CTAB + 2 * CH + 2 * CW;
   const sW = 2 * SW + 2 * SD + TAB, sH = TOP_TAB + SW + SH, sGap = 6;
-  const top = LEGEND_H + 3, bottom = BODY_H - 0.5;
+  const top = LEGEND_H + 3, bottom = DRAW_BOTTOM;
   const free = bottom - top - capH - sH;
   const between = Math.min(14, free * 0.45), pad = (free - between) / 2;
   const cy = top + pad, sy = cy + capH + between;
@@ -297,7 +297,7 @@ function sheet2(texts: string[]): Plan {
   const rowY = rY + rh + GAP + 1;
   const row = Math.min(n, 4);
   const rowW = row ? Math.min(46, (BODY_W - 4 - (row - 1) * cg) / row) : 0;
-  const rowH = Math.min(38, BODY_H - 0.5 - rowY);
+  const rowH = Math.min(38, DRAW_BOTTOM - rowY);
   const slots: [number, number, number, number][] = [];
   const rx0 = (BODY_W - row * rowW - (row - 1) * cg) / 2;
   for (let k = 0; k < row; k++) slots.push([rx0 + k * (rowW + cg), rowY, rowW, rowH]);

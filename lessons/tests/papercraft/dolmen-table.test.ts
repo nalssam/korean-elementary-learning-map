@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { xmlText } from '#lib/content.ts';
 import mod, * as dolmen from '../../generators/papercraft/modules/dolmen-table.ts';
-import { analyse, bbox, len, BODY_H, BODY_W, LEGEND_H, MIN_TEXT, RULE, SVG_OPEN, textWidth, type Piece, type Plan, type Pt, type Seg } from '../../generators/papercraft/net.ts';
+import { analyse, bbox, len, MARK_R, BODY_H, BODY_W, DRAW_BOTTOM, FOOT_ROOM, LEGEND_H, MIN_TEXT, RULE, SVG_OPEN, textWidth, type Piece, type Plan, type Pt, type Seg } from '../../generators/papercraft/net.ts';
 
 /** 수업 화면 10번 장의 네 단계 글과 같은 차례 카드 (R21) */
 const TEXTS = ['받침돌을 세웁니다.', '흙을 쌓아 비탈을 만듭니다.', '덮개돌을 비탈 위로 끌어 올립니다.', '흙을 걷어 냅니다.'];
@@ -341,12 +341,12 @@ test('글꼴: 도안과 완성 모습의 글은 고정 굵기 Pretendard 로 찍
   }
 });
 
-test('조각은 모두 190 × 249mm 안에, 선 안내 아래에 있고, 가위가 지나갈 틈(2mm 이상)을 두고 떨어져 있다', () => {
+test('조각은 모두 190 × 249mm 안에, 선 안내 아래와 바닥글 앞의 틈(R29) 위에 있고, 가위가 지나갈 틈(2mm 이상)을 두고 떨어져 있다', () => {
   for (const [label, texts] of Object.entries(CASES)) {
     for (const [i, plan] of dolmen.plans(texts).entries()) {
       const boxes = plan.pieces.map((p) => ({ name: p.name, b: bbox(p) }));
       for (const { name, b } of boxes) {
-        assert.ok(b[0] >= 0.5 && b[1] >= LEGEND_H + 1 && b[2] <= BODY_W - 0.5 && b[3] <= BODY_H - 0.5, `${label} · ${i + 1}쪽 ${name}: [${b.map((v) => v.toFixed(1))}] 가 본문 밖으로 나갑니다`);
+        assert.ok(b[0] >= 0.5 && b[1] >= LEGEND_H + 1 && b[2] <= BODY_W - 0.5 && b[3] <= DRAW_BOTTOM + 1e-9, `${label} · ${i + 1}쪽 ${name}: [${b.map((v) => v.toFixed(1))}] 가 본문 밖이나 바닥글 앞의 틈으로 나갑니다`);
       }
       for (let a = 0; a < boxes.length; a++) for (let c = a + 1; c < boxes.length; c++) {
         const p = boxes[a].b, q = boxes[c].b;
@@ -437,6 +437,29 @@ test('결(꾸밈 선)은 어떤 글자나 조립 표시도 지나지 않고 닿�
           }
         }
       }
+    }
+  }
+});
+
+test('전개도의 아래 끝은 바닥글이 두 줄일 때의 footReserve 만큼 비운다 (R29)', async () => {
+  const { footReserve, footLines } = await import('#src/components/print/layout.ts');
+  const { SITE } = await import('#lib/site.ts');
+  // 공개된 차시의 바닥글 (안내 문구 · 차시 주소 · 쪽 번호). 두 줄로 접힌다.
+  const long = `${SITE.printFooter} · https://nalssam.github.io/korean-elementary-learning-map/5-2/1/01/ · 3/3`;
+  assert.equal(footLines(long), 2);
+  assert.ok(FOOT_ROOM >= footReserve(long), `FOOT_ROOM ${FOOT_ROOM} < footReserve ${footReserve(long)}`);
+  assert.equal(DRAW_BOTTOM, BODY_H - FOOT_ROOM);
+});
+
+test('6mm 풀칠 칸의 표시 동그라미는 칸 안에서 자르는 선과 접는 선에 0.8mm 이상 떨어진다', () => {
+  assert.ok(dolmen.TAB / 2 - MARK_R.tab >= 0.8 - 1e-9 && dolmen.TOP_TAB / 2 - MARK_R.tab >= 0.8 - 1e-9 && dolmen.CTAB / 2 - MARK_R.tab >= 0.8 - 1e-9);
+  for (const [label, texts] of Object.entries(CASES)) {
+    for (const [i, plan] of dolmen.plans(texts).entries()) {
+      const svg = dolmen.sheets(texts)[i].svg;
+      for (const m of svg.matchAll(/data-mark-role="tab"><circle cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)"/g)) {
+        assert.ok(Number(m[3]) <= MARK_R.tab, `${label} · ${i + 1}쪽: 탭 표시의 반지름 ${m[3]}`);
+      }
+      assert.ok(plan.pieces.length > 0);
     }
   }
 });

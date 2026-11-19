@@ -326,7 +326,13 @@ test('QR 창 (R25): Q 와 단추로 열고, 학생 페이지의 QR 과 주소만
     assert.deepEqual(await page.locator('.qr-name').allTextContents(), want.map((p) => p.name));
     assert.deepEqual(await page.locator('.qr-addr').allTextContents(), want.map((p) => p.url));
     const kit = fs.readFileSync(path.join(s.out, '5-2', '1', '02-03', 'index.html'), 'utf8');
-    for (const p of want) assert.ok(kit.includes(p.url), `안내 페이지에 같은 주소가 없습니다: ${p.url}`);
+    for (const p of want) assert.ok(kit.replace(/<[^>]+>/g, '').includes(p.url), `안내 페이지에 같은 주소가 없습니다: ${p.url}`);
+    // 주소는 '/' 뒤에서만 줄이 바뀐다: '/' 사이의 조각마다 줄바꿈 없는 덩이이고, 그 사이에만 <wbr> 이 있다 (C3-10)
+    for (const addr of await page.locator('.qr-addr').all()) {
+      const parts = await addr.locator('.url-part').allTextContents();
+      assert.ok(parts.length > 1 && parts.slice(0, -1).every((t) => t.endsWith('/')), `주소 조각: ${parts.join(' | ')}`);
+      assert.equal(await addr.locator('.url-part').first().evaluate((e) => getComputedStyle(e).whiteSpace), 'nowrap');
+    }
     // QR 을 칸 배열로 되읽어 그 주소를 담은 QR 과 견준다 (주소를 바꾸면 칸이 달라진다)
     const paths = await page.locator('.qr-layer .qr-ink').evaluateAll((els) => els.map((e) => e.getAttribute('d')!));
     assert.equal(paths.length, want.length);

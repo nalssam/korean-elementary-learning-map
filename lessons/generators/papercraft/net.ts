@@ -17,6 +17,13 @@ export type Seg = readonly [Pt, Pt];
 /** 본문(.sheet-body)의 크기. 세로 A4 에서 여백·머리·바닥글을 뺀 자리다. */
 export const BODY_W = 190;
 export const BODY_H = 249;
+/**
+ * 전개도가 그림을 그릴 수 있는 아래 끝(mm). 바닥글 앞의 틈 6mm (R29, docs/CONTRACT.md 7절)를 지키려고
+ * 본문 아래 6.2mm 를 비운다. 바닥글이 두 줄(공개된 차시는 주소가 들어간다)일 때 layout.ts 의 footReserve 가 내는 값이다.
+ * 전개도는 실제 크기로 찍혀야 하므로 바닥글에 따라 줄이지 않고, 늘 긴 쪽에 맞춘다.
+ */
+export const FOOT_ROOM = 6.2;
+export const DRAW_BOTTOM = BODY_H - FOOT_ROOM;
 
 // 인쇄물 색. src/styles/tokens.css 의 인쇄물 기준값(--ink, --ink-dim, --rule, --rule-soft)과 같은 값이다.
 // SVG 를 따로 떼어 열어도 같은 모양이 나오도록 CSS 변수 대신 값을 적는다.
@@ -270,9 +277,12 @@ export function text(x: number, y: number, s: string, o: TextOpts = {}): string 
 
 /** 도안에 찍는 글의 가장 작은 크기 (mm). 8pt 다. 이보다 작은 글은 A4 에서 아이가 읽기 어렵다. */
 export const MIN_TEXT = 2.83;
-/** 조립 표시의 글자 크기와 동그라미 반지름 (mm). 붙일 자리의 글자도 MIN_TEXT 를 넘는다. */
-export const MARK_SIZE = { tab: 3.2, target: 2.9 } as const;
-export const MARK_R = { tab: 2.5, target: 2.2 } as const;
+/**
+ * 조립 표시의 글자 크기와 동그라미 반지름 (mm). 붙일 자리의 글자도 MIN_TEXT 를 넘는다.
+ * 탭의 동그라미(지름 4.4mm)는 6mm 풀칠 칸 안에서 자르는 선과 접는 선에 0.8mm 씩 떨어진다 (닿으면 오릴 자리가 가려진다).
+ */
+export const MARK_SIZE = { tab: 3.0, target: 2.9 } as const;
+export const MARK_R = { tab: 2.2, target: 2.2 } as const;
 
 /**
  * 조립 표시: 동그라미 안의 글자. 탭과, 그 탭을 붙이는 자리에 같은 글자를 찍는다.

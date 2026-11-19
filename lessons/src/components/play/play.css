@@ -159,7 +159,8 @@ html:not(.js) .q { padding-bottom: var(--s6); margin-bottom: var(--s6); border-b
    출처는 카드에 찍지 않고 활동 아래 '그림 출처'에 모은다. */
 .chip-media { grid-template-columns: minmax(0, 1fr) auto; }
 .chip-picture { display: flex; align-items: center; justify-content: center; width: var(--box-w); height: var(--box-h); margin: var(--s2) var(--s2) var(--s2) 0; pointer-events: none; }
-.chip-picture img { display: block; width: min(100%, calc(var(--box-h) * var(--ar, 1))); height: auto; aspect-ratio: var(--ar, 1); border-radius: 4px; }
+/* 카드 그림의 가는 테두리: 하늘이 흰 사진이 흰 카드에 녹아 그림이 작아 보이지 않게 (R26 은 카드에서 빼도 된다고 하지만 둘러 둔다) */
+.chip-picture img { display: block; box-sizing: border-box; width: min(100%, calc(var(--box-h) * var(--ar, 1))); height: auto; aspect-ratio: var(--ar, 1); border: 1px solid var(--line); border-radius: 4px; }
 /* 아주 넓은 그림이 있는 페이지, 또는 카드가 아주 좁을 때(320px 휴대폰): 그림 칸을 글 아래에 카드 너비로 둔다.
    글 옆에 두면 이름이 한 낱말씩 세 줄로 쌓인다. 칸의 높이는 그대로라 그림 카드끼리 높이가 같다. */
 .drop { container: drop / inline-size; }

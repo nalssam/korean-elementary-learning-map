@@ -1,6 +1,7 @@
 ---
 // 확인 퀴즈와 웹 활동: 아이들이 여는 페이지의 QR 과 링크. QR 은 이 페이지만 만든다 (docs/CONTRACT.md 6절).
 // 주소는 absoluteUrl() 로 만든다. 종이와 화면에 박히는 주소라서 브라우저의 location 으로 만들지 않는다.
+import UrlText from '#src/components/UrlText.astro';
 import { absoluteUrl, answerText, lessonRoute, quizByLesson, scored } from '#lib/content.ts';
 import { ASSET_LABEL, ASSET_ROUTE, MARK_LABEL } from '#lib/site.ts';
 import type { Lesson } from '#schema/lesson.ts';
@@ -29,7 +30,7 @@ const webAside = web && !usedInFlow(lesson).has('web_activity');
       <div class="qr-text">
         <h3 class="qr-title">{ASSET_LABEL.quiz}</h3>
         <p class="qr-desc">{count}문항{perLesson && ` (${perLesson})`}</p>
-        <p class="qr-url" data-pagefind-ignore>{absoluteUrl(quizRoute)}</p>
+        <p class="qr-url" data-pagefind-ignore><UrlText url={absoluteUrl(quizRoute)} /></p>
         <p class="qr-open" data-pagefind-ignore><a href={href(quizRoute)}>{ASSET_LABEL.quiz} 열기</a></p>
       </div>
     </article>
@@ -40,7 +41,7 @@ const webAside = web && !usedInFlow(lesson).has('web_activity');
           <h3 class="qr-title">{ASSET_LABEL.web_activity}</h3>
           {webAside && <p class="qr-tag" data-pagefind-ignore><span class="chip chip-plain">더 해 볼 자료</span></p>}
           <p class="qr-desc">{web.title}</p>
-          <p class="qr-url" data-pagefind-ignore>{absoluteUrl(playRoute)}</p>
+          <p class="qr-url" data-pagefind-ignore><UrlText url={absoluteUrl(playRoute)} /></p>
           <p class="qr-open" data-pagefind-ignore><a href={href(playRoute)}>{ASSET_LABEL.web_activity} 열기</a></p>
         </div>
       </article>
@@ -57,7 +58,7 @@ const webAside = web && !usedInFlow(lesson).has('web_activity');
                 <p class="quiz-q">{item.q}</p>
                 {item.type === 'choice' && <ol class="quiz-choices">{item.choices.map((c) => <li>{c}</li>)}</ol>}
                 <p class="quiz-a"><strong>정답</strong> {item.type === 'ox'
-                  ? <><span class="quiz-mark" aria-hidden="true">{answerText(item)}</span><span class="sr-only" data-pagefind-ignore>{MARK_LABEL[item.answer ? 'yes' : 'no']}</span></>
+                  ? <><span class="quiz-mark" aria-hidden="true">{answerText(item)}</span> {MARK_LABEL[item.answer ? 'yes' : 'no']}</>
                   : answerText(item)}</p>
                 <p class="quiz-why">{item.explain}</p>
               </li>

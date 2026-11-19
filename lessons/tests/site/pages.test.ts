@@ -115,7 +115,8 @@ test('차시 안내 페이지: 차례와 쉬는 시간, 띄우기 링크', () =>
       for (const f of flows.slice(1)) assert.ok(new RegExp(`href="/${lesson.id}/slides/#${f.firstSlide}"[^>]*>${f.lesson}차시부터 띄우기`).test(html), `${lesson.id} ${f.lesson}차시`);
       // QR 은 absoluteUrl() 로 만든 주소를 담는다
       assert.match(html, /<svg class="qr"[^>]*aria-label="확인 퀴즈 QR 코드"/);
-      assert.ok(html.includes(c.absoluteUrl(c.lessonRoute(lesson.id, 'quiz'))));
+      // 주소 글은 '/' 뒤에서만 줄이 바뀌게 조각으로 나뉘어 찍힌다 (UrlText). 태그를 걷어 내면 주소 그대로다.
+      assert.ok(html.replace(/<[^>]+>/g, '').includes(c.absoluteUrl(c.lessonRoute(lesson.id, 'quiz'))));
       // 학습지 풀이는 접힌 상자에만
       for (const k of c.worksheetKey(lesson)) assert.ok(html.includes(esc(k.text)), `${lesson.id} 풀이: ${k.text}`);
       // 그림 출처는 shownMedia() 의 creditFull()
@@ -219,7 +220,7 @@ test('공개 빌드: 공개된 묶음만 링크하고, 초안 표시가 없다',
     assert.ok(!kit.includes('data-draft') && !kit.includes('class="site-flag"'));
     // 공개한 차시는 검색 결과에 초안 표시가 붙지 않는다
     assert.ok(!kit.includes('data-pagefind-meta="draft:'));
-    assert.ok(kit.includes('https://example.org/korean-elementary/5-2/1/01/quiz/'));
+    assert.ok(kit.replace(/<[^>]+>/g, '').includes('https://example.org/korean-elementary/5-2/1/01/quiz/'));
     assert.ok(!kit.includes('localhost'));
     // 승인한 날을 보여 준다
     assert.ok(kit.includes('<time datetime="2026-11-20">2026년 11월 20일</time>'));

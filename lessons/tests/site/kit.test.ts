@@ -59,10 +59,10 @@ test('출처 제목: 낫표를 겹치지 않는다', () => {
   assert.equal(quoteTitle('『삼국유사』 권1'), '『삼국유사』 권1');
 });
 
-test('OX 문항의 정답: lib 의 ○·× 를 보여 주고, 화면 읽기 프로그램에는 말로 읽힌다', () => {
+test('OX 문항의 정답: lib 의 ○·× 옆에 맞다·아니다를 글로 보여 준다 (C3-09)', () => {
   const answers = [...html.matchAll(/<p class="quiz-a"><strong>정답<\/strong> (.*?)<\/p>/g)].map((m) => m[1]);
   for (const [mark, label] of [[MARK.yes, MARK_LABEL.yes], [MARK.no, MARK_LABEL.no]]) {
-    assert.ok(answers.includes(`<span class="quiz-mark" aria-hidden="true">${mark}</span><span class="sr-only" data-pagefind-ignore>${label}</span>`), `${mark} 정답이 없습니다: ${answers.join(' | ')}`);
+    assert.ok(answers.includes(`<span class="quiz-mark" aria-hidden="true">${mark}</span> ${label}`), `${mark} 정답이 없습니다: ${answers.join(' | ')}`);
   }
   for (const a of answers) assert.ok(!/(^|[^A-Za-z])[OX]([^A-Za-z]|$)/.test(a.replace(/<[^>]+>/g, '')), `정답에 라틴 글자 O·X 가 있습니다: ${a}`);
 });

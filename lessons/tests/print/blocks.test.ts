@@ -213,6 +213,12 @@ test('학습지 보기·그림 줄·○× 표시·조사 붙이기, 카드의 �
       const cells = [...row.querySelectorAll('.ws-figcell')];
       return {
         imgHeights: cells.map((cell) => Math.round(cell.querySelector('img')!.getBoundingClientRect().height)),
+        // contain 으로 그려진 그림의 높이 (상자가 아니라 그림). 가로로 긴 그림도 이웃과 같은 높이로 그려져야 한다 (R15, C3-08).
+        drawn: cells.map((cell) => {
+          const img = cell.querySelector('img')!;
+          const q = img.getBoundingClientRect();
+          return Math.min(q.height, (q.width * img.naturalHeight) / img.naturalWidth);
+        }),
         fit: cells.map((cell) => getComputedStyle(cell.querySelector('img')!).objectFit),
         captionTops: cells.map((cell) => Math.round(cell.querySelector('.ws-fig-caption')!.getBoundingClientRect().top)),
         creditTops: cells.map((cell) => cell.querySelector('.media-credit')!).filter(visible).map((el) => Math.round(el.getBoundingClientRect().top)),
@@ -229,6 +235,7 @@ test('학습지 보기·그림 줄·○× 표시·조사 붙이기, 카드의 �
     assert.equal(rows.length, 2);
     for (const row of rows) {
       assert.equal(new Set(row.imgHeights).size, 1, `그림 상자의 높이가 다릅니다: ${row.imgHeights}`);
+      assert.ok(Math.max(...row.drawn) - Math.min(...row.drawn) <= 1.5, `그려진 그림의 높이가 다릅니다: ${row.drawn.map((h) => h.toFixed(1))}`);
       assert.deepEqual(row.fit, row.fit.map(() => 'contain'), '그림을 잘라 넣습니다');
       assert.equal(new Set(row.captionTops).size, 1, `설명이 다른 높이에 있습니다: ${row.captionTops}`);
     }

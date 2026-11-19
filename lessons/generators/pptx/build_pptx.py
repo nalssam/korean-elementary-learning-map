@@ -30,6 +30,8 @@ PX = 6350
 PAD_X, PAD_T, PAD_B = 120, 80, 88
 CW = W - 2 * PAD_X          # 본문 폭
 BOTTOM = H - PAD_B          # 본문 아래 끝
+# 그림 없는 항목·할 일 장에서 목록을 제목 아래 얼마나 내려 시작하는가 (웹 무대의 stage.css 와 같은 48)
+BODY_DROP = 48
 # 줄바꿈을 셀 때 상자 폭을 이만큼만 쓴다. 글자 폭은 글꼴 파일의 값 그대로라서 여유는 반올림만큼만 둔다.
 # (예전에는 0.95 로 넉넉히 두었더니 한 줄에 들어가는 항목이 두 줄짜리 상자를 받아 항목 사이가 들쭉날쭉했다)
 FIT = 0.99
@@ -476,12 +478,12 @@ def lay_points(ctx, s, sl, L):
         x, ty, tw = side_place(ctx, s, media, pic, size, y, BOTTOM - y, measure)
         numbered(ctx, s, sl['points'], x, ty, tw, size, 1.4, 32, BOTTOM)
         return
-    # 그림이 없으면 크게 쓰고(넘치면 줄이고) 제목 아래 남은 자리의 위아래 가운데에 둔다
+    # 그림이 없으면 크게 쓰고(넘치면 줄이고) 제목 아래 BODY_DROP 만큼 내려 위에 맞춘다 (장마다 목록이 같은 높이에서 시작한다)
     for size in ctx.fit['points']:
         h = numbered_h(ctx, sl['points'], CW, size, 1.4, 48)
         if y + h <= BOTTOM + 1:
             break
-    numbered(ctx, s, sl['points'], PAD_X, y + max(0, (BOTTOM - y - h) / 2), CW, size, 1.4, 48, BOTTOM)
+    numbered(ctx, s, sl['points'], PAD_X, y + min(BODY_DROP, max(0, BOTTOM - y - h)), CW, size, 1.4, 48, BOTTOM)
 
 
 def bullets(ctx, s, items, x, y, w, size=44, lh=1.32, gap=12):
@@ -615,10 +617,11 @@ def steps_grid(ctx, sl, y, size, shared, limit):
     cw = (CW - 48) / 2
     ch = (bottom - y - 32) / 2
     cells = []
+    # 단계 표의 폭은 가장 긴 표에 맞춘다: 한 단 안의 두 단계 글이 같은 왼쪽 끝에서 시작한다 (웹의 --chip-em 과 같다)
+    chw = max(text_w(ctx, st['label'], size, True) / FIT + 36 for st in sl['steps'])
     for i, st in enumerate(sl['steps']):
         x = PAD_X + (i % 2) * (cw + 48)
         cy = y + (i // 2) * (ch + 32)
-        chw = text_w(ctx, st['label'], size, True) / FIT + 36
         tw = cw - chw - 20
         lines = len(wrap(ctx, st['text'], size, tw))
         if lines > limit:
@@ -672,7 +675,7 @@ def lay_steps(ctx, s, sl, L):
             size, cells, _ = grid
             for st, (x, cy, cw, chw, tw, by, bh) in zip(steps, cells):
                 box(ctx, s, x, cy, cw, 6, fill='teal', line=None, radius=0, shape=MSO_SHAPE.RECTANGLE)
-                chip(ctx, s, x, cy + 22, st['label'], size=size)
+                chip(ctx, s, x, cy + 22, st['label'], size=size, w=chw)
                 th = text_h(ctx, st['text'], size, tw, 1.35)
                 text(ctx, s, x + chw + 20, cy + 22 + 6, tw, th, st['text'], size, 'navy', lh=1.35)
                 picture(ctx, s, st['media'], x, by, cw, bh, credit=not shared)
@@ -754,12 +757,12 @@ def lay_activity(ctx, s, sl, L):
     aside = sl.get('minutes') is not None or sl.get('materials')
     lw = CW - 64 - 540 if aside else CW
     ah = activity_aside_h(ctx, sl) if aside else 0
-    # 할 일은 크게 쓰고 넘치면 줄인다 (STAGE_FIT.activity). 목록과 상자를 한 덩어리로 남은 자리의 위아래 가운데에 둔다.
+    # 할 일은 크게 쓰고 넘치면 줄인다 (STAGE_FIT.activity). 목록과 상자를 한 덩어리로 제목 아래 BODY_DROP 만큼 내려 위에 맞춘다.
     for size in ctx.fit['activity']:
         lh_ = numbered_h(ctx, sl['instructions'], lw, size, 1.35, 20)
         if y + max(lh_, ah) <= BOTTOM + 1:
             break
-    y += max(0, (BOTTOM - y - max(lh_, ah)) / 2)
+    y += min(BODY_DROP, max(0, BOTTOM - y - max(lh_, ah)))
     numbered(ctx, s, sl['instructions'], PAD_X, y, lw, size, 1.35, 20, BOTTOM)
     if aside:
         ax, aw = W - PAD_X - 540, 540

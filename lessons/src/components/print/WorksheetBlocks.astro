@@ -6,7 +6,8 @@
 // 아이가 읽는 명세의 글은 모두 keepParticle() 을 거쳐 찍는다. 닫는 따옴표와 뒤의 조사(‘본 것’은)가 줄 끝에서 갈리지 않는다.
 // 맞고 틀림의 표시(○ ×)는 lib 의 MARK 를 쓴다. 손으로 O·X 를 적지 않는다.
 import Media from '#src/components/Media.astro';
-import { creditShort, getMedia, getPassage } from '#lib/content.ts';
+import { creditShort, getMedia, getPassage, mediaFile } from '#lib/content.ts';
+import { fileImageSize } from '../../../checks/files.mjs';
 import { keepParticle as k, MARK } from '#lib/site.ts';
 import type { Lesson } from '#schema/lesson.ts';
 import { choiceColumns, frameParts, keepParts, matchOrder, tableWidths } from './layout.ts';
@@ -207,8 +208,14 @@ const rowCredit = (credit: string, n: number) => credit.replace(/^([^:]+):/, `$1
         const figs = it.columns!.map((col) => col[0]);
         const credits = figs.map((f) => creditShort(getMedia(lesson, (f.block as { media: string }).media)));
         const shared = credits.every((c) => c === credits[0]);
+        // 단의 폭을 그림의 가로세로 비에 비례해 나눈다: 그러면 모든 그림이 같은 높이로 그려져 위끝과 아래끝이 맞는다 (R15, C3-08).
+        // 크기를 읽지 못한 그림은 정사각형으로 친다.
+        const ratios = figs.map((f) => {
+          const size = fileImageSize(mediaFile(lesson, (f.block as { media: string }).media)) as { w: number; h: number } | undefined;
+          return size && size.w > 0 && size.h > 0 ? size.w / size.h : 1;
+        });
         return (
-          <div class="ws-block ws-figrow" data-part={it.where} data-count={figs.length} data-shared-credit={shared ? '' : undefined} style={`grid-template-columns:repeat(${figs.length},minmax(0,1fr))`}>
+          <div class="ws-block ws-figrow" data-part={it.where} data-count={figs.length} data-shared-credit={shared ? '' : undefined} style={`grid-template-columns:${ratios.map((r) => `minmax(0,${r.toFixed(3)}fr)`).join(' ')}`}>
             {figs.map((f) => {
               const fb = f.block as { media: string; show_caption: boolean };
               const caption = fb.show_caption ? getMedia(lesson, fb.media).caption : undefined;

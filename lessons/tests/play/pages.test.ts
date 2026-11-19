@@ -602,6 +602,8 @@ test('아이처럼 눌러 보기: 퀴즈·웹 활동 네 가지 (터치, 마우�
       const answer = page.locator('.q.is-current [data-correct]');
       assert.equal((await answer.locator('.answer-mark').textContent())!.trim(), MARK.yes);
       assert.match(await answer.evaluate((e) => e.textContent ?? ''), new RegExp(MARK_LABEL.yes));
+      // 정답 표시 옆의 맞다·아니다는 눈에 보이는 글이다 (× 를 '틀렸다'로 읽지 않게, C3-09)
+      assert.equal(await answer.locator('.answer-say').evaluate((e) => getComputedStyle(e).position !== 'absolute' && (e as HTMLElement).offsetWidth > 0), true);
       await done();
     });
 

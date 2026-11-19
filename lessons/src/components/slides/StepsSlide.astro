@@ -19,10 +19,12 @@ const credits = [...new Set(pictured.map((s) => creditShort(getMedia(lesson, s.m
 const shared = pictured.length > 1 && credits.length === 1 ? credits[0] : undefined;
 const fit = STAGE_FIT.stepsMedia;
 const grid = pictured.length === 4 && slide.steps.length === 4;
+// 2 × 2 에서 단계 표는 모두 가장 긴 표의 폭으로 그린다 (한 단 안의 두 단계 글이 같은 왼쪽 끝에서 시작한다)
+const chipEm = Math.max(...slide.steps.map((s) => [...s.label].length));
 ---
 <div class:list={['sl-steps', shared && 'has-shared-credit']} data-fit={across ? fit.join(' ') : undefined} style={across ? `--fit: ${grid ? STAGE_STEPS.gridFit.at(-1) : fit.at(-1)}` : undefined}>
   <h2 class="sl-title">{keepParticle(slide.title)}</h2>
-  <ol class:list={['sl-steps-list', across ? 'is-across' : 'is-down']} style={`--n: ${slide.steps.length}`}
+  <ol class:list={['sl-steps-list', across ? 'is-across' : 'is-down']} style={`--n: ${slide.steps.length}; --chip-em: ${chipEm}`}
     data-arrange={grid ? 'grid' : undefined} data-grid-fit={grid ? STAGE_STEPS.gridFit.join(' ') : undefined} data-max-lines={grid ? STAGE_STEPS.maxLines : undefined}>
     {slide.steps.map((s) => (
       <li class="sl-step">
