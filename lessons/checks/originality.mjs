@@ -32,7 +32,9 @@ export const FAIL_AT = 12;
 export const WARN_AT = 8;
 const SEED = WARN_AT; // 같은 글을 찾는 씨앗의 길이. 알림이 되는 가장 짧은 길이와 같다.
 
-const KIND_LABEL = { textbook: '교과서', guide: '지도서', sheet: '활동지', ppt: 'PPT' };
+export const KIND_LABEL = { textbook: '교과서', guide: '지도서', sheet: '활동지', ppt: 'PPT' };
+/** 자료 파일의 이름 꼴: <학기>/<종류>/<쪽 세 자리>.txt (scripts/store-add.mjs 도 이 꼴로 쓴다) */
+export const STORE_KINDS = Object.keys(KIND_LABEL);
 const STORE_FILE = /^([3-6]-[12])\/(textbook|guide|sheet|ppt)\/(\d{3})\.txt$/;
 const HANGUL = /[가-힣]/;
 const WORDLIKE = /[\p{L}\p{N}]/u;
@@ -188,18 +190,31 @@ export function blockedAt(chars, allow) {
 
 // ───────────── 비공개 자료 ─────────────
 
+/**
+ * 그 폴더가 저장소(lessons/ 또는 git 뿌리) 안에 있는가. 아직 없는 폴더는 가장 가까운 있는 윗폴더의 실제 자리로 본다
+ * (scripts/store-add.mjs 가 새 자료 폴더를 만들기 전에 묻는다. 바로 가기를 거쳐 저장소 안으로 들어가는 길도 잡는다).
+ * 예외는 시험이 쓰는 .cache/tests/ 하나다. git 이 무시하는 폴더라 올라가지 않고, 시험은 제 폴더 밖에 쓰지 않는다 (16절).
+ */
+export function storeInRepo(dir) {
+  let at = path.resolve(dir);
+  const rest = [];
+  while (!fs.existsSync(at)) { rest.unshift(path.basename(at)); at = path.dirname(at); }
+  const real = path.join(fs.realpathSync(at), ...rest);
+  const sandbox = path.join(fs.realpathSync(c.ROOT), '.cache', 'tests') + path.sep;
+  if (real.startsWith(sandbox)) return false;
+  return [c.ROOT, gitRoot()].filter(Boolean).some((repo) => {
+    const r = fs.realpathSync(repo);
+    return real === r || real.startsWith(r + path.sep);
+  });
+}
+
 /** 비공개 자료 폴더를 읽는다. 저장소 안에 있으면 멈춘다 (커밋하는 순간 공개된다). */
 export function openStore(dir = process.env.TEXTBOOK_STORE) {
   if (!dir) throw new UsageError('TEXTBOOK_STORE 가 없습니다. 비공개 자료 폴더(저장소 밖)를 가리킵니다. 예: TEXTBOOK_STORE=~/교과서자료 npm run check:originality -- 5-2/1/01');
   const store = path.resolve(dir);
   if (!fs.existsSync(store) || !fs.statSync(store).isDirectory()) throw new UsageError(`TEXTBOOK_STORE 폴더가 없습니다: ${store}`);
   const real = fs.realpathSync(store);
-  // 예외는 시험이 쓰는 .cache/tests/ 하나다. git 이 무시하는 폴더라 올라가지 않고, 시험은 제 폴더 밖에 쓰지 않는다 (16절).
-  const sandbox = path.join(fs.realpathSync(c.ROOT), '.cache', 'tests') + path.sep;
-  for (const repo of real.startsWith(sandbox) ? [] : [c.ROOT, gitRoot()].filter(Boolean)) {
-    const r = fs.realpathSync(repo);
-    if (real === r || real.startsWith(r + path.sep)) throw new UsageError(`TEXTBOOK_STORE 가 저장소 안에 있습니다 (${store}). 커밋하면 공개되므로 저장소 밖으로 옮깁니다`);
-  }
+  if (storeInRepo(real)) throw new UsageError(`TEXTBOOK_STORE 가 저장소 안에 있습니다 (${store}). 커밋하면 공개되므로 저장소 밖으로 옮깁니다`);
   const pages = [];
   let skipped = 0;
   const walk = (d) => {

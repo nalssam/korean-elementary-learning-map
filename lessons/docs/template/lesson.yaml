@@ -186,6 +186,7 @@ slides:
     # 교사용 진행 메모. 비우면 이 장을 쓰는 흐름 단계의 title·do·ask 가 메모로 들어갑니다.
     notes: 표지를 띄우고 오늘 할 일을 짧게 말합니다.
   # 큰 질문 하나: kicker 12자, title 40자, hint 40자, media 는 곁그림(지어낸 그림도 됩니다)
+  # 글과 그림 한 장을 함께 싣는 장(question·points·term·activity)은 글이 왼쪽, 그림이 오른쪽 단을 가득 채웁니다. 글이 짧을수록 그림이 커집니다.
   - layout: question
     kicker: 오늘의 질문
     title: 이 그림에서 무엇을 알아낼 수 있을까요?
@@ -213,6 +214,7 @@ slides:
       label: 오른쪽 이름표
       points: [오른쪽의 특징]
   # 차례가 있는 단계: steps 2~5개. 단계마다 label 6자, text 40자, media(그림)
+  # 그림이 셋이면 한 줄로, 넷이면 2 × 2 로 화면을 채웁니다. 작게 놓여도 알아볼 수 있는 그림을 고릅니다.
   - layout: steps
     title: 차례대로 봅시다
     steps:
@@ -272,10 +274,22 @@ worksheet:
     - heading: 그림 보고 짐작하기
       blocks:
         # 그림: media 는 그림 id, width 는 full·half·third, show_caption 은 그림 아래 한 줄을 찍을지
+        # 그림 여럿을 columns 로 나란히 놓으면 높이를 맞춰 찍습니다. 설명이 한 줄에 들어가게 짧게 쓰고, 출처가 같으면 줄 아래에 한 번만 찍힙니다.
         - type: figure
           media: example-diagram
           width: half
           show_caption: true
+        # 풀어 놓은 보기: 아이가 할 일을 한 번 먼저 보여 줍니다. "예" 표시가 붙은 조용한 상자로 찍히고 번호는 붙지 않습니다.
+        # 한 문장이면 text 에 적고, 본 것 → 아는 것 → 짐작처럼 이어지면 parts 에 칸 2~4개를 적습니다. 둘 가운데 하나만 씁니다.
+        - type: example
+          # 칸마다 label 은 이름표(12자까지), text 는 그 칸의 글(60자까지). 찍을 때 한 줄에 화살표로 잇습니다.
+          parts:
+            - label: 본 것
+              text: 그림 속 그릇에 손잡이가 있다.
+            - label: 아는 것
+              text: 손잡이는 손으로 쥐는 곳이다.
+            - label: 짐작
+              text: 손에 들고 썼을 것이다.
         # 지시문·질문: text 는 글, number 가 true 면 번호가 붙습니다.
         - type: prompt
           text: 그림에서 본 것을 적어 봅시다.
@@ -350,8 +364,9 @@ worksheet:
 quiz:
   items:
     # OX: q 는 물음(80자까지), answer 는 true 또는 false. O·X 로 적지 않습니다.
+    # 단추와 정답 표시(○·×)는 사이트가 찍습니다. 물음에 O·X·○·× 를 손으로 적지 않습니다.
     - type: ox
-      q: 새 낱말의 풀이가 맞으면 O, 틀리면 X 를 골라 봅시다.
+      q: 새 낱말의 풀이가 맞는지 골라 봅시다.
       answer: true
       # 답을 고른 뒤 아이에게 보여 주는 풀이
       explain: 풀이를 아이가 알아듣는 말로 씁니다.
@@ -378,6 +393,7 @@ quiz:
 # reason 과 idea 는 제작 기록이라 사이트에 보이지 않습니다.
 assets:
   # 페이퍼크래프트: 모양이 배움이 되는 입체물이 있을 때. state 를 ready 로 하면 title·module·pages·print·steps·texts·try_it·reflect·facts 를 적습니다. ready 로 하려면 generators/papercraft/modules/ 에 전개도 모듈이 있어야 합니다.
+  # 인쇄한 조각은 모두 steps 어딘가에서 이름으로 부릅니다. 카드의 차례대로 조각을 움직여 보는 모형은 조각을 바닥판에 붙이지 않고, 바닥판에는 놓을 자리만 찍습니다.
   papercraft:
     state: skip
     # 만들지 않는 까닭
@@ -436,9 +452,11 @@ assets:
         - id: guessed
           label: 짐작한 것
       # 카드: items 4~12장. text 20자, bin 은 들어갈 상자 id, why 는 맞힌 뒤 보여 주는 까닭
+      # media 는 카드에 넣는 그림(적지 않아도 됩니다). 휴대폰에서 작게 보여도 알아볼 그림을 고릅니다. 출처는 활동 아래에 한 번 모아 찍힙니다.
       items:
         - text: 생김새
           bin: seen
+          media: example-diagram
           why: 눈으로 볼 수 있습니다.
         - text: 크기
           bin: seen

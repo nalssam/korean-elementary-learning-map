@@ -30,6 +30,37 @@ export const PAIN_WORDS = /사망|희생|학살|전사|고문|끌려|처형|살�
 /** 놀이 자료의 글인가 (퀴즈·카드·웹 활동). childStrings() 의 경로로 가린다. */
 export const isPlayPath = (p) => /^(quiz\.|assets\.cards\.|assets\.web_activity\.)/.test(p);
 
+/**
+ * 곧은 따옴표(' ")를 쓴 한국어 글 (15절 '글'). 아이와 교사가 읽는 글에서는 굽은 따옴표(‘ ’ “ ”)를 씁니다.
+ * 곧은 따옴표는 글꼴에 따라 세로 막대처럼 찍히고, 여는 것과 닫는 것이 같아 낱말이 어디에서 시작하는지 흐려진다.
+ * 한글이 없는 글(id·주소·영문 값), 주소와 `코드` 안, 영어 줄임표(don't), 숫자 뒤의 표시(5' 같은 분·피트)는 뺀다.
+ * 돌려주는 값: undefined 괜찮음 · { marks: 찾은 따옴표들, fixed: 굽은 따옴표로 바꾼 글, at: 처음 찾은 자리(fixed 안) }
+ */
+export function straightQuotes(text) {
+  if (!/[가-힣]/.test(text)) return undefined;
+  // 뺄 자리를 같은 길이의 빈칸으로 덮어 자리 번호가 그대로 맞게 한다
+  const blank = (m) => ' '.repeat(m.length);
+  const masked = text.replace(/\b(?:https?:\/\/|www\.)\S+/g, blank).replace(/`[^`]*`/g, blank);
+  const isLatin = (ch) => /[A-Za-z]/.test(ch ?? '');
+  const hits = [];
+  for (let i = 0; i < masked.length; i++) {
+    const ch = masked[i];
+    if (ch !== "'" && ch !== '"') continue;
+    if (ch === "'" && isLatin(masked[i - 1]) && isLatin(masked[i + 1])) continue; // don't
+    if (/\d/.test(masked[i - 1] ?? '')) continue; // 5' 30"
+    hits.push(i);
+  }
+  if (!hits.length) return undefined;
+  // 여는 것: 글의 처음이거나 앞이 빈칸·여는 괄호. 그 밖에는 닫는 것. 굽은 따옴표도 한 글자라 자리 번호가 그대로다.
+  let out = text;
+  for (const i of hits) {
+    const opening = i === 0 || /[\s(\[{<·—–-]/.test(text[i - 1]);
+    const curly = text[i] === "'" ? (opening ? '‘' : '’') : (opening ? '“' : '”');
+    out = out.slice(0, i) + curly + out.slice(i + 1);
+  }
+  return { marks: [...new Set(hits.map((i) => text[i]))], fixed: out, at: hits[0] };
+}
+
 /** 이모지 (14절). 아이콘이 필요하면 선 그림 SVG 를 쓴다. */
 export const EMOJI = /\p{Extended_Pictographic}/u;
 
