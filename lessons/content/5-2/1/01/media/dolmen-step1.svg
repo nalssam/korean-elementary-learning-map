@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 380" role="img" aria-labelledby="t">
-  <title id="t">고인돌을 세운 차례에 대한 한 가지 짐작, 첫째. 땅을 파고 받침돌 두 개를 세운다.</title>
+  <title id="t">고인돌을 세운 차례에 대한 한 가지 짐작, 첫째. 받침돌 두 개를 세운다.</title>
   <defs>
   <pattern id="soil" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="#f3f0e8"/><circle cx="3" cy="3" r="1.6" fill="#586875"/><circle cx="9" cy="9" r="1.6" fill="#586875"/></pattern>
   <pattern id="earth" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="#ffffff"/><line x1="0" y1="0" x2="0" y2="10" stroke="#586875" stroke-width="1.4"/></pattern>
