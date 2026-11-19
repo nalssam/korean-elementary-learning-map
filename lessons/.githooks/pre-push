@@ -1,0 +1,16 @@
+#!/bin/sh
+# 올리기(git push) 전 검사 (docs/CONTRACT.md 13절).
+# npm ci 가 누구에게나 켭니다 (package.json 의 prepare: git config core.hooksPath lessons/.githooks).
+#
+# 비공개 교과서 자료가 없는 기여자는 막지 않습니다. TEXTBOOK_STORE 가 없으면 한 줄만 찍고 지나갑니다.
+# TEXTBOOK_STORE 가 있는 컴퓨터(날쌤)에서는 이번에 올리는 커밋에서 바뀐 명세·차시표·SVG 그림·전개도 모듈에
+# 베끼기 검사를 다시 돌리고(주석까지 봅니다), npm run check -- --push 로 막습니다.
+
+if [ -z "$TEXTBOOK_STORE" ]; then
+  echo "베끼기 검사를 건너뜁니다 (비공개 자료가 없습니다). 기록은 날쌤이 PR 에서 적습니다"
+  exit 0
+fi
+
+# 훅은 git 뿌리에서 불립니다. lessons/ 로 들어간 뒤에 일합니다 (0절).
+cd "$(dirname "$0")/.." || exit 1
+exec node checks/pre-push.mjs "$@"

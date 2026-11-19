@@ -1,0 +1,11 @@
+# 수업 자료(lessons/)에서 날쌤의 승인이 있어야 바뀌는 곳 (lessons/docs/CONTRACT.md 12절).
+# 명세와 검수 기록, 형식, 명세를 읽는 코드, 검사와 서명 도구, 전개도 도안, 워크플로, 계약서입니다.
+# 가지 보호에서 "Require review from Code Owners" 를 켜야 이 파일이 승인을 막습니다.
+/lessons/content/ @nalssam
+/lessons/schema/ @nalssam
+/lessons/lib/ @nalssam
+/lessons/generators/papercraft/modules/ @nalssam
+/lessons/checks/ @nalssam
+/lessons/scripts/sign.mjs @nalssam
+/.github/ @nalssam
+/lessons/docs/CONTRACT.md @nalssam

@@ -1,0 +1,42 @@
+name: 수업 자료 저작권 신고
+description: 수업 자료(lessons/)에 실린 글이나 그림이 권리를 침해한다고 보시면 알려 주세요.
+title: "[저작권] "
+labels: ["lessons"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        신고를 받으면 그 자료를 먼저 사이트에서 내리고 확인합니다. 이 글은 누구나 볼 수 있으니 연락처나 개인 정보는 적지 마세요.
+        침해했다고 보시는 원본의 문장을 여기에 옮겨 적지 않아도 됩니다. 원본의 제목과 쪽수만으로 확인합니다.
+  - type: input
+    id: url
+    attributes:
+      label: 문제가 되는 자료의 주소
+      description: 사이트의 주소나 저장소의 파일 경로를 적어 주세요.
+      placeholder: https://…/5-2/1/01/ 또는 lessons/content/5-2/1/01/media/…
+    validations:
+      required: true
+  - type: textarea
+    id: original
+    attributes:
+      label: 원본
+      description: 원본의 제목, 펴낸 곳, 쪽수나 주소를 적어 주세요.
+    validations:
+      required: true
+  - type: dropdown
+    id: relation
+    attributes:
+      label: 신고하는 분
+      options:
+        - 권리자 본인
+        - 권리자의 대리인
+        - 권리자는 아니지만 알게 되었습니다
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: 무엇이 문제인가요
+      description: 글이 겹치는지, 그림의 이용 조건이 다른지, 초상이 문제인지 등을 적어 주세요.
+    validations:
+      required: true

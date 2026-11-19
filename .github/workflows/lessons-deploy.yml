@@ -1,0 +1,92 @@
+# 수업 자료(lessons/) 사이트를 GitHub Pages 에 배포한다 (lessons/docs/CONTRACT.md 12절).
+# 기본 가지에서만 돈다. 공개된 차시만 싣는 공개 빌드이고, 배포는 승인자가 날쌤인 production 환경을 거친다.
+#
+# 저장소 변수(Settings → Secrets and variables → Actions → Variables):
+#   SITE_URL   배포 주소. 하위 경로 없이 (예: https://nalssam.github.io). 없으면 배포하지 않는다.
+#   SITE_BASE  하위 경로 (예: /korean-elementary-learning-map). 한 번 정한 뒤에는 바꾸지 않는다 (종이의 QR 에 박힌다).
+name: lessons-deploy
+
+on:
+  push:
+    paths:
+      - "lessons/**"
+      - ".github/workflows/lessons-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# 배포는 하나씩, 도중에 끊지 않는다
+concurrency:
+  group: lessons-pages
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: lessons
+
+jobs:
+  build:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      SITE_URL: ${{ vars.SITE_URL }}
+      SITE_BASE: ${{ vars.SITE_BASE }}
+      PYTHON: python
+    steps:
+      - name: 배포 주소 확인
+        working-directory: .
+        run: |
+          if [ -z "$SITE_URL" ]; then
+            echo "::error::저장소 변수 SITE_URL 이 없어 배포하지 않습니다. 종이에 박히는 QR 주소가 여기에서 나옵니다. Settings → Secrets and variables → Actions → Variables 에 SITE_URL(예: https://nalssam.github.io)을 넣습니다."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: lessons/.nvmrc
+          cache: npm
+          cache-dependency-path: lessons/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 내려받기
+        run: |
+          npm ci
+          python -m pip install -r generators/pptx/requirements.txt
+          npx playwright install --with-deps chromium
+
+      # 배포 워크플로도 기본 가지의 검사를 먼저 돌린다. 베끼기 검사 기록이 없거나 낡았으면 배포하지 않는다 (13절).
+      - name: 명세 검사
+        run: npm run check -- --push
+
+      - name: 공개 빌드
+        run: npm run build
+
+      - name: 배포 요약
+        run: node checks/deploy-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: lessons/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      # 승인자가 날쌤인 환경. Settings → Environments → production 에서 Required reviewers 를 날쌤으로 둔다.
+      name: production
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
