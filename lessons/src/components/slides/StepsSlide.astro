@@ -1,7 +1,8 @@
 ---
 // 차례가 있는 단계 2~5개. 그림이 하나라도 있으면 가로로 늘어놓고, 없으면 위에서 아래로 늘어놓는다.
-// 그림이 넷이면 한 줄(4칸)과 2 × 2(칸마다 그림 왼쪽, 글 오른쪽) 가운데 그림이 더 크게 그려지는 쪽을 Stage.astro 의 스크립트가 골라 data-arrange 에 적는다.
-// 2 × 2 에서 칸 안의 그림 몫은 STAGE_STEPS.gridShare 의 큰 것부터 해 본다 (R13: 제목 아래를 다 쓰고 그림을 크게).
+// 그림이 넷이면 2 × 2 로 놓는다 (R22). 칸마다 위에 머리 한 줄(단계 표와 단계 글), 아래에 칸 폭 전체를 쓰는 그림 상자.
+// 머리 글의 크기(STAGE_STEPS.gridFit)는 Stage.astro 의 스크립트가 골라 data-arrange 에 적는다. 머리가 두 줄을 넘거나
+// 그림 상자가 너무 작아지는 아주 긴 글은 한 줄(4칸)로 놓는다.
 // 한 줄로 놓았는데 그림이 칸의 폭에 걸려 틀보다 낮게 그려지면, 스크립트가 그림 줄을 그림 높이로 줄이고 단계 전체를 위아래 가운데에 둔다.
 // 모든 단계 그림의 출처 표시가 같으면 그림마다 찍지 않고 목록 아래에 한 번만 찍는다.
 import { keepParticle } from '#lib/site.ts';
@@ -19,10 +20,10 @@ const shared = pictured.length > 1 && credits.length === 1 ? credits[0] : undefi
 const fit = STAGE_FIT.stepsMedia;
 const grid = pictured.length === 4 && slide.steps.length === 4;
 ---
-<div class:list={['sl-steps', shared && 'has-shared-credit']} data-fit={across ? fit.join(' ') : undefined} style={across ? `--fit: ${fit.at(-1)}` : undefined}>
+<div class:list={['sl-steps', shared && 'has-shared-credit']} data-fit={across ? fit.join(' ') : undefined} style={across ? `--fit: ${grid ? STAGE_STEPS.gridFit.at(-1) : fit.at(-1)}` : undefined}>
   <h2 class="sl-title">{keepParticle(slide.title)}</h2>
   <ol class:list={['sl-steps-list', across ? 'is-across' : 'is-down']} style={`--n: ${slide.steps.length}`}
-    data-arrange={grid ? 'auto' : undefined} data-shares={grid ? STAGE_STEPS.gridShare.join(' ') : undefined}>
+    data-arrange={grid ? 'grid' : undefined} data-grid-fit={grid ? STAGE_STEPS.gridFit.join(' ') : undefined} data-max-lines={grid ? STAGE_STEPS.maxLines : undefined}>
     {slide.steps.map((s) => (
       <li class="sl-step">
         <span class="sl-chip">{keepParticle(s.label)}</span>

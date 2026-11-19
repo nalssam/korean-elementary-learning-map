@@ -13,7 +13,7 @@ import { SITE } from '#lib/site.ts';
 import { slideCounter } from '#src/components/slides/counter.ts';
 import { FIXTURES, noChromium, noPython } from '../contract/helpers.ts';
 import { NOTE_COPY } from '#src/components/slides/copy.ts';
-import { STRESS_ID, makeStress } from './stress.ts';
+import { DOLMEN_STEPS, EVEN_ITEMS, STRESS_ID, makeStress } from './stress.ts';
 
 const OUT = path.join(ROOT, '.cache', 'tests', `slides-pptx-${process.pid}`);
 const PYTHON = process.env.PYTHON || 'python3';
@@ -34,7 +34,8 @@ interface Inspected {
   width: number; height: number; embedded: string[]; fontdata: string[]; colors: string[]; faces: string[];
   core: { title: string; author: string; last_modified_by: string; comments: string; keywords: string; revision: number };
   raw: { core: string; app: string; sldSz: string };
-  slides: { texts: string[]; boxes: number[][]; notes: string; pictures: { ratio_shape: number; ratio_image: number; crop: number[]; inside: boolean; alt: string; box: number[] }[] }[];
+  slides: { texts: string[]; boxes: number[][]; notes: string; pictures: { ratio_shape: number; ratio_image: number; crop: number[]; inside: boolean; alt: string; box: number[]; line: [number, string] | null }[] }[];
+  lang: { runs: number; ends: number; missing: string[]; runs_total: number; paras_total: number };
 }
 const inspect = (file: string): Inspected =>
   JSON.parse(execFileSync(PYTHON, [path.join(ROOT, 'tests', 'slides', 'inspect_pptx.py'), file], { encoding: 'utf8', maxBuffer: 64 << 20 }));
@@ -103,6 +104,10 @@ test('시험용 명세 넷의 PPTX', { skip }, () => {
     assert.deepEqual(p.faces, ['Pretendard']);
     assert.deepEqual(p.embedded, ['Pretendard']);
     assert.equal(p.fontdata.length, 2);
+    // 글 조각과 문단 끝마다 언어가 ko-KR(altLang en-US)이다 (장과 메모란 모두. PowerPoint 가 영어 맞춤법 검사로 한글에 밑줄을 긋지 않게)
+    assert.deepEqual(p.lang.missing, [], `${lesson.id}: 언어가 없는 글 조각`);
+    assert.ok(p.lang.runs > 0 && p.lang.runs === p.lang.runs_total, `${lesson.id}: 글 조각 ${p.lang.runs_total} 가운데 ${p.lang.runs} 만 언어를 셌습니다`);
+    assert.equal(p.lang.ends, p.lang.paras_total, `${lesson.id}: 문단 ${p.lang.paras_total} 가운데 문단 끝 ${p.lang.ends}`);
   }
   // 퀴즈 장의 정답은 화면에 없고 메모에만 있다
   const one = loadLesson('5-2/1/01');
@@ -141,7 +146,7 @@ test('가장 긴 글로 채운 PPTX 를 만들 수 있다 (모든 layout, 그림
   for (const s of p.slides) for (const pic of s.pictures) assert.ok(Math.abs(pic.ratio_shape / pic.ratio_image - 1) < 0.01);
 });
 
-test('PPTX: 글 곁에 그림 하나를 둔 장은 두 칸 짜임이고, 그림 넷의 단계 장은 2 × 2 다 (R12, R13)', { skip }, () => {
+test('PPTX: 글 곁에 그림 하나를 둔 장은 두 칸 짜임이고, 그림 넷의 단계 장은 2 × 2 다 (R12, R22)', { skip }, () => {
   const p = inspect(stressPptx());
   // 치수는 pt (장 폭 960pt = 무대 1920px). 본문 자리는 위 40pt, 아래 540 - 44pt
   const W = 960, TOP = 40, BOTTOM = 540 - 44;
@@ -164,12 +169,80 @@ test('PPTX: 글 곁에 그림 하나를 둔 장은 두 칸 짜임이고, 그림 
     assert.ok(mid <= 20 || (ty1 - ty0 > py1 - py0 && top <= 4), `${i + 1}번 장: 글과 그림의 세로 가운데 ${mid.toFixed(0)}pt, 위 끝 ${top.toFixed(0)}pt`);
   });
   assert.ok(sided >= 4);
-  // 그림 넷이고 글이 짧은 단계 장: 2 × 2 로 놓이고 그림 폭이 500px(250pt) 이상
+  // 그림 넷이고 글이 짧은 단계 장: 2 × 2 로 놓인다 (R22)
   const at = stressSlides.findIndex((sl) => sl.layout === 'steps' && sl.steps!.length === 4 && sl.steps!.every((st) => st.media === 'labelled'));
   const pics = p.slides[at].pictures.map((x) => x.box);
   assert.equal(pics.length, 4);
   assert.equal(new Set(pics.map((b) => Math.round(b[1]))).size, 2, '2 × 2 가 아닙니다');
-  for (const b of pics) assert.ok(b[2] - b[0] >= 250, `2 × 2 의 그림 폭 ${((b[2] - b[0]) * 2).toFixed(0)}px`);
+});
+
+test('PPTX: 단계 장 2 × 2 는 머리 한 줄 아래에 칸 폭의 그림 상자, 견주기 장의 두 그림은 같은 높이, 함께 보는 그림은 두 칸 (R22, R23)', { skip }, () => {
+  const p = inspect(stressPptx());
+  const raw = stressSlides as unknown as Record<string, any>[];
+  // R22: 실제 차시의 단계 글 넷 + 가로로 넓은 단계 그림. 글은 한 줄(40px 이상 = 20pt 이상, 한 줄 높이 27~30pt), 그림은 폭 500px(250pt) 이상
+  const at = raw.findIndex((sl) => sl.layout === 'steps' && sl.steps.map((st: { text: string }) => st.text).join() === DOLMEN_STEPS.join() && sl.steps[0].media === 'step1');
+  const s = p.slides[at];
+  const pics = s.pictures.map((x) => x.box);
+  assert.equal(pics.length, 4);
+  assert.equal(new Set(pics.map((b) => Math.round(b[1]))).size, 2, '2 × 2 가 아닙니다');
+  for (const b of pics) assert.ok(b[2] - b[0] >= 250, `단계 그림 폭 ${((b[2] - b[0]) * 2).toFixed(0)}px`);
+  for (const t of DOLMEN_STEPS) {
+    const box = s.boxes[s.texts.indexOf(t)];
+    assert.ok(box, `단계 글이 없습니다: ${t}`);
+    const h = box[3] - box[1];
+    assert.ok(h >= 40 * 1.35 / 2 - 0.5 && h <= 44 * 1.35 / 2 + 0.5, `${t}: 글상자 높이 ${h.toFixed(1)}pt (한 줄이 아닙니다)`);
+    // 머리(글)는 그 칸의 그림보다 위에 있다
+    const left = box[0] < 480;
+    const pic = pics.filter((b) => ((b[0] + b[2]) / 2 < 480) === left && b[1] > box[1]).sort((a, b) => a[1] - b[1])[0];
+    assert.ok(pic && pic[1] >= box[3], `${t}: 그림이 머리 아래에 있지 않습니다`);
+  }
+  // R23b: 쪽마다 그림 하나 (항목 수가 다른 두 쪽). 두 출처 표시와 두 첫 항목의 위 끝이 같다
+  const pair = raw.findIndex((sl) => sl.layout === 'compare' && sl.left.media === 'square' && sl.right.media === 'sample');
+  const c = p.slides[pair];
+  const top = (t: string) => c.boxes[c.texts.indexOf(t)][1];
+  const credits = c.texts.map((t, i) => [t, c.boxes[i][1]] as const).filter(([t]) => /^(그림|사진):/.test(t));
+  assert.equal(credits.length, 2);
+  assert.ok(Math.abs(credits[0][1] - credits[1][1]) < 0.5, `출처 표시 높이 ${credits[0][1]} / ${credits[1][1]}`);
+  assert.ok(Math.abs(top(raw[pair].left.points[0]) - top(raw[pair].right.points[0])) < 0.5, '첫 항목의 높이가 다릅니다');
+  // R23a: 함께 보는 그림 하나. 그림은 오른쪽 칸, 이름표 상자 둘은 그림 왼쪽에 위아래로
+  const shared = raw.findIndex((sl) => sl.layout === 'compare' && sl.media);
+  const d = p.slides[shared];
+  assert.equal(d.pictures.length, 1);
+  const [px0] = d.pictures[0].box;
+  assert.ok(Math.abs(d.pictures[0].box[2] - (960 - 60)) < 1, '그림이 오른쪽 끝에 붙지 않았습니다');
+  assert.ok((d.pictures[0].box[2] - px0) / 960 >= 0.42 - 0.001, '그림 칸이 42% 보다 좁습니다');
+  const labels = [raw[shared].left.label, raw[shared].right.label].map((t: string) => d.boxes[d.texts.indexOf(t)]);
+  assert.ok(labels.every((b) => b[2] <= px0), '이름표 상자가 그림 왼쪽에 있지 않습니다');
+  assert.ok(labels[1][1] > labels[0][3], '이름표 상자 둘이 위아래로 쌓이지 않았습니다');
+});
+
+test('PPTX: 한 줄짜리 항목은 한 줄 상자를 받아 항목 사이가 고르다 (글꼴의 글자 폭으로 잰다)', { skip }, () => {
+  const p = inspect(stressPptx());
+  const at = stressSlides.findIndex((sl) => (sl as { instructions?: string[] }).instructions?.[0] === EVEN_ITEMS[0]);
+  const s = p.slides[at];
+  const boxes = EVEN_ITEMS.map((t) => s.boxes[s.texts.indexOf(t)]);
+  const heights = boxes.map((b) => b[3] - b[1]);
+  assert.ok(heights.every((h) => Math.abs(h - heights[0]) < 0.5), `항목 상자 높이가 다릅니다: ${heights.map((h) => h.toFixed(1))}`);
+  const gaps = [boxes[1][1] - boxes[0][1], boxes[2][1] - boxes[1][1]];
+  assert.ok(Math.abs(gaps[0] - gaps[1]) < 0.5, `항목 사이가 고르지 않습니다: ${gaps.map((g) => g.toFixed(1))}pt`);
+});
+
+test('PPTX: 사진에는 --line 색의 가는 테두리를 두르고, 도해에는 두르지 않는다 (R26)', { skip }, () => {
+  const p = inspect(stressPptx());
+  const line = fs.readFileSync(path.join(ROOT, 'src', 'styles', 'tokens.css'), 'utf8').match(/--line:\s*#([0-9a-fA-F]{6})/)![1].toUpperCase();
+  let photos = 0, others = 0;
+  stressSlides.forEach((sl, i) => {
+    const refs = [sl.media, ...(sl.steps ?? []).map((st) => st.media), (sl as any).left?.media, (sl as any).right?.media].filter(Boolean);
+    const pics = p.slides[i].pictures;
+    if (refs.length !== pics.length) return;
+    // 그림은 장에 놓인 차례대로 (단계는 칸 차례, 견주기는 왼쪽·오른쪽)
+    const order = (sl.layout === 'compare' && !sl.media ? [(sl as any).left?.media, (sl as any).right?.media] : sl.layout === 'steps' ? (sl.steps ?? []).map((st) => st.media) : [sl.media]).filter(Boolean);
+    order.forEach((ref, k) => {
+      if (ref === 'sample') { photos++; assert.deepEqual(pics[k].line, [0.5, line], `${i + 1}번 장의 사진에 테두리가 없습니다`); }
+      else { others++; assert.equal(pics[k].line, null, `${i + 1}번 장의 도해(${ref})에 테두리가 있습니다`); }
+    });
+  });
+  assert.ok(photos >= 2 && others >= 4, `사진 ${photos}, 도해 ${others}`);
 });
 
 test('그림 출처 장: 앞 장을 채운 뒤 새 장을 열고, 앞 장에 들어갈 한 줄만 따로 남기지 않는다', { skip: noPython() }, () => {

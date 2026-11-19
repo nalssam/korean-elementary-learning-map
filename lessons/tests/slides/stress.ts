@@ -18,6 +18,23 @@ const svg = (w: number, h: number) =>
 const labelled = (label: number) =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 380"><rect x="4" y="4" width="592" height="372" fill="#e3f0ec" stroke="#132c3d" stroke-width="6"/><rect x="200" y="200" width="200" height="40" fill="#d8d2c4" stroke="#132c3d" stroke-width="4"/><g font-family="Pretendard, sans-serif" fill="#132c3d"><text x="300" y="170" font-size="${label}" text-anchor="middle">덮개돌</text></g></svg>`;
 
+/**
+ * 단계 그림 (R22): 2 × 2 칸의 그림 상자에 맞게 가로로 넓게 그린 도해 (viewBox 780 × 300, 2.6:1).
+ * 내용 담당이 고쳐 그리는 고인돌 단계 그림과 같은 꼴의 대역이다. 글은 40 단위라서 상자에 맞춰 줄여 그려도 28px 을 넘는다.
+ */
+const stepDrawing = (n: number) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 300"><rect x="3" y="3" width="774" height="294" fill="#fbfaf6" stroke="#132c3d" stroke-width="6"/><path d="M40 250 H740" stroke="#132c3d" stroke-width="6"/><rect x="${200 + n * 60}" y="130" width="60" height="120" fill="#d8d2c4" stroke="#132c3d" stroke-width="5"/><rect x="${420 + n * 20}" y="130" width="60" height="120" fill="#d8d2c4" stroke="#132c3d" stroke-width="5"/><g font-family="Pretendard, sans-serif" fill="#132c3d" font-weight="700"><text x="390" y="90" font-size="40" text-anchor="middle">받침돌</text></g></svg>`;
+
+/** 정사각형 도해 (단계 장의 그림 상자에 꼴이 다른 그림이 들어갈 때) */
+const square = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect x="4" y="4" width="392" height="392" fill="#e3f0ec" stroke="#132c3d" stroke-width="8"/><circle cx="200" cy="200" r="120" fill="none" stroke="#18766b" stroke-width="8"/></svg>`;
+
+/** 실제 차시(5-2/1/01) 10번 장의 단계 글 넷 (R21: 차례 카드와 같은 글). 1920 무대에서 머리 한 줄에 40px 이상으로 들어가야 한다. */
+export const DOLMEN_STEPS = ['받침돌을 세웁니다.', '흙을 쌓아 비탈을 만듭니다.', '덮개돌을 비탈 위로 끌어 올립니다.', '흙을 걷어 냅니다.'] as const;
+export const STEP_LABELS = ['하나', '둘', '셋', '넷'] as const;
+
+/** 실제 차시 8번 장의 할 일 셋. 모두 한 줄이다 (첫 줄은 52px 에서 상자 폭의 97% 남짓으로 길다) */
+export const EVEN_ITEMS = ['차례 카드 네 장을 모둠이 정한 차례로 놓습니다.', '카드를 놓은 차례대로 조각을 움직여 봅니다.', '차례와 그 까닭을 학습지 1쪽에 적습니다.'] as const;
+
 /** 그림 안의 글이 너무 작은 것으로 일부러 넣은 장 (넘침 시험이 이 장의 이 글만 잡아야 한다) */
 export const SMALL_LABEL = { media: 'small-label', text: '덮개돌' } as const;
 
@@ -53,10 +70,21 @@ function stressSlides(): Raw[] {
     { layout: 'steps', title: L(30, 7), steps: Array.from({ length: 3 }, (_, i) => ({ label: L(6, i), text: L(40, i), media: 'labelled' })) },
     { layout: 'steps', title: L(30, 7), steps: Array.from({ length: 4 }, (_, i) => ({ label: L(6, i), text: L(40, i), media: i === 1 ? SMALL_LABEL.media : 'labelled' })) },
     { layout: 'steps', title: L(20, 7), steps: Array.from({ length: 4 }, (_, i) => ({ label: L(3, i), text: L(16, i), media: 'labelled' })) },
+    // R22: 실제 차시의 단계 글 넷과 가로로 넓은 단계 그림(780 × 300)
+    { layout: 'steps', title: '이렇게 올렸다는 짐작이 있습니다', steps: DOLMEN_STEPS.map((text, i) => ({ label: STEP_LABELS[i], text, media: `step${i + 1}` })) },
+    // R22: 꼴이 다른 그림(사진, 정사각형 도해, 넓은 도해)도 상자 안에 contain 으로 가운데 놓인다
+    { layout: 'steps', title: '이렇게 올렸다는 짐작이 있습니다', steps: DOLMEN_STEPS.map((text, i) => ({ label: STEP_LABELS[i], text, media: ['sample', 'square', 'step1', 'tall'][i] })) },
+    // R23b: 쪽마다 그림 하나, 항목 수와 그림 꼴이 다른 두 쪽 (출처 표시와 첫 항목이 같은 높이에 서야 한다)
+    { layout: 'compare', title: '박물관의 짐작과 견주어 봅시다', left: { label: '그릇', points: ['본 것: 아래쪽에 작은 구멍이 있다.', '짐작: 깨진 곳을 고쳐 쓴 흔적으로 본다.'], media: 'square' }, right: { label: '돌 도구', points: ['본 것: 끝이 뾰족하고 가장자리에 날이 있다.', '짐작: 여러 가지 일에 썼다고 본다.', '짐작: 주로 큰 동물을 가르는 데 썼다고 본다.'], media: 'sample' } },
+    // R23a: 두 쪽이 함께 보는 그림 하나. 상자 둘을 그림 곁에 쌓으므로 쪽마다 항목 둘(가장 긴 글)까지 들어간다.
+    // 셋 이상은 어느 크기로도 들어가지 않는다 (형식에서 막아 달라고 계약 담당에게 부탁했다)
+    { layout: 'compare', title: L(30, 6), media: 'labelled', left: { label: L(12), points: pts(2, 30) }, right: { label: L(12, 3), points: pts(2, 30, 1) } },
     { layout: 'passage', passage: 'long-even' },
     { layout: 'passage', passage: 'long-uneven' },
     { layout: 'activity', title: L(30, 9), instructions: pts(5, 40), minutes: 40, materials: pts(6, 12) },
     { layout: 'activity', title: L(30, 9), instructions: pts(5, 40) },
+    // 한 줄에 들어가는 할 일 셋 (실제 차시 8번 장). PPTX 에서 항목 사이가 고르게 벌어져야 한다 (한 줄짜리에 두 줄 상자를 주지 않는다)
+    { layout: 'activity', title: '덮개돌을 올린 차례를 짐작해 봅시다', instructions: [...EVEN_ITEMS], minutes: 4 },
     { layout: 'quiz', item: 5 },
     { layout: 'quiz', item: 6 },
     { layout: 'quiz', item: 7 },
@@ -75,7 +103,9 @@ export function makeStress(dir: string, raw: Raw): number {
   fs.writeFileSync(path.join(media, 'tall.svg'), svg(400, 1600));
   fs.writeFileSync(path.join(media, 'labelled.svg'), labelled(60));
   fs.writeFileSync(path.join(media, `${SMALL_LABEL.media}.svg`), labelled(22));
-  for (const id of ['wide', 'tall', 'labelled', SMALL_LABEL.media]) {
+  for (let i = 1; i <= 4; i++) fs.writeFileSync(path.join(media, `step${i}.svg`), stepDrawing(i));
+  fs.writeFileSync(path.join(media, 'square.svg'), square);
+  for (const id of ['wide', 'tall', 'labelled', SMALL_LABEL.media, 'square', 'step1', 'step2', 'step3', 'step4']) {
     raw.media.push({ id, kind: 'diagram', file: `media/${id}.svg`, alt: L(20), caption: L(40), credit: { holder: L(30), licence: 'original' }, facts: ['f1'] });
   }
   raw.terms.new.push({ term: L(14), meaning: L(50, 2), facts: ['f1'] });

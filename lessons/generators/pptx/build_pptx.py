@@ -7,6 +7,7 @@ lessons.json 은 generators/pptx/build.mjs 가 검증을 마친 명세에서 내
 치수는 웹 무대와 같은 1920 × 1080 px 로 셈한다. 13.333in = 1920px 이므로 1px = 6350 EMU = 0.5pt 다.
 웹 무대(src/components/slides/stage.css)와 같은 자리에 같은 크기로 놓아서 화면과 PPTX 가 같은 얼굴이 되게 한다.
 글은 진짜 글상자로 넣는다 (교사가 고칠 수 있게). 넘침은 글꼴 파일의 글자 폭으로 줄바꿈을 미리 셈해 막는다.
+글 조각(run)과 문단 끝(endParaRPr)에는 언어를 ko-KR(altLang en-US)로 적는다 (PowerPoint 가 영어 맞춤법 검사로 한글에 밑줄을 긋지 않게).
 """
 import datetime
 import json
@@ -29,8 +30,13 @@ PX = 6350
 PAD_X, PAD_T, PAD_B = 120, 80, 88
 CW = W - 2 * PAD_X          # 본문 폭
 BOTTOM = H - PAD_B          # 본문 아래 끝
-# 줄바꿈을 셀 때 상자 폭을 이만큼만 쓴다. PowerPoint·LibreOffice 의 글자 사이와 줄바꿈 규칙이 조금씩 달라도 넘치지 않게 둔 여유다.
-FIT = 0.95
+# 줄바꿈을 셀 때 상자 폭을 이만큼만 쓴다. 글자 폭은 글꼴 파일의 값 그대로라서 여유는 반올림만큼만 둔다.
+# (예전에는 0.95 로 넉넉히 두었더니 한 줄에 들어가는 항목이 두 줄짜리 상자를 받아 항목 사이가 들쭉날쭉했다)
+FIT = 0.99
+# LibreOffice 는 한글과 그 밖의 글자(로마자·숫자·문장 부호) 사이마다 글자 크기의 이만큼 틈을 더 둔다 (README.md).
+# PowerPoint 는 두지 않지만, 두 프로그램 어디에서 열어도 넘치지 않게 이 틈을 넣어 셈한다. 1920 무대·26pt 로 찍어 재어 보니 0.24em 남짓이었다.
+ASIAN_GAP = 0.25
+LANG, ALT_LANG = 'ko-KR', 'en-US'
 
 
 class Overflow(Exception):
@@ -51,12 +57,33 @@ class Ctx:
         # 장에 맞게 줄어드는 글의 크기 차례 (copy.ts 의 STAGE_FIT)와 그림 틀의 크기 (STAGE_PICTURE)
         self.fit = data['fit']
         self.pic = data['picture']
-        # 글 곁에 그림 하나를 두는 장의 짜임 (copy.ts 의 STAGE_SIDE, sideCandidates)과 2 × 2 단계 장의 그림 몫 (STAGE_STEPS)
+        # 글 곁에 그림 하나를 두는 장의 짜임 (copy.ts 의 STAGE_SIDE, sideCandidates)과 2 × 2 단계 장의 머리 글 크기 (STAGE_STEPS)
         self.side = data.get('side')
         self.steps = data.get('steps')
 
 
 # ───────────────────────── 글 재기 ─────────────────────────
+
+def _asian(ch):
+    """한글·한자·가나 (LibreOffice 가 '아시아 문자'로 보는 것)"""
+    o = ord(ch)
+    return 0x1100 <= o <= 0x11FF or 0x3130 <= o <= 0x318F or 0xAC00 <= o <= 0xD7AF or 0x3040 <= o <= 0x30FF or 0x4E00 <= o <= 0x9FFF
+
+
+def measure(font, text, size):
+    """한 줄로 그린 글의 폭 (px). 글꼴 파일의 글자 폭에 LibreOffice 가 한글과 다른 글자 사이에 두는 틈(ASIAN_GAP)을 더한다.
+    띄어쓰기는 건너뛰고 앞뒤 글자를 견준다 ('것: 아' 의 ':' 와 '아' 사이에도 틈이 생긴다)."""
+    w = font.width(text, size)
+    prev = None
+    for ch in text:
+        if ch == ' ':
+            continue
+        kind = _asian(ch)
+        if prev is not None and kind != prev:
+            w += ASIAN_GAP * size
+        prev = kind
+    return w
+
 
 def wrap(ctx, text, size, width, bold=False):
     """웹 무대의 줄바꿈(word-break: keep-all; overflow-wrap: anywhere)과 같은 규칙으로 줄을 나눈다."""
@@ -65,7 +92,7 @@ def wrap(ctx, text, size, width, bold=False):
     lines, cur = [], ''
     for word in text.split(' '):
         cand = f'{cur} {word}' if cur else word
-        if font.width(cand, size) <= width:
+        if measure(font, cand, size) <= width:
             cur = cand
             continue
         if cur:
@@ -73,7 +100,7 @@ def wrap(ctx, text, size, width, bold=False):
         cur = ''
         # 한 낱말이 한 줄보다 길면 글자 단위로 끊는다
         for ch in word:
-            if font.width(cur + ch, size) > width and cur:
+            if measure(font, cur + ch, size) > width and cur:
                 lines.append(cur)
                 cur = ''
             cur += ch
@@ -86,7 +113,7 @@ def text_h(ctx, text, size, width, lh, bold=False):
 
 
 def text_w(ctx, text, size, bold=False):
-    return (ctx.bold if bold else ctx.reg).width(text, size)
+    return measure(ctx.bold if bold else ctx.reg, text, size)
 
 
 # ───────────────────────── 도형 ─────────────────────────
@@ -109,12 +136,26 @@ def _font(ctx, run, size, bold, color):
     f.color.rgb = ctx.c[color]
     f.name = ctx.face
     rpr = run._r.get_or_add_rPr()
+    rpr.set('lang', LANG)
+    rpr.set('altLang', ALT_LANG)
     for tag in ('a:latin', 'a:ea', 'a:cs'):
         el = rpr.find(qn(tag))
         if el is None:
             el = rpr.makeelement(qn(tag), {})
             rpr.append(el)
         el.set('typeface', ctx.face)
+
+
+def _end(p, size=None):
+    """문단 끝 표시(endParaRPr)에도 언어를 적는다. 교사가 문단 끝에 글을 이어 쓰면 이 값을 물려받는다."""
+    el = p._p.find(qn('a:endParaRPr'))
+    if el is None:
+        el = p._p.makeelement(qn('a:endParaRPr'), {})
+        p._p.append(el)
+    el.set('lang', LANG)
+    el.set('altLang', ALT_LANG)
+    if size:
+        el.set('sz', str(int(round(size / 2 * 100))))
 
 
 def text(ctx, s, x, y, w, h, paras, size, color='navy', bold=False, lh=1.4, align='l', anchor='t', gap=0):
@@ -138,6 +179,7 @@ def text(ctx, s, x, y, w, h, paras, size, color='navy', bold=False, lh=1.4, alig
         r = p.add_run()
         r.text = para
         _font(ctx, r, size, bold, color)
+        _end(p, size)
     return tb
 
 
@@ -161,6 +203,7 @@ def filled_text(ctx, s, x, y, w, h, px, py, paras, fill='paper', radius=20):
         r = p.add_run()
         r.text = t
         _font(ctx, r, size, bold, color)
+        _end(p, size)
     tf.auto_size = MSO_AUTO_SIZE.SHAPE_TO_FIT_TEXT
     return sh
 
@@ -178,6 +221,8 @@ def box(ctx, s, x, y, w, h, fill='card', line='line', radius=20, lw=1, shape=MSO
     else:
         sh.line.fill.background()
     _flat(sh)
+    # 도형에도 빈 문단이 하나 들어 있다. 교사가 도형에 글을 써 넣어도 한글로 검사받게 문단 끝에 언어를 적는다
+    _end(sh.text_frame.paragraphs[0])
     if shape == MSO_SHAPE.ROUNDED_RECTANGLE:
         sh.adjustments[0] = min(0.5, radius / max(1, min(w, h)))
     return sh
@@ -203,6 +248,7 @@ def num(ctx, s, x, y, n, d=64, size=40):
     r = p.add_run()
     r.text = str(n)
     _font(ctx, r, size, True, 'teal')
+    _end(p, size)
 
 
 def chip(ctx, s, x, y, label, size=44, fill='teal-soft', color='teal', pad=18, lh=1.3, w=None):
@@ -226,8 +272,10 @@ def fit_box(m, w, h):
     return m['width'] * k, m['height'] * k
 
 
-def picture(ctx, s, m, x, y, w, h, credit=True):
+def picture(ctx, s, m, x, y, w, h, credit=True, valign='m'):
     """그림을 틀(x, y, w, h) 안에 원본 비율 그대로 넣는다 (자르지도 늘이지도 않는다). 출처 표시는 그림 바로 아래 가운데.
+    valign='b' 는 그림과 출처 표시를 틀의 아래 끝에 붙인다 (견주기 장의 두 그림: 출처 표시가 같은 높이에 선다).
+    사진(kind: photo)에는 --line 색의 가는 선(0.5pt, 무대 1px)을 두른다 (R26. 옅은 하늘이 바탕에 녹지 않게).
     돌려주는 값: 실제로 차지한 (y 시작, y 끝)"""
     ch = credit_h(ctx, m, w) if credit else 0
     bh = h - ch
@@ -236,10 +284,13 @@ def picture(ctx, s, m, x, y, w, h, credit=True):
     iw, ih = m['width'], m['height']
     k = min(w / iw, bh / ih)
     pw, ph = iw * k, ih * k
-    px, py = x + (w - pw) / 2, y + (h - ch - ph) / 2
+    px, py = x + (w - pw) / 2, (y + h - ch - ph) if valign == 'b' else y + (h - ch - ph) / 2
     # 폭과 높이를 원본 비율대로 계산해 함께 준다 (한쪽만 주면 python-pptx 가 반올림한 값으로 다시 셈한다)
     pic = s.shapes.add_picture(m['file'], E(px), E(py), E(pw), E(ph))
     pic._element.nvPicPr.cNvPr.set('descr', m['alt'])
+    if m.get('kind') == 'photo':
+        pic.line.color.rgb = ctx.c['line']
+        pic.line.width = Pt(0.5)
     if credit:
         text(ctx, s, x, py + ph + 10, w, ch - 10, m['credit'], ctx.type['credit'], 'gray', lh=1.3, align='c')
     return py, py + ph + ch
@@ -324,7 +375,7 @@ def side_place(ctx, s, media, pic, size, top, area_h, measure):
     그림이 칸의 높이에 걸려 칸보다 좁게 그려지면 그림 칸을 그림 폭까지 좁힌다 (가장 좁은 후보 아래로는 줄이지 않는다).
     글이 그림보다 높으면 위 끝을 맞추고 둘을 한 덩어리로 위아래 가운데에, 아니면 둘의 가운데 높이를 맞춘다 (웹 무대와 같다)."""
     S = ctx.side
-    narrow = min(p for p, _ in S['candidates']['points'] + S['candidates']['question'])
+    narrow = min(p for k in S['candidates'] for p, _ in S['candidates'][k])
     ch = credit_h(ctx, media, pic)
     k = min(pic / media['width'], (area_h - ch) / media['height'])
     pw, ph = media['width'] * k, media['height'] * k
@@ -446,19 +497,51 @@ def bullets_h(ctx, items, w, size=44, lh=1.32, gap=12):
     return sum(text_h(ctx, t, size, w - 36, lh) for t in items) + gap * (len(items) - 1)
 
 
+def card(ctx, s, x, y, w, side, size, h=None):
+    """이름표와 점 목록이 든 견주기 상자 하나 (그림 없음). 돌려주는 값: 상자 높이"""
+    lab = 44 * 1.3
+    iw = w - 72
+    h = h or 24 + lab + 16 + bullets_h(ctx, side['points'], iw, size) + 24
+    box(ctx, s, x, y, w, h, fill='card', line='line', radius=20)
+    text(ctx, s, x + 36, y + 24, iw, lab, side['label'], 44, 'teal', True, 1.3)
+    bullets(ctx, s, side['points'], x + 36, y + 24 + lab + 16, iw, size)
+    return h
+
+
 def lay_compare(ctx, s, sl, L):
     y = title(ctx, s, sl['title'])
-    cw = (CW - 48) / 2
-    any_media = sl['left'].get('media') or sl['right'].get('media')
     sides = (sl['left'], sl['right'])
     lab = 44 * 1.3
+    shared = sl.get('media')
+    if shared:
+        # 함께 보는 그림 하나 (R23a): 글 곁에 그림 하나를 두는 두 칸 짜임. 왼쪽에 두 상자를 위아래로 쌓고, 오른쪽에 그림 (웹 무대와 같다)
+        def stack(tw, size):
+            hs = [24 + lab + 16 + bullets_h(ctx, sd['points'], tw - 72, size) + 24 for sd in sides]
+            return hs, sum(hs) + 32
+
+        def measure(tw, size):
+            lines = max(len(wrap(ctx, t, size, tw - 72 - 36)) for sd in sides for t in sd['points'])
+            return stack(tw, size)[1], lines
+        pic, size = side_plan(ctx, 'compare', measure, BOTTOM - y)
+        x, ty, tw = side_place(ctx, s, shared, pic, size, y, BOTTOM - y, measure)
+        hs, _ = stack(tw, size)
+        for sd, h in zip(sides, hs):
+            card(ctx, s, x, ty, tw, sd, size, h)
+            ty += h + 32
+        return
+    cw = (CW - 48) / 2
+    any_media = sl['left'].get('media') or sl['right'].get('media')
     iw = cw - 72
     iy0 = y + 24 + lab + 16
     if any_media:
-        # 그림이 있으면 카드는 아래 끝까지. 그림 틀이 compareMin 보다 낮아지지 않게 항목 글을 먼저 줄인다 (STAGE_FIT.compareMedia)
+        # 쪽마다 그림 하나 (R23b): 두 상자의 그림 상자 높이를 같게 하고, 그림과 출처 표시를 상자 아래 끝에 붙인다.
+        # 항목은 두 쪽 가운데 긴 쪽의 높이만큼 자리를 잡고 같은 높이에서 시작한다. 그래서 출처 표시와 첫 항목이 두 쪽에서 같은 높이에 선다.
+        # 그림 틀이 compareMin 보다 낮아지지 않게 항목 글을 먼저 줄인다 (STAGE_FIT.compareMedia)
+        def bh(size):
+            return max(bullets_h(ctx, sd['points'], iw, size) for sd in sides)
+
         def frame(size):
-            return min((BOTTOM - 24 - bullets_h(ctx, sd['points'], iw, size)) - 16 - iy0 - credit_h(ctx, sd['media'], iw)
-                       for sd in sides if sd.get('media'))
+            return min((BOTTOM - 24 - bh(size)) - 16 - iy0 - credit_h(ctx, sd['media'], iw) for sd in sides if sd.get('media'))
         sizes = ctx.fit['compareMedia']
         size = next((z for z in sizes if frame(z) >= ctx.pic['compareMin'] - 0.5), sizes[-1])
         top, bottom = y, BOTTOM
@@ -479,9 +562,9 @@ def lay_compare(ctx, s, sl, L):
         text(ctx, s, ix, iy, iw, lab, side['label'], 44, 'teal', True, 1.3)
         iy += lab + 16
         if any_media:
-            by = BOTTOM - 24 - bullets_h(ctx, side['points'], iw, size)
+            by = BOTTOM - 24 - bh(size)
             if side.get('media'):
-                picture(ctx, s, side['media'], ix, iy, iw, by - 16 - iy)
+                picture(ctx, s, side['media'], ix, iy, iw, by - 16 - iy, valign='b')
             bullets(ctx, s, side['points'], ix, by, iw, size)
         else:
             bullets(ctx, s, side['points'], ix, iy, iw, size)
@@ -524,30 +607,30 @@ def steps_row(ctx, sl, y, size, shared):
     return cells, low
 
 
-def steps_grid(ctx, sl, y, size, shared, share):
-    """그림 넷을 2 × 2 로 놓은 자리 (칸마다 그림 왼쪽, 이름표와 글 오른쪽). 웹 무대의 data-arrange="grid" 와 같은 치수.
-    share: 칸 폭 가운데 그림 칸의 몫(%, copy.ts 의 STAGE_STEPS.gridShare)"""
+def steps_grid(ctx, sl, y, size, shared, limit):
+    """그림 넷을 2 × 2 로 놓은 자리 (R22). 칸마다 위에 머리(단계 표와 단계 글, 같은 크기), 그 아래에 칸 폭 전체를 쓰는 그림 상자.
+    웹 무대의 data-arrange="grid" 와 같은 치수. 머리 글이 limit 줄을 넘거나 그림 상자의 짧은 변이 shortSide 보다 작으면 Overflow.
+    돌려주는 값: 칸마다 (x, 칸 y, 칸 폭, 표 폭, 글 폭, 그림 상자 y, 그림 상자 높이)"""
     bottom = BOTTOM - (shared_credit_h(ctx, shared) if shared else 0)
     cw = (CW - 48) / 2
     ch = (bottom - y - 32) / 2
-    chh = 44 * 1.3 + 12
-    pw = cw * share / 100
-    tw = cw - 32 - pw
-    cells, low = [], float('inf')
+    cells = []
     for i, st in enumerate(sl['steps']):
         x = PAD_X + (i % 2) * (cw + 48)
         cy = y + (i // 2) * (ch + 32)
-        inner = ch - 22
-        if chh + 16 + text_h(ctx, st['text'], size, tw, 1.35) > inner + 1:
+        chw = text_w(ctx, st['label'], size, True) / FIT + 36
+        tw = cw - chw - 20
+        lines = len(wrap(ctx, st['text'], size, tw))
+        if lines > limit:
             raise Overflow('단계')
+        head = max(size * 1.3 + 12, 6 + lines * size * 1.35)
+        by = cy + 6 + 16 + head + 16
+        bh = cy + ch - by
         m = st['media']
-        ph = inner - (0 if shared else credit_h(ctx, m, pw))
-        if min(pw, ph) < ctx.pic['shortSide'] - 0.5:
+        if min(cw, bh - (0 if shared else credit_h(ctx, m, cw))) < ctx.pic['shortSide'] - 0.5:
             raise Overflow('단계')
-        a, b = fit_box(m, pw, ph)
-        low = min(low, a * b)
-        cells.append((x, cy, cw, pw, tw, inner))
-    return cells, low
+        cells.append((x, cy, cw, chw, tw, by, bh))
+    return cells, 0
 
 
 def shared_credit_h(ctx, credit):
@@ -571,21 +654,28 @@ def lay_steps(ctx, s, sl, L):
                 except Overflow:
                     continue
             return None
-        row = first_fit(steps_row)
-        # 그림이 넷이면 한 줄과 2 × 2 가운데 그림이 더 크게 그려지는 쪽 (웹 무대와 같은 규칙).
-        # 2 × 2 는 칸 안의 그림 몫을 큰 것부터 해 본다 (R13: 제목 아래를 다 쓰고 그림을 크게)
+        # 그림이 넷이면 2 × 2 (R22, 웹 무대와 같은 규칙): 네 머리가 모두 한 줄에 들어가는 가장 큰 글 크기를 먼저 찾고,
+        # 없으면 maxLines 줄까지 받는다. 어느 것도 안 되는 아주 긴 글은 한 줄(4칸)로 놓는다.
         grid = None
         if len(steps) == 4 and len(pictured) == 4:
-            grid = next((g for g in (first_fit(steps_grid, sh) for sh in ctx.steps['gridShare']) if g), None)
-        if grid and (not row or grid[2] > row[2]):
+            for limit in (1, ctx.steps['maxLines']):
+                for size in ctx.steps['gridFit']:
+                    try:
+                        grid = (size,) + steps_grid(ctx, sl, y, size, shared, limit)
+                        break
+                    except Overflow:
+                        continue
+                if grid:
+                    break
+        row = None if grid else first_fit(steps_row)
+        if grid:
             size, cells, _ = grid
-            for st, (x, cy, cw, pw, tw, inner) in zip(steps, cells):
+            for st, (x, cy, cw, chw, tw, by, bh) in zip(steps, cells):
                 box(ctx, s, x, cy, cw, 6, fill='teal', line=None, radius=0, shape=MSO_SHAPE.RECTANGLE)
-                tx = x + pw + 32
-                _, chh = chip(ctx, s, tx, cy + 22, st['label'])
+                chip(ctx, s, x, cy + 22, st['label'], size=size)
                 th = text_h(ctx, st['text'], size, tw, 1.35)
-                text(ctx, s, tx, cy + 22 + chh + 16, tw, th, st['text'], size, 'navy', lh=1.35)
-                picture(ctx, s, st['media'], x, cy + 22, pw, inner, credit=not shared)
+                text(ctx, s, x + chw + 20, cy + 22 + 6, tw, th, st['text'], size, 'navy', lh=1.35)
+                picture(ctx, s, st['media'], x, by, cw, bh, credit=not shared)
         elif row:
             size, cells, _ = row
             for st, (x, cw, (fx, fy, fw, fh), ty, ry) in zip(steps, cells):
@@ -679,7 +769,7 @@ def lay_activity(ctx, s, sl, L):
         if sl.get('minutes') is not None:
             parts.append(('min', lab + 8 + 72 * 1.15))
         if sl.get('materials'):
-            mh = sum(text_h(ctx, m, T['body'], iw, 1.3) for m in sl['materials']) + 8 * (len(sl['materials']) - 1)
+            mh = sum(text_h(ctx, m, T['body'], iw - 36, 1.3) for m in sl['materials']) + 8 * (len(sl['materials']) - 1)
             parts.append(('mat', lab + 8 + mh))
         ah = 64 + sum(h for _, h in parts) + 32 * (len(parts) - 1)
         if y + ah > BOTTOM + 1:
@@ -693,9 +783,11 @@ def lay_activity(ctx, s, sl, L):
             else:
                 text(ctx, s, ax + 40, iy, iw, lab, ctx.copy['slide']['materials'], T['label'], 'teal', True, 1.3)
                 my = iy + lab + 8
+                # 상자 안의 목록은 점을 머리표로 쓴다 (R27, 웹 무대의 .sl-materials 와 같다)
                 for m in sl['materials']:
-                    mh = text_h(ctx, m, T['body'], iw, 1.3)
-                    text(ctx, s, ax + 40, my, iw, mh, m, T['body'], 'navy', lh=1.3)
+                    mh = text_h(ctx, m, T['body'], iw - 36, 1.3)
+                    box(ctx, s, ax + 40, my + T['body'] * 1.3 / 2 - 7, 14, 14, fill='teal', line=None, shape=MSO_SHAPE.OVAL)
+                    text(ctx, s, ax + 40 + 36, my, iw - 36, mh, m, T['body'], 'navy', lh=1.3)
                     my += mh + 8
             iy += h + 32
 
@@ -708,7 +800,7 @@ def activity_aside_h(ctx, sl):
     if sl.get('minutes') is not None:
         hs.append(lab + 8 + 72 * 1.15)
     if sl.get('materials'):
-        hs.append(lab + 8 + sum(text_h(ctx, m, T['body'], iw, 1.3) for m in sl['materials']) + 8 * (len(sl['materials']) - 1))
+        hs.append(lab + 8 + sum(text_h(ctx, m, T['body'], iw - 36, 1.3) for m in sl['materials']) + 8 * (len(sl['materials']) - 1))
     return 64 + sum(hs) + 32 * (len(hs) - 1)
 
 
@@ -849,6 +941,22 @@ def credit_slides(ctx, prs, L):
     return len(pages)
 
 
+def notes(s, lines):
+    """메모란: 줄마다 문단 하나. 글 조각에 언어(ko-KR)를 적는다 (메모란도 맞춤법 검사를 받는다)."""
+    tf = s.notes_slide.notes_text_frame
+    tf.text = ''
+    for i, line in enumerate(lines):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        r = p.add_run()
+        r.text = line
+        rpr = r._r.get_or_add_rPr()
+        rpr.set('lang', LANG)
+        rpr.set('altLang', ALT_LANG)
+        _end(p)
+    if not lines:
+        _end(tf.paragraphs[0])
+
+
 def new_slide(ctx, prs):
     layout = next((l for l in prs.slide_layouts if l.name.strip().lower() == 'blank'), prs.slide_layouts[6])
     s = prs.slides.add_slide(layout)
@@ -889,7 +997,7 @@ def build(ctx, L):
         if L.get('draft') and sl['no'] != 1:
             draft_notice(ctx, s, L['draft'])
         counter(ctx, s, sl['counter'])
-        s.notes_slide.notes_text_frame.text = '\n'.join(sl['notes'])
+        notes(s, sl['notes'])
     try:
         credit_slides(ctx, prs, L)
     except Overflow as e:

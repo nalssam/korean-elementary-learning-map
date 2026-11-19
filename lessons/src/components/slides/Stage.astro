@@ -5,6 +5,8 @@
 // 조작 (교실 앞에서 리모컨·키보드·마우스·터치로)
 //   다음 장: → ↓ Space PageDown Enter, 화면 오른쪽 클릭·탭     이전 장: ← ↑ Shift+Space PageUp, 화면 왼쪽 클릭·탭
 //   처음·끝: Home(지금 차시의 첫 장) End     전체 화면: F     교사 메모: N     화면 가리기: B .     차시 안내로 돌아가기: Esc
+//   학생 페이지 QR: Q (확인 퀴즈·웹 활동의 QR 과 주소를 장 위에 띄운다. Esc, Q, 창 바깥 누르기로 닫는다. R25)
+//   교사 메모를 열면 장 전체를 메모 창 위의 자리에 줄여 그린다. 메모 창이 장을 가리지 않는다 (R24).
 //   퀴즈 장: 다음 글쇠를 처음 누르면 정답이 드러나고, 한 번 더 누르면 다음 장으로 간다. 교사 메모의 정답·풀이도 그때 보인다.
 //   조작 단추는 마우스를 4px 넘게 움직이거나, 손가락·펜으로 화면을 누르거나, 키보드로 단추에 초점을 옮길 때만 보인다.
 //   손가락·펜으로 화면 아래쪽 12% 를 누르면 조작 단추만 보이고 장은 넘어가지 않는다.
@@ -15,8 +17,10 @@ import { lessonRoute } from '#lib/content.ts';
 import type { Lesson } from '#schema/lesson.ts';
 import { href } from '#src/lib/url.ts';
 import Slide from './Slide.astro';
-import { CREDITS_ANCHOR, NOTE_COPY, STAGE_COPY, STAGE_PICTURE } from './copy.ts';
+import Qr from '#src/components/Qr.astro';
+import { CREDITS_ANCHOR, NOTE_COPY, QR_COPY, STAGE_COPY, STAGE_PICTURE } from './copy.ts';
 import { slideCounter } from './counter.ts';
+import { studentPages } from './qr.ts';
 import './stage.css';
 
 interface Props { lesson: Lesson }
@@ -24,6 +28,7 @@ const { lesson } = Astro.props;
 const total = lesson.slides.length;
 const k = STAGE_COPY.keys;
 const firstCount = slideCounter(lesson, 1).text;
+const pages = studentPages(lesson);
 ---
 <Base title={`${lesson.title} 수업 화면`} kind="stage" lesson={lesson}>
   <script is:inline slot="head">document.documentElement.classList.add('stage-js');</script>
@@ -37,11 +42,29 @@ const firstCount = slideCounter(lesson, 1).text;
       <button type="button" data-act="next"><span>{STAGE_COPY.next}</span><kbd>{k.next}</kbd></button>
       <span class="hud-gap"></span>
       <button type="button" data-act="notes" aria-pressed="false"><span>{STAGE_COPY.notes}</span><kbd>{k.notes}</kbd></button>
+      {pages.length > 0 && <button type="button" data-act="qr" aria-pressed="false" aria-controls="qr-layer"><span>{STAGE_COPY.qr}</span><kbd>{k.qr}</kbd></button>}
       <button type="button" data-act="fullscreen"><span>{STAGE_COPY.fullscreen}</span><kbd>{k.fullscreen}</kbd></button>
       <a href={`${href(lessonRoute(lesson.id))}#${CREDITS_ANCHOR}`} data-act="credits"><span>{STAGE_COPY.credits}</span></a>
       <a href={href(lessonRoute(lesson.id))} data-act="exit"><span>{STAGE_COPY.exit}</span><kbd>{k.exit}</kbd></a>
     </nav>
     <div class="stage-blank" hidden role="status" aria-label={STAGE_COPY.blank}></div>
+    {pages.length > 0 && (
+      <div class="qr-layer" id="qr-layer" hidden role="dialog" aria-modal="true" aria-labelledby="qr-heading">
+        <div class="qr-panel">
+          <p class="qr-heading" id="qr-heading">{QR_COPY.heading}</p>
+          <ul class="qr-list">
+            {pages.map((p) => (
+              <li class="qr-item" data-kind={p.kind} data-url={p.url}>
+                <p class="qr-name">{p.name}</p>
+                <Qr url={p.url} label={QR_COPY.code(p.name)} />
+                <p class="qr-addr">{p.url}</p>
+              </li>
+            ))}
+          </ul>
+          <button type="button" class="qr-close" data-act="qr-close">{QR_COPY.close}</button>
+        </div>
+      </div>
+    )}
     <aside class="notes" hidden aria-labelledby="notes-heading" data-missing={STAGE_COPY.missing}>
       <h2 id="notes-heading">{NOTE_COPY.heading} <span class="notes-no"></span></h2>
       <div class="notes-body"></div>
@@ -62,6 +85,8 @@ const firstCount = slideCounter(lesson, 1).text;
   const notesBtn = stage.querySelector<HTMLButtonElement>('[data-act="notes"]')!;
   const fsBtn = stage.querySelector<HTMLButtonElement>('[data-act="fullscreen"]')!;
   const blank = stage.querySelector<HTMLElement>('.stage-blank')!;
+  const qrLayer = stage.querySelector<HTMLElement>('.qr-layer');
+  const qrBtn = stage.querySelector<HTMLButtonElement>('[data-act="qr"]');
   let cur = 0;
 
   const fromHash = () => {
@@ -117,17 +142,11 @@ const firstCount = slideCounter(lesson, 1).text;
     }
     return low;
   }
-  /** 그려진 그림 가운데 가장 작은 넓이 (무대 px²) */
-  function smallestPicture(s: HTMLElement): number {
-    const u = unit(s);
-    let low = Infinity;
-    for (const img of s.querySelectorAll<HTMLImageElement>('.media img')) {
-      const r = img.getBoundingClientRect();
-      if (!img.naturalWidth || !r.width) continue;
-      const k = Math.min(r.width / img.naturalWidth, r.height / img.naturalHeight);
-      low = Math.min(low, (img.naturalWidth * k / u) * (img.naturalHeight * k / u));
-    }
-    return low;
+  /** 글 요소가 그려진 줄 수 (줄 상자의 위 끝을 센다) */
+  function lineCount(el: HTMLElement): number {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    return new Set([...range.getClientRects()].filter((r) => r.width > 1).map((r) => Math.round(r.top))).size;
   }
   /** 그림 틀 안에 실제로 그려진 그림(과 보이는 출처 표시)의 높이 (화면 px). 그림이 아직 없으면 0 */
   function drawnHeight(f: HTMLElement): number {
@@ -166,7 +185,7 @@ const firstCount = slideCounter(lesson, 1).text;
     const narrowest = Math.min(...plan.map(([pic]) => pic));
     const widest = Math.max(...plan.map(([pic]) => pic));
     const lines = (el: HTMLElement) => Math.round(el.getBoundingClientRect().height / Number.parseFloat(getComputedStyle(el).lineHeight));
-    const short = (limit: number) => !limit || [...box.querySelectorAll<HTMLElement>('.sl-li-text, .sl-question-title')].every((el) => lines(el) <= limit);
+    const short = (limit: number) => !limit || [...box.querySelectorAll<HTMLElement>('.sl-li-text, .sl-question-title, .sl-bullets > li')].every((el) => lines(el) <= limit);
     const tryPlan = (strict: boolean) => {
       for (const [pic, size] of plan) {
         box.style.setProperty('--pic', String(pic));
@@ -213,25 +232,24 @@ const firstCount = slideCounter(lesson, 1).text;
       }
       return false;
     };
-    pick();
-    // 그림이 넷인 단계 장: 한 줄과 2 × 2 가운데 넘치지 않으면서 그림이 더 크게 그려지는 쪽
-    // 2 × 2 는 칸 안의 그림 몫(data-shares)을 큰 것부터 해 본다
+    // 그림이 넷인 단계 장 (R22): 2 × 2 에서 네 머리(단계 표와 글)가 모두 한 줄에 들어가는 가장 큰 글 크기를 먼저 찾고,
+    // 없으면 STAGE_STEPS.maxLines 줄까지 받는다. 그림 상자의 짧은 변이 STAGE_PICTURE.shortSide 보다 작아지면 들어가지 않은 것이다.
+    // 어느 것도 안 되는 아주 긴 글은 한 줄(4칸)로 놓는다.
     const list = s.querySelector<HTMLElement>('[data-arrange]');
+    let gridded = false;
     if (list) {
-      list.dataset.arrange = 'row';
-      const row = { fit: box.style.getPropertyValue('--fit'), area: fits(s) ? smallestPicture(s) : 0 };
       list.dataset.arrange = 'grid';
-      let grid = 0;
-      for (const share of (list.dataset.shares ?? '55').split(' ')) {
-        list.style.setProperty('--share', share);
-        if (pick()) { grid = smallestPicture(s); break; }
-      }
-      if (grid <= row.area) {
-        list.dataset.arrange = 'row';
-        list.style.removeProperty('--share');
-        box.style.setProperty('--fit', row.fit);
-      }
+      const heads = [...list.querySelectorAll<HTMLElement>(':scope > .sl-step > .sl-step-text')];
+      const most = Number(list.dataset.maxLines ?? 2);
+      const gridSizes = (list.dataset.gridFit ?? '').split(' ').filter(Boolean);
+      const tryGrid = (limit: number) => gridSizes.some((size) => {
+        box.style.setProperty('--fit', size);
+        return fits(s) && lowestFrame(s) >= SHORT_SIDE - 0.5 && heads.every((h) => lineCount(h) <= limit);
+      });
+      gridded = tryGrid(1) || tryGrid(most);
+      if (!gridded) list.dataset.arrange = 'row';
     }
+    if (!gridded) pick();
     tightenRow(s);
     s.dataset.fitted = 'true';
   }
@@ -274,10 +292,27 @@ const firstCount = slideCounter(lesson, 1).text;
   // 앞 장으로 돌아가면 퀴즈의 정답은 드러난 채로 보여 준다 (방금 본 것을 다시 짚을 때)
   function prev() { if (cur > 0) show(cur - 1, true); }
 
-  function toggleNotes(open = notes.hidden) {
+  // 메모 창을 열고 닫을 때 장의 크기가 바뀌므로 다시 잰다
+  function toggleNotes(open: boolean = notes.hidden === true) {
     notes.hidden = !open;
+    stage.classList.toggle('has-notes', open);
     notesBtn.setAttribute('aria-pressed', String(open));
+    refit();
   }
+  // QR 창: 열려 있는 동안 다른 글쇠는 장을 넘기지 않는다. 닫으면 초점을 단추로 돌려준다 (키보드로 열었을 때).
+  let qrReturn: HTMLElement | null = null;
+  function toggleQr(open: boolean = qrLayer?.hidden === true) {
+    if (!qrLayer || !qrBtn) return;
+    qrLayer.hidden = !open;
+    qrBtn.setAttribute('aria-pressed', String(open));
+    if (open) {
+      qrReturn = document.activeElement as HTMLElement | null;
+      qrLayer.querySelector<HTMLElement>('.qr-close')!.focus({ preventScroll: true });
+    } else if (qrReturn && qrReturn !== document.body) { qrReturn.focus({ preventScroll: true }); qrReturn = null; }
+    else (document.activeElement as HTMLElement | null)?.blur();
+  }
+  const qrOpen = () => !!qrLayer && !qrLayer.hidden;
+  qrLayer?.addEventListener('click', (e) => { if (!(e.target as HTMLElement).closest('.qr-panel') || (e.target as HTMLElement).closest('.qr-close')) toggleQr(false); });
   function toggleFullscreen() {
     if (document.fullscreenElement) document.exitFullscreen();
     else document.documentElement.requestFullscreen?.().catch(() => {});
@@ -295,6 +330,10 @@ const firstCount = slideCounter(lesson, 1).text;
     // 키보드로 단추에 초점을 옮겼을 때 Space·Enter 는 그 단추를 누른다
     if ((e.key === ' ' || e.key === 'Enter') && t.closest('button, a')) return;
     const k = e.key;
+    if (qrOpen()) {
+      if (k === 'Escape' || k === 'q' || k === 'Q' || k === 'ㅂ') { toggleQr(false); e.preventDefault(); }
+      return;
+    }
     const isNext = NEXT.includes(k) || (k === ' ' && !e.shiftKey);
     const isPrev = PREV.includes(k) || (k === ' ' && e.shiftKey);
     if (!blank.hidden && (isNext || isPrev)) setBlank(false);
@@ -304,6 +343,7 @@ const firstCount = slideCounter(lesson, 1).text;
     else if (k === 'End') show(total - 1);
     else if (k === 'f' || k === 'F' || k === 'ㄹ') toggleFullscreen();
     else if (k === 'n' || k === 'N' || k === 'ㅜ') toggleNotes();
+    else if ((k === 'q' || k === 'Q' || k === 'ㅂ') && qrBtn) toggleQr(true);
     else if (k === 'b' || k === 'B' || k === '.' || k === 'ㅠ') setBlank(blank.hidden === true);
     else if (k === 'Escape') { if (!blank.hidden) setBlank(false); else if (!notes.hidden) toggleNotes(false); else location.href = stage.dataset.exit!; }
     else return;
@@ -350,6 +390,7 @@ const firstCount = slideCounter(lesson, 1).text;
   stage.querySelector<HTMLElement>('[data-act="next"]')!.addEventListener('click', press(next));
   notesBtn.addEventListener('click', press(() => toggleNotes()));
   fsBtn.addEventListener('click', press(toggleFullscreen));
+  qrBtn?.addEventListener('click', (e) => { e.stopPropagation(); toggleQr(true); });
   window.addEventListener('hashchange', () => { if (fromHash() !== cur) show(fromHash()); });
 
   show(fromHash());

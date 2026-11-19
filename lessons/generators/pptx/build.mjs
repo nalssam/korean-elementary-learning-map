@@ -109,6 +109,8 @@ async function mediaEntry(lesson, ref) {
     file: file.endsWith('.svg') ? await svgToPng(file, m.lessonId) : file,
     alt: m.alt,
     credit: creditShort(m),
+    // 사진에는 PPTX 에서도 가는 테두리를 두른다 (R26)
+    kind: m.kind,
   };
 }
 
@@ -126,7 +128,8 @@ async function slideEntry(lesson, slide, no) {
     case 'points': return { ...base, title: slide.title, points: slide.points, media: await media(slide.media) };
     case 'compare': {
       const side = async (s) => ({ label: s.label, points: s.points, media: await media(s.media) });
-      return { ...base, title: slide.title, left: await side(slide.left), right: await side(slide.right) };
+      // media 는 두 쪽이 함께 보는 그림 하나 (R23a). left·right 의 그림과 함께 오지 않는다 (형식이 막는다)
+      return { ...base, title: slide.title, media: await media(slide.media), left: await side(slide.left), right: await side(slide.right) };
     }
     case 'steps': {
       const steps = [];
@@ -211,7 +214,11 @@ async function main() {
     side: {
       gap: STAGE_SIDE.gap,
       maxLines: STAGE_SIDE.maxLines,
-      candidates: { points: sideCandidates(STAGE_FIT.pointsMedia), question: sideCandidates(STAGE_FIT.questionMedia) },
+      candidates: {
+        points: sideCandidates(STAGE_FIT.pointsMedia),
+        question: sideCandidates(STAGE_FIT.questionMedia),
+        compare: sideCandidates(STAGE_FIT.compareShared),
+      },
     },
     steps: STAGE_STEPS,
     copy: { slide: SLIDE_COPY },

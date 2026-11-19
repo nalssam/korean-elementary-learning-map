@@ -53,8 +53,10 @@ export const STAGE_COPY = {
   exit: '차시 안내로',
   /** 차시 안내 페이지의 접힌 '그림 출처'로 가는 링크 */
   credits: '그림 출처',
+  /** 학생 페이지(확인 퀴즈, 웹 활동)의 QR 창을 여는 단추 (R25) */
+  qr: 'QR',
   /** 단추 옆 글쇠 안내 */
-  keys: { prev: '←', next: '→', fullscreen: 'F', notes: 'N', exit: 'Esc' },
+  keys: { prev: '←', next: '→', fullscreen: 'F', notes: 'N', qr: 'Q', exit: 'Esc' },
   /** 퀴즈 장에서 정답이 아직 가려져 있을 때 메모 칸에 보이는 한 줄 */
   revealHint: '다음 장 키(→, 스페이스 바)를 누르면 화면에 정답이 나옵니다.',
   /** 그림 파일을 불러오지 못했을 때 그림 자리에 보이는 글 */
@@ -64,6 +66,18 @@ export const STAGE_COPY = {
   /** 화면 읽기 프로그램용 */
   slideLabel: (no: number, total: number) => `${total}장 가운데 ${no}번째 장`,
   region: '수업 화면',
+} as const;
+
+/** 수업 화면의 QR 창 (R25). 이 차시에 준비된 학생 페이지의 QR 과 주소만 싣는다. */
+export const QR_COPY = {
+  /** 창의 머리 한 줄 (아이들이 읽는다) */
+  heading: '휴대폰이나 태블릿으로 찍어 봅시다',
+  /** 화면 읽기 프로그램이 읽는 창 이름 */
+  label: '학생 페이지 QR 코드',
+  /** 닫기 단추 */
+  close: '닫기',
+  /** QR 그림의 읽는 말. 예: "확인 퀴즈 QR 코드" */
+  code: (name: string) => `${name} QR 코드`,
 } as const;
 
 /**
@@ -111,8 +125,10 @@ export const STAGE_FIT = {
   compareMedia: [44, 40, 36, 32],
   /** 활동 장의 할 일 */
   activity: [52, 48, 44],
-  /** 그림 있는 단계 장의 글 */
+  /** 그림 있는 단계 장의 글 (한 줄로 놓을 때) */
   stepsMedia: [44, 40, 36],
+  /** 함께 보는 그림 하나가 있는 견주기 장(R23a)의 항목. 44 아래 크기는 그림 칸을 가장 좁게 해도 넘칠 때만 쓴다 */
+  compareShared: [48, 44, 40, 36],
   /** 그림 곁의 항목 (STAGE_SIDE). 44 아래 크기는 그림 칸을 가장 좁게 해도 글이 넘칠 때만 쓴다 */
   pointsMedia: [48, 44, 40, 36],
   /** 그림 곁의 큰 질문 (제목이라 72 아래로는 내리지 않는다) */
@@ -136,7 +152,7 @@ export const STAGE_SIDE = {
    * 먼저 이 줄 수를 넘지 않는 짜임을 찾는다 (항목 하나, 질문 제목). 좁은 칸에서 항목이 세 줄로 쪼개지면 읽기 어렵다.
    * 이때 그림 칸은 가장 좁은 후보까지 줄이지 않는다. 어느 짜임도 이것을 지킬 수 없으면 줄 수를 보지 않고 다시 고른다.
    */
-  maxLines: { points: 2, question: 3 },
+  maxLines: { points: 2, question: 3, compare: 2 },
 } as const;
 
 /**
@@ -156,12 +172,14 @@ export function sideCandidates(sizes: readonly number[]): [number, number][] {
 }
 
 /**
- * 그림 넷을 2 × 2 로 놓는 단계 장 (R13). 칸마다 그림은 왼쪽, 이름표와 글은 오른쪽이다.
- * 칸 폭 가운데 그림 칸이 차지하는 몫(%) 후보. 큰 것부터 해 보고 글이 들어가는 가장 큰 몫을 쓴다.
- * 63% 는 600 × 380 도해가 1920 × 1080 무대의 2 × 2 칸 높이를 다 쓰는 폭이다 (그림이 500px 보다 넓게 그려진다).
+ * 그림 넷을 2 × 2 로 놓는 단계 장 (R22). 칸마다 위에 머리 한 줄(단계 표와 단계 글), 그 아래에 칸 폭 전체를 쓰는 그림 상자를 둔다.
+ * 머리 글의 크기 후보(무대 px, 40 이상)를 큰 것부터 해 보고, 네 머리가 모두 한 줄에 들어가는 크기를 먼저 고른다.
+ * 어느 크기에서도 한 줄이 안 되면 maxLines 줄까지 받는다. 그래도 안 되거나 그림 상자의 짧은 변이 STAGE_PICTURE.shortSide 보다 작아지면
+ * 2 × 2 를 버리고 한 줄(4칸)로 놓는다 (형식이 허락하는 가장 긴 글).
  */
 export const STAGE_STEPS = {
-  gridShare: [63, 58, 54],
+  gridFit: [44, 40],
+  maxLines: 2,
 } as const;
 
 /** 그림 틀의 크기 (무대 px) */

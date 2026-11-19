@@ -27,7 +27,10 @@ node generators/pptx/build.mjs --out .cache/tests/x   # 다른 dist 폴더 (캐�
 - 명세의 슬라이드 한 장이 PPTX 한 장입니다. 번호가 `flow.slides` 와 같습니다. 오른쪽 아래에 `4 / 12` 처럼 장 번호가 있습니다. 두 차시 묶음은 차시마다 따로 세어 `3차시 1 / 4` 로 적습니다 (`src/components/slides/counter.ts`).
 - 글은 모두 고칠 수 있는 글상자입니다. 줄 간격은 고정값입니다. 글자 크기를 줄이는 자동 맞춤은 쓰지 않습니다. 낱말 장의 '이렇게 써요' 상자만 글에 맞춰 상자가 늘어납니다 (다른 글꼴로 열어 줄이 늘어도 글이 상자 밖으로 나가지 않게).
 - 그림 없는 항목 장, 견주기 장, 활동 장, 그림 있는 단계 장의 글은 크게 쓰고 넘치면 한 단계씩 줄입니다 (`STAGE_FIT`). 웹 무대와 같은 크기 차례를 씁니다. 그림 틀의 짧은 변이 200px(`STAGE_PICTURE.shortSide`)보다 작아지면 넘친 것으로 셉니다.
-- 그림이 넷인 단계 장은 한 줄과 2 × 2 가운데 그림이 더 크게 그려지는 쪽으로 놓습니다. 단계 그림의 출처 표시가 모두 같으면 목록 아래에 한 번만 찍습니다.
+- 그림이 넷인 단계 장은 2 × 2 로 놓습니다 (R22). 칸마다 위에 머리 한 줄(단계 표와 단계 글, 같은 크기로 44px 또는 40px), 그 아래에 칸 폭 전체를 쓰는 그림 상자가 있고 그림은 상자 안 가운데에 놓입니다. 머리가 두 줄을 넘거나 그림 상자가 너무 작아지는 아주 긴 글만 한 줄(4칸)로 놓습니다. 단계 그림의 출처 표시가 모두 같으면 목록 아래에 한 번만 찍습니다.
+- 견주기 장 (R23): 쪽마다 그림이 있으면 두 그림 상자의 높이가 같고 그림과 출처 표시는 상자 아래 끝에 붙습니다. 그래서 두 쪽의 출처 표시와 첫 항목이 같은 높이에 섭니다. 두 쪽이 함께 보는 그림 하나(`media`)는 글 곁에 그림 하나를 두는 두 칸 짜임입니다 (왼쪽에 이름표 상자 둘을 위아래로, 오른쪽에 그림).
+- 사진(`kind: photo`)에는 `--line` 색의 0.5pt 선을 두릅니다 (R26. 무대의 1px 테두리와 같은 굵기). 도해·지도·그림에는 두르지 않습니다.
+- 글 조각(run)과 문단 끝(`endParaRPr`)마다 `lang="ko-KR"`, `altLang="en-US"` 를 적습니다 (메모란과 도형의 빈 문단도). PowerPoint 가 영어 맞춤법 검사로 한글에 밑줄을 긋지 않게 하려는 것입니다.
 - 1번 장(표지)에 `footerNotice(lesson)` 이 찍힙니다. 공개하지 않은 차시는 2번 장부터 장마다 왼쪽 아래에 초안 표시가 있습니다.
 - 파일 정보(`docProps/core.xml`): 제목 `<차시 제목> 수업 화면`(초안은 앞에 `[검수 전 초안] `), 만든 이·마지막으로 고친 이 `SITE.author`, 키워드 `CC BY-NC-SA 4.0`, 판 1. 날짜는 공개된 차시는 승인한 날, 초안은 2026-01-01 로 고정합니다 (빌드할 때마다 파일이 달라지지 않게). `docProps/app.xml` 에는 장 수만 적고, 화면 크기에 4:3 이름(`type="screen4x3"`)을 남기지 않습니다.
 - 메모란은 `slideNotes(lesson, no)` 입니다. 퀴즈 장은 그 뒤에 `정답: …`, `풀이: …` 두 줄이 붙습니다 (화면에는 정답을 찍지 않습니다).
@@ -41,7 +44,9 @@ LibreOffice Impress 는 한글과 로마자·숫자·문장 부호 사이에 조
 
 ![LibreOffice 에서 괄호와 기호 앞뒤에 틈이 생긴 모습](libreoffice-spacing.png)
 
-넘침 시험(`tests/slides/pptx.test.ts`)은 이 틈까지 넣어 LibreOffice 로 찍은 글이 글상자 안에 있는지 봅니다 (줄바꿈을 셀 때 상자 폭의 95% 만 쓰는 까닭입니다).
+글 조각에 `lang="ko-KR"` 을 적은 뒤에도 이 틈은 그대로입니다. 같은 글 여섯 줄을 언어를 적은 파일과 적지 않은 파일로 만들어 LibreOffice 로 찍고 줄 폭을 재어 보았더니 여섯 줄 모두 소수 첫째 자리까지 같았습니다. 언어 표시와 관계없는, LibreOffice 가 그리는 방식의 문제입니다. PowerPoint 와 한컴 한쇼에서 어떻게 보이는지는 날쌤이 실제 컴퓨터에서 확인합니다 (`docs/ROADMAP.md`).
+
+줄바꿈은 이 틈까지 넣어 셉니다: 한글과 다른 글자가 맞닿을 때마다(띄어쓰기는 건너뛰고) 글자 크기의 0.25배를 더합니다 (`ASIAN_GAP`. 26pt 로 찍어 재어 보니 0.24배 남짓이었습니다). 그 밖에는 글꼴 파일의 글자 폭 그대로이고, 상자 폭은 99% 까지 씁니다 (`FIT`). 예전처럼 95% 만 쓰면 한 줄에 들어가는 항목이 두 줄짜리 상자를 받아 항목 사이가 들쭉날쭉했습니다 (실제 차시 8번 장). 넘침 시험(`tests/slides/pptx.test.ts`)은 LibreOffice 로 찍은 글이 글상자 안에 있는지, 한 줄짜리 항목 사이가 고른지를 봅니다.
 
 ## `.cache/lessons.json`
 
@@ -55,9 +60,9 @@ LibreOffice Impress 는 한글과 로마자·숫자·문장 부호 사이에 조
   "type": { "cover": 104, "title": 72, "body": 44, … },          // 글자 크기 px (src/components/slides/copy.ts 의 STAGE_TYPE)
   "fit": { "points": [56, 52, 48, 44], … },                      // 장에 맞게 줄어드는 글의 크기 차례 (STAGE_FIT)
   "picture": { "compareMin": 360, "shortSide": 200 },            // 그림 틀의 크기 (STAGE_PICTURE)
-  "side": { "gap": 72, "maxLines": { "points": 2, "question": 3 }, // 글 곁에 그림 하나를 두는 장 (STAGE_SIDE, R12)
-            "candidates": { "points": [[1120, 48], [1008, 48], …], "question": [[1120, 80], …] } }, // 해 볼 [그림 칸 폭, 글 크기] 차례 (sideCandidates)
-  "steps": { "gridShare": [63, 58, 54] },                        // 2 × 2 단계 장에서 칸 폭 가운데 그림 칸의 몫 % (STAGE_STEPS, R13)
+  "side": { "gap": 72, "maxLines": { "points": 2, "question": 3, "compare": 2 }, // 글 곁에 그림 하나를 두는 장 (STAGE_SIDE, R12)
+            "candidates": { "points": [[1120, 48], [1008, 48], …], "question": [[1120, 80], …], "compare": [[1120, 48], …] } }, // 해 볼 [그림 칸 폭, 글 크기] 차례 (sideCandidates)
+  "steps": { "gridFit": [44, 40], "maxLines": 2 },               // 2 × 2 단계 장의 머리 글 크기 차례와 줄 수 (STAGE_STEPS, R22)
   "copy": { "slide": { "term": "새 낱말", "quiz": "확인 퀴즈", … } }, // 장 안의 이름표 (SLIDE_COPY)
   "lessons": [
     {
@@ -78,7 +83,7 @@ LibreOffice Impress 는 한글과 로마자·숫자·문장 부호 사이에 조
 }
 ```
 
-장마다 `no`(1부터), `layout`, `notes`(메모란 줄들), `counter`(장 번호 글, `slideCounter()`)가 있고, layout 에 따라 아래 칸이 더 있습니다. 그림(`media`)은 `{ "id": "5-2/1/01/stone", "file": "<절대 경로: jpg·png, SVG 는 바꾼 PNG>", "alt": "…", "credit": "creditShort()" }` 입니다.
+장마다 `no`(1부터), `layout`, `notes`(메모란 줄들), `counter`(장 번호 글, `slideCounter()`)가 있고, layout 에 따라 아래 칸이 더 있습니다. 그림(`media`)은 `{ "id": "5-2/1/01/stone", "file": "<절대 경로: jpg·png, SVG 는 바꾼 PNG>", "alt": "…", "credit": "creditShort()", "kind": "photo" }` 입니다 (`kind` 는 명세의 그림 종류. 사진에만 테두리를 두른다).
 
 | layout | 칸 |
 |---|---|
@@ -86,7 +91,7 @@ LibreOffice Impress 는 한글과 로마자·숫자·문장 부호 사이에 조
 | `question` | `kicker?`, `title`, `hint?`, `media?` |
 | `picture` | `title`, `caption?`, `media` |
 | `points` | `title`, `points[]`, `media?` |
-| `compare` | `title`, `left`·`right`: `{ label, points[], media? }` |
+| `compare` | `title`, `media?`(두 쪽이 함께 보는 그림), `left`·`right`: `{ label, points[], media? }` |
 | `steps` | `title`, `steps[]`: `{ label, text, media? }` |
 | `term` | `term`, `meaning`(termMeaning), `example?` |
 | `passage` | `passage`: `{ title, text[], source }` |

@@ -114,7 +114,9 @@ export async function slideProblems(): Promise<string[]> {
     if (cap && cap.getClientRects().length && !/\.svg(?:[?#]|$)/i.test(src)) {
       const r = img.getBoundingClientRect();
       const k = Math.min(r.width / img.naturalWidth, r.height / img.naturalHeight);
-      const drawnBottom = r.top + (r.height + img.naturalHeight * k) / 2;
+      // object-position 의 세로 값 (견주기 장의 그림은 상자 아래 끝에 붙는다: 100%)
+      const oy = Number.parseFloat(getComputedStyle(img).objectPosition.split(' ')[1] ?? '50') / 100;
+      const drawnBottom = r.top + (r.height - img.naturalHeight * k) * (Number.isFinite(oy) ? oy : 0.5) + img.naturalHeight * k;
       const gap = (cap.getBoundingClientRect().top - drawnBottom) / u;
       if (gap > 24.5) out.push(`출처 표시가 그림에서 멀리 떨어짐 (${gap.toFixed(0)}px): ${src}`);
     }
