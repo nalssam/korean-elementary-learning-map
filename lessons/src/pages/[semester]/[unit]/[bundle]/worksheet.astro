@@ -8,6 +8,7 @@ import WorksheetBlocks from '#src/components/print/WorksheetBlocks.astro';
 import '#src/components/print/worksheet.css';
 import { placeWorksheet } from '#src/components/print/layout.ts';
 import { lessonPaths, loadLesson, printJobs } from '#lib/content.ts';
+import { keepParticle as k } from '#lib/site.ts';
 
 export function getStaticPaths() { return lessonPaths(); }
 const lesson = loadLesson(Astro.props.id);
@@ -17,9 +18,9 @@ const pages = placeWorksheet(lesson);
 ---
 <PrintLayout lesson={lesson} job={job}>
   {pages.map((page, i) => (
-    <Sheet lesson={lesson} job={job} no={i + 1} title={worksheet.title} sub={worksheet.subtitle} name={i === 0 ? 'student' : 'none'}>
+    <Sheet lesson={lesson} job={job} no={i + 1} title={k(worksheet.title)} sub={worksheet.subtitle && k(worksheet.subtitle)} name={i === 0 ? 'student' : 'none'}>
       <div class="ws">
-        {page.heading && <h2 class="ws-heading">{page.heading}</h2>}
+        {page.heading && <h2 class="ws-heading">{k(page.heading)}</h2>}
         <WorksheetBlocks lesson={lesson} items={page.items} width={job.print.orientation === 'landscape' ? 277 : 190} />
       </div>
     </Sheet>

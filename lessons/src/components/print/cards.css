@@ -1,9 +1,17 @@
 /* 카드. 한 장 95 × 62mm, 한 면에 2열 × 4행 (190 × 248mm). 본문의 왼쪽 위부터 채운다.
-   앞면: 자르는 선(.cut, print.css)이 카드의 테두리다. 이웃한 카드의 선이 겹쳐 두 줄이 되고, 그 사이를 자르면 카드마다 테두리가 남는다.
+   앞면: 자르는 선(.cut, print.css 의 0.5mm 실선)이 카드의 가장자리다. 카드마다 네 변을 다 그리면 이웃한 카드의 선이
+   나란히 붙어 가운데 선만 두 배(1mm)로 굵어진다. 그래서 카드는 오른쪽과 아래 변만 그리고, 왼쪽 열은 왼쪽 변을,
+   첫 줄은 위 변을 더 그린다. 모든 자르는 선이 한 줄, 같은 굵기다. 카드는 왼쪽 위부터 채우므로 빈 칸이 있어도 선이 끊기지 않는다.
+   카드의 크기(95 × 62mm)와 자리는 그대로여서 뒷면과 맞는다.
    뒷면: 선이 없다. 안쪽 여백 9mm 는 양면 맞춤이 어긋나도 글이 잘리지 않게 하는 자리다. */
 .cards { display: grid; grid-template-columns: repeat(2, 95mm); grid-auto-rows: 62mm; color: var(--ink); }
 .card { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5mm; width: 95mm; height: 62mm; text-align: center; }
 .card-front { padding: 5mm; }
+/* 굵기는 2px(0.53mm)로 적는다. Chromium 은 테두리 굵기를 화면 점 단위로 내려 맞춰서 0.5mm(1.89px)로 적으면 1px(0.26mm)로 찍힌다. */
+.cards { --cut-w: 2px; }
+.cards .card-front.cut { border-width: 0 var(--cut-w) var(--cut-w) 0; }
+.cards .card-front.cut:nth-child(odd) { border-left-width: var(--cut-w); }
+.cards .card-front.cut:nth-child(-n + 2) { border-top-width: var(--cut-w); }
 .card-back { padding: 9mm; }
 
 /* 앞면: 이름·낱말. 14자까지 한 줄에 들어가게 길수록 작게 찍는다 (layout.ts 의 frontSize). */
