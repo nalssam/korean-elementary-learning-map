@@ -108,19 +108,27 @@ abstract class Board extends HTMLElement {
     this.classList.toggle('is-picking', msg !== null);
   }
 
+  /** 고르기를 푼다. 고른 카드가 있었다면 결과 줄에 남은 '골랐습니다' 안내도 지운다. */
   protected unpick() {
-    this.picked?.querySelector('.chip-btn, .row-btn')?.setAttribute('aria-pressed', 'false');
-    this.picked?.classList.remove('is-picked');
+    if (!this.picked) return this.pickbar(null);
+    this.picked.querySelector('.chip-btn, .row-btn')?.setAttribute('aria-pressed', 'false');
+    this.picked.classList.remove('is-picked');
     this.picked = null;
     this.pickbar(null);
+    this.say('');
   }
 
+  /**
+   * 카드를 고른다. 안내는 화면 아래 안내 줄에 보이고, 화면 읽기에는 결과 줄(role=status)로 읽힌다.
+   * 고르는 동안 결과 줄은 눈에는 숨긴다 (같은 글이 두 번 보이지 않게. play.css 의 .is-picking .board-status).
+   */
   protected setPicked(el: HTMLElement, msg: string) {
     this.unpick();
     this.picked = el;
     el.classList.add('is-picked');
     el.querySelector('.chip-btn, .row-btn')?.setAttribute('aria-pressed', 'true');
     this.pickbar(msg);
+    this.say(msg);
   }
 
   /** 다시 놓을 카드에 '다시'를 붙일까. 차례 맞추기는 줄마다 붙으면 어지러워서 맞은 줄에만 '맞음'을 붙이고 나머지는 점선으로만 둔다. */
@@ -216,15 +224,22 @@ class PlayBoard extends Board {
 
   private place(chip: HTMLElement, id: string, key: boolean) {
     if (id === this.where(chip)) { this.unpick(); return; }
+    const noun = this.dataset.noun;
+    // 놓은 일을 결과 줄(role=status)에 적는다. 화면 읽기는 이것으로 카드가 어디에 들어갔는지 듣는다.
+    let said = `‘${textOf(chip)}’ ${noun}를 ${this.drop(id).dataset.said}.`;
     if (this.one && id !== 'tray') {
       const there = this.drop(id).querySelector<HTMLElement>('.chip');
       if (there?.classList.contains('is-ok')) { this.say('그 자리에는 이미 알맞은 것이 놓여 있습니다.'); return; }
-      if (there) { this.setMark(there, null); this.drop('tray').append(there); }
+      if (there) {
+        this.setMark(there, null);
+        this.drop('tray').append(there);
+        said += ` 있던 ‘${textOf(there)}’ ${noun}는 처음 자리로 돌아갔습니다.`;
+      }
     }
     this.setMark(chip, null);
     this.drop(id).append(chip);
     this.unpick();
-    this.say('');
+    this.say(said);
     this.update();
     if (key) {
       // 키보드로 놓았으면 다음에 놓을 카드로, 다 놓았으면 확인하기로 초점을 옮긴다
