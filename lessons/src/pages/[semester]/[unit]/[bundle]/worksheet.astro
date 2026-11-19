@@ -20,7 +20,7 @@ const pages = placeWorksheet(lesson);
     <Sheet lesson={lesson} job={job} no={i + 1} title={worksheet.title} sub={worksheet.subtitle} name={i === 0 ? 'student' : 'none'}>
       <div class="ws">
         {page.heading && <h2 class="ws-heading">{page.heading}</h2>}
-        <WorksheetBlocks lesson={lesson} items={page.items} />
+        <WorksheetBlocks lesson={lesson} items={page.items} width={job.print.orientation === 'landscape' ? 277 : 190} />
       </div>
     </Sheet>
   ))}

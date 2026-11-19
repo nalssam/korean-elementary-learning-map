@@ -106,11 +106,13 @@
     gap: var(--s1);
     margin-left: calc(-1 * var(--s1));
     padding: var(--s1) var(--s2) var(--s1) var(--s1);
+    min-height: 44px;
     border-radius: var(--radius-sm);
     color: var(--teal);
-    text-decoration: none;
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
-  .print-back:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .print-back:hover { color: var(--navy); }
   .print-bar svg { flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 
   .print-top {
