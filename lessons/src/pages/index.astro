@@ -1,0 +1,22 @@
+---
+// 첫 화면. 교과서를 펴 놓은 교사가 차시를 찾는 자리다: 쪽수·차시로 찾기, 낱말로 찾기(검색 상자), 학기 타일 여덟 개.
+import { SITE } from '#lib/site.ts';
+import SiteLayout from '#src/layouts/SiteLayout.astro';
+import Finder from '#src/components/site/Finder.astro';
+import Search from '#src/components/site/Search.astro';
+import SemesterTiles from '#src/components/site/SemesterTiles.astro';
+---
+<SiteLayout title={SITE.tagline}>
+  <header class="home-head">
+    <h1 class="page-title">{SITE.tagline}</h1>
+    <p class="lead">교과서 쪽수나 차시 번호를 넣으면 그 시간의 수업 화면, 학습지, 확인 퀴즈가 나옵니다.</p>
+  </header>
+  <div class="find" data-pagefind-ignore>
+    <Finder />
+    <Search />
+  </div>
+  <section class="sec" aria-labelledby="semesters-title" data-pagefind-ignore>
+    <h2 class="sec-title" id="semesters-title">학기별 차시표</h2>
+    <SemesterTiles />
+  </section>
+</SiteLayout>

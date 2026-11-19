@@ -1,0 +1,33 @@
+---
+// 인쇄물 한 줄: 이름, 인쇄 안내, 함께 챙길 것, 인쇄 페이지와 PDF 로 가는 링크. 준비물과 '더 해 볼 자료'가 같이 쓴다.
+// 카드이면 줄 아래에 놀이 방법을 보여 준다. 카드 인쇄 페이지에는 찍지 않기 때문이다 (docs/CONTRACT.md 6절).
+import { href } from '#src/lib/url.ts';
+import { jobLine } from './data.ts';
+import type { PrintRow } from './data.ts';
+
+interface Props { row: PrintRow }
+const { row } = Astro.props;
+const { job } = row;
+---
+<li class="mat">
+  <div class="mat-main">
+    <p class="mat-name">
+      <span class="mat-kind">{job.label}</span>
+      <span class="mat-title">{row.title}</span>
+      {row.cards !== undefined && <span class="mat-extra">{row.cards}장</span>}
+    </p>
+    <p class="mat-line">{jobLine(job)}</p>
+    {job.print.materials.length > 0 && <p class="mat-line">함께 챙길 것: {job.print.materials.join(', ')}</p>}
+    {job.print.note && <p class="mat-line">{job.print.note}</p>}
+    {row.games.length > 0 && (
+      <dl class="games">
+        <dt class="games-title">놀이 방법</dt>
+        {row.games.map((g) => <dd><strong>{g.name}</strong> {g.how}</dd>)}
+      </dl>
+    )}
+  </div>
+  <p class="mat-links" data-pagefind-ignore>
+    <a href={href(job.route)}><span class="visually-hidden">{job.label} </span>인쇄 페이지 열기</a>
+    <a href={href(job.file)} download={job.download}><span class="visually-hidden">{job.label} </span>PDF 내려받기</a>
+  </p>
+</li>

@@ -1,0 +1,47 @@
+---
+// 한 단원의 차시표. 차시표(allBundles)의 묶음을 모두 그리고, 이번 빌드에 실리는 차시에만 링크를 건다.
+// 실리지 않는 묶음은 차시 번호와 쪽수만 보여 준다. 차시표의 focus 는 검수를 거치지 않은 계획 글이라 찍지 않는다 (docs/CONTRACT.md 3절).
+import { isPublic, lessonRoute, lessonsLabel, pagesLabel, readyAssets } from '#lib/content.ts';
+import { ASSET_LABEL, ROLE_LABEL } from '#lib/site.ts';
+import { href } from '#src/lib/url.ts';
+import type { Row } from './data.ts';
+
+interface Props {
+  rows: Row[];
+  /** 단원 페이지에서는 차시마다 만들어 둔 자료의 이름도 보여 준다 */
+  detail?: boolean;
+}
+const { rows, detail = false } = Astro.props;
+// 모든 차시에 있는 셋 다음에, 그 차시에서 만든 선택 자료
+const assetsOf = (row: Row) => (row.lesson ? [ASSET_LABEL.slides, ASSET_LABEL.worksheet, ASSET_LABEL.quiz, ...readyAssets(row.lesson).map((k) => ASSET_LABEL[k])] : []);
+---
+<ul class="lessons">
+  {rows.map((row) => {
+    const { ref, lesson } = row;
+    const role = ROLE_LABEL[ref.role];
+    return (
+      <li class:list={['lesson-row', !lesson && 'is-off']}>
+        <span class="lesson-no">{lessonsLabel(ref.lessons)}</span>
+        <span class="lesson-pages">{pagesLabel(ref.pages)}</span>
+        {lesson ? (
+          <div class="lesson-body">
+            <p class="lesson-head">
+              <a class="lesson-title" href={href(lessonRoute(lesson.id))}>{lesson.title}</a>
+              {role && <span class="chip">{role}</span>}
+              {!isPublic(lesson) && <span class="chip chip-plain">초안</span>}
+            </p>
+            <p class="lesson-tagline">{lesson.tagline}</p>
+            {detail && <p class="lesson-assets">{assetsOf(row).join(' · ')}</p>}
+          </div>
+        ) : (
+          <div class="lesson-body">
+            <p class="lesson-head">
+              <span class="lesson-off">준비 중</span>
+              {role && <span class="chip chip-plain">{role}</span>}
+            </p>
+          </div>
+        )}
+      </li>
+    );
+  })}
+</ul>

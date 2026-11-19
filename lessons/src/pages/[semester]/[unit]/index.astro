@@ -1,0 +1,84 @@
+---
+// 단원 페이지 (/<학기>/<단원>/). 단원 자료(단원 정리 묶음의 카드와 학습지)를 맨 위에 걸고, 그 아래에 묶음 목록을 그린다.
+import { isPublic, lessonRoute, lessonsLabel, loadRegistry, pagesLabel, semesterLabel, standardSummary, unitPages } from '#lib/content.ts';
+import SiteLayout from '#src/layouts/SiteLayout.astro';
+import { href } from '#src/lib/url.ts';
+import LessonList from '#src/components/site/LessonList.astro';
+import PrintRowItem from '#src/components/site/PrintRowItem.astro';
+import { allRows, printRows, progressLabel, progressOf } from '#src/components/site/data.ts';
+import { standardCode } from '#src/components/site/format.ts';
+
+export function getStaticPaths() {
+  return loadRegistry().semesters.flatMap((s) => s.units.map((u) => ({ params: { semester: s.id, unit: String(u.no) } })));
+}
+const { semester: semesterId, unit: unitNo } = Astro.params;
+const unit = loadRegistry().semesters.find((s) => s.id === semesterId)?.units.find((u) => String(u.no) === unitNo);
+if (!unit) throw new Error(`차시표에 ${semesterId} 학기 ${unitNo}단원이 없습니다`);
+const all = allRows().filter((r) => r.ref.semester.id === semesterId);
+const rows = all.filter((r) => r.ref.unit.no === unit.no);
+const semester = semesterLabel(semesterId);
+const progress = progressOf(rows);
+const lessonCount = rows.reduce((n, r) => n + r.ref.lessons.length, 0);
+
+// 단원 자료: 단원 정리 묶음(role: review)의 카드와 학습지. 그 묶음이 이번 빌드에 실릴 때만 건다.
+const review = rows.find((r) => r.ref.role === 'review' && r.lesson);
+const unitPrints = review?.lesson
+  ? [...printRows(review.lesson).prepare, ...printRows(review.lesson).more].filter((p) => p.job.kind === 'cards' || p.job.kind === 'worksheet')
+  : [];
+
+// 앞뒤 단원
+const units = loadRegistry().semesters.find((s) => s.id === semesterId)?.units ?? [];
+const prevUnit = units.find((u) => u.no === unit.no - 1);
+const nextUnit = units.find((u) => u.no === unit.no + 1);
+---
+<SiteLayout
+  title={`${unit.no}단원 ${unit.title} · ${semester}`}
+  crumbs={[{ label: '처음', href: href('/') }, { label: semester, href: href(`/${semesterId}/`) }, { label: `${unit.no}단원` }]}
+>
+  <header class="page-head">
+    <p class="eyebrow">{semester} · {unit.no}단원</p>
+    <h1 class="page-title">{unit.title}</h1>
+    <p class="page-meta">
+      <span>교과서 {pagesLabel(unitPages(unit))}</span>
+      <span>{lessonCount}차시</span>
+      <span>{progressLabel(progress)}</span>
+      {progress.drafts > 0 && <span class="chip chip-plain">초안 {progress.drafts}차시</span>}
+    </p>
+    <section class="unit-standards" aria-labelledby="standards-title">
+      <h2 class="facts-title" id="standards-title">성취기준</h2>
+      <dl class="standards">
+        {unit.standards.map((code) => <div><dt>{standardCode(code)}</dt><dd>{standardSummary(code)}</dd></div>)}
+      </dl>
+      <p class="fine" data-pagefind-ignore>코드 옆의 글은 줄여 쓴 요약이고, 교육부가 고시한 문장과 다릅니다.</p>
+    </section>
+  </header>
+
+  {review?.lesson && unitPrints.length > 0 && (
+    <section class="sec" aria-labelledby="unit-kit-title">
+      <h2 class="sec-title" id="unit-kit-title">단원 자료</h2>
+      <p class="sec-note">
+        {lessonsLabel(review.ref.lessons)} <a href={href(lessonRoute(review.lesson.id))}>{review.lesson.title}</a>에서 쓰는 자료입니다.
+        {!isPublic(review.lesson) && <span class="chip chip-plain">초안</span>}
+      </p>
+      <ul class="mats">
+        {unitPrints.map((row) => <PrintRowItem row={row} />)}
+      </ul>
+    </section>
+  )}
+
+  <section class="sec" aria-labelledby="lessons-title">
+    <h2 class="sec-title" id="lessons-title">차시</h2>
+    <LessonList rows={rows} detail />
+  </section>
+
+  {(prevUnit || nextUnit) && (
+  <nav class="pager" aria-label="앞뒤 단원" data-pagefind-ignore>
+    {prevUnit
+      ? <a class="pager-link" href={href(`/${semesterId}/${prevUnit.no}/`)}><span class="pager-dir">앞 단원</span><span class="pager-name">{prevUnit.no}단원 {prevUnit.title}</span></a>
+      : <span></span>}
+    {nextUnit
+      ? <a class="pager-link pager-next" href={href(`/${semesterId}/${nextUnit.no}/`)}><span class="pager-dir">다음 단원</span><span class="pager-name">{nextUnit.no}단원 {nextUnit.title}</span></a>
+      : <span></span>}
+  </nav>
+  )}
+</SiteLayout>

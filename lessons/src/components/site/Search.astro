@@ -1,0 +1,91 @@
+---
+// 낱말로 찾기 (검색 상자). 색인은 빌드 6단계(pagefind)에서야 생기므로 가져오기 문으로 묶지 않고 브라우저에서 불러온다.
+// 불러오지 못하면(astro dev, 6단계를 돌리기 전의 dist) 상자를 숨긴 채 둔다. 검색은 사이트 밖으로 아무것도 보내지 않는다 (docs/CONTRACT.md 6절).
+---
+<site-search class="search" hidden>
+  <form class="search-form" role="search" aria-labelledby="search-title">
+    <h2 class="finder-title" id="search-title">낱말로 찾기</h2>
+    <label class="field field-grow">
+      <span class="field-label">차시 이름이나 수업에 나오는 낱말</span>
+      <input class="field-input" type="search" autocomplete="off" enterkeyhint="search" data-search-input />
+    </label>
+    <p class="finder-hint">차시 안내 페이지의 글에서 찾습니다. 찾는 낱말은 사이트 밖으로 나가지 않습니다.</p>
+  </form>
+  <div class="finder-results" aria-live="polite" data-search-results></div>
+</site-search>
+
+<script>
+  import { href } from '../../lib/url.ts';
+
+  /** pagefind 가 주는 결과 하나. 쓰는 칸만 적었다. */
+  interface Found { url: string; excerpt: string; meta: Record<string, string | undefined> }
+  interface Pagefind {
+    options(o: { baseUrl: string }): Promise<void>;
+    init(): Promise<void>;
+    debouncedSearch(q: string): Promise<{ results: { data(): Promise<Found> }[] } | null>;
+  }
+  const SHOW = 6;
+
+  class SiteSearch extends HTMLElement {
+    async connectedCallback() {
+      const input = this.querySelector<HTMLInputElement>('[data-search-input]');
+      const results = this.querySelector<HTMLElement>('[data-search-results]');
+      const form = this.querySelector('form');
+      if (!input || !results || !form) return;
+      let pagefind: Pagefind;
+      try {
+        pagefind = await import(/* @vite-ignore */ href('/pagefind/pagefind.js'));
+        // 사이트가 하위 경로에 놓여도 결과의 주소가 맞게 나오도록
+        await pagefind.options({ baseUrl: href('/') });
+        await pagefind.init();
+      } catch {
+        return; // 색인이 없다. 상자를 숨긴 채 둔다.
+      }
+      this.hidden = false;
+
+      const line = (text: string) => { const p = document.createElement('p'); p.className = 'finder-msg'; p.textContent = text; return p; };
+      // 발췌 글에는 찾은 낱말을 감싼 <mark> 만 들어 있다. HTML 로 끼워 넣지 않고 글자와 <mark> 로만 다시 만든다.
+      const excerpt = (html: string) => {
+        const p = document.createElement('span');
+        p.className = 'finder-excerpt';
+        for (const node of new DOMParser().parseFromString(html, 'text/html').body.childNodes) {
+          if (node.nodeName === 'MARK') { const mark = document.createElement('mark'); mark.textContent = node.textContent; p.append(mark); }
+          else p.append(node.textContent ?? '');
+        }
+        return p;
+      };
+
+      const run = async () => {
+        const q = input.value.trim();
+        if (!q) { results.replaceChildren(); return; }
+        const found = await pagefind.debouncedSearch(q);
+        if (!found) return; // 더 새로운 검색이 뒤따라왔다
+        const pages = await Promise.all(found.results.slice(0, SHOW).map((r) => r.data()));
+        if (input.value.trim() !== q) return;
+        if (pages.length === 0) { results.replaceChildren(line('이 낱말이 들어간 페이지가 없습니다. 다른 낱말로 찾아봅니다.')); return; }
+        const ul = document.createElement('ul');
+        ul.className = 'finder-list';
+        for (const page of pages) {
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.className = 'finder-hit finder-hit-text';
+          a.href = page.url;
+          const where = document.createElement('span');
+          where.className = 'finder-where';
+          where.textContent = page.meta.where ?? '';
+          const what = document.createElement('span');
+          what.className = 'finder-what';
+          what.textContent = page.meta.title ?? '';
+          a.append(...(page.meta.where ? [where] : []), what, excerpt(page.excerpt));
+          li.append(a);
+          ul.append(li);
+        }
+        results.replaceChildren(ul);
+        if (found.results.length > SHOW) results.append(line(`${found.results.length}곳 가운데 앞의 ${SHOW}곳입니다. 낱말을 더 적으면 줄어듭니다.`));
+      };
+      input.addEventListener('input', run);
+      form.addEventListener('submit', (e) => { e.preventDefault(); void run(); });
+    }
+  }
+  customElements.define('site-search', SiteSearch);
+</script>

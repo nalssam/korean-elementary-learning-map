@@ -1,0 +1,112 @@
+---
+// 쪽수·차시로 찾기. 교과서를 펴 놓은 교사가 쪽수나 차시 번호를 넣으면 그 묶음의 안내 페이지로 간다.
+// 찾을 거리(학기마다 묶음의 단원·차시·쪽수, 실리는 차시의 이름과 주소)는 HTML 에 실어 보내고 브라우저에서 찾는다. 아무것도 사이트 밖으로 보내지 않는다.
+// 이번 빌드에 실리지 않는 묶음은 차시 번호와 쪽수만 알려 준다 (차시표의 focus 는 싣지 않는다).
+import { href } from '#src/lib/url.ts';
+import { finderData, textbookLabel } from './data.ts';
+
+interface Props {
+  /** 주면 그 학기 안에서만 찾는다 (학기 페이지). 주지 않으면 학기를 고르는 칸이 나온다 (첫 화면). */
+  semester?: string;
+}
+const { semester } = Astro.props;
+const data = finderData(semester);
+---
+{data.length > 0 && (
+  <lesson-finder class="finder" data-semesters={JSON.stringify(data)}>
+    {/* 스크립트가 돌지 않는 브라우저에서는 학기 페이지로 간다. 거기 차시표에 쪽수가 모두 적혀 있다. */}
+    <form class="finder-form" role="search" aria-labelledby="finder-title" action={href(`/${data[0].id}/`)}>
+      <h2 class="finder-title" id="finder-title">쪽수나 차시로 찾기</h2>
+      <div class="finder-row">
+        {!semester && (
+          <label class="field">
+            <span class="field-label">학기</span>
+            <select class="field-input" data-finder-semester>
+              {data.map((s) => <option value={s.id}>{s.label}</option>)}
+            </select>
+          </label>
+        )}
+        <label class="field field-grow">
+          <span class="field-label">쪽수 또는 차시 번호</span>
+          <input class="field-input" type="text" inputmode="numeric" autocomplete="off" enterkeyhint="search" placeholder="예: 34" data-finder-input />
+        </label>
+        <button class="btn btn-primary" type="submit">찾기</button>
+      </div>
+      {/* 학기 페이지는 머리에서 어느 교과서를 따르는지 이미 밝힌다 */}
+      <p class="finder-hint">교과서 쪽수나 차시 번호를 숫자로 넣으면 됩니다.{!semester && ` 쪽수는 ${textbookLabel()}를 따릅니다.`}</p>
+    </form>
+    <div class="finder-results" aria-live="polite" data-finder-results></div>
+  </lesson-finder>
+)}
+
+<script>
+  import { emptyMessage, findBundles, parseQuery } from './finder.ts';
+  import type { FinderBundle, FinderSemester } from './finder.ts';
+
+  // 명세의 글(차시 이름)은 글자로만 넣는다. innerHTML 을 쓰지 않는다.
+  const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, text?: string): HTMLElementTagNameMap[K] => {
+    const node = document.createElement(tag);
+    node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+
+  class LessonFinder extends HTMLElement {
+    connectedCallback() {
+      const semesters = JSON.parse(this.dataset.semesters ?? '[]') as FinderSemester[];
+      const form = this.querySelector('form');
+      const input = this.querySelector<HTMLInputElement>('[data-finder-input]');
+      const select = this.querySelector<HTMLSelectElement>('[data-finder-semester]');
+      const results = this.querySelector<HTMLElement>('[data-finder-results]');
+      if (!form || !input || !results || semesters.length === 0) return;
+
+      const current = () => semesters.find((s) => s.id === select?.value) ?? semesters[0];
+
+      const hit = (b: FinderBundle) => {
+        const li = document.createElement('li');
+        const box = b.href ? el('a', 'finder-hit') : el('div', 'finder-hit is-off');
+        if (b.href) (box as HTMLAnchorElement).href = b.href;
+        box.append(el('span', 'finder-where', b.where), el('span', 'finder-what', b.title ?? '준비 중'));
+        li.append(box);
+        return li;
+      };
+      const group = (title: string, list: FinderBundle[]) => {
+        const section = el('section', 'finder-group');
+        const ul = el('ul', 'finder-list');
+        ul.append(...list.map(hit));
+        section.append(el('h3', 'finder-group-title', title), ul);
+        return section;
+      };
+
+      /** 결과를 그리고, 찾은 묶음을 돌려준다 */
+      const show = (): FinderBundle[] => {
+        results.replaceChildren();
+        const q = parseQuery(input.value);
+        if (!q) return [];
+        const semester = current();
+        const hits = findBundles(semester, q);
+        if (hits.page.length === 0 && hits.lesson.length === 0) {
+          results.append(el('p', 'finder-msg', emptyMessage(semester, q)));
+          return [];
+        }
+        if (hits.page.length > 0) results.append(group(`교과서 ${q.n}쪽`, hits.page));
+        if (hits.lesson.length > 0) results.append(group(`${q.n}차시`, hits.lesson));
+        return [...hits.page, ...hits.lesson];
+      };
+
+      input.addEventListener('input', show);
+      select?.addEventListener('change', show);
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const found = show();
+        // 찾은 묶음이 하나뿐이고 열 수 있으면 바로 간다. 여럿이면 목록에서 고른다 (12 는 12쪽일 수도 12차시일 수도 있다).
+        if (found.length === 1 && found[0].href) location.href = found[0].href;
+        else if (!parseQuery(input.value)) {
+          results.replaceChildren(el('p', 'finder-msg', '쪽수나 차시 번호를 숫자로 넣어 주세요.'));
+          input.focus();
+        }
+      });
+    }
+  }
+  customElements.define('lesson-finder', LessonFinder);
+</script>
