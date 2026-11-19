@@ -519,7 +519,7 @@ const LessonShape = so({
   quiz: so({ items: z.array(QuizItem).min(3).max(10) }),
   assets: Assets,
 
-  /** 자주 나오는 오개념과 받아 주는 말 */
+  /** 예상되는 오개념과 받아 주는 말 */
   misconceptions: z.array(so({ belief: Text, response: Text })).default([]),
   /** 평가: 무엇을, 어디에서 볼 것인가 */
   assessment: so({ look_for: Text, where: Text }).optional(),

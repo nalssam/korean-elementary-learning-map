@@ -142,7 +142,7 @@ const kp = keepParticle;
 
   .pc-steps { flex: none; }
   .pc-steps ol { counter-reset: pc-step; display: grid; gap: 2.2mm; }
-  .pc-steps li { counter-increment: pc-step; position: relative; padding-left: 10mm; font-size: 13pt; line-height: 1.45; }
+  .pc-steps li { counter-increment: pc-step; position: relative; padding-left: 10mm; font-size: 13pt; line-height: 1.45; text-wrap: balance; }
   .pc-steps li::before {
     content: counter(pc-step); position: absolute; left: 0; top: 0.2mm;
     width: 6.6mm; height: 6.6mm; border: 0.35mm solid var(--ink); border-radius: 50%;

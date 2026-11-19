@@ -31,7 +31,7 @@ const any = key.length > 0 || lesson.misconceptions.length > 0 || !!lesson.asses
       </Fold>
     )}
     {lesson.misconceptions.length > 0 && (
-      <Fold title="자주 나오는 오개념" count={`${lesson.misconceptions.length}가지`}>
+      <Fold title="예상되는 오개념" count={`${lesson.misconceptions.length}가지`}>
         <dl class="pairs pairs-stack">
           {lesson.misconceptions.map((m) => <div><dt>{m.belief}</dt><dd>{m.response}</dd></div>)}
         </dl>

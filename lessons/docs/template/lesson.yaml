@@ -501,9 +501,9 @@ assets:
     print:
       per: group
 
-# 자주 나오는 오개념과 받아 주는 말
+# 예상되는 오개념과 받아 주는 말
 misconceptions:
-  # belief 는 아이들이 흔히 하는 생각, response 는 받아 주는 말
+  # belief 는 아이들이 할 법한 생각, response 는 받아 주는 말
   - belief: 아이들이 잘못 알기 쉬운 생각을 씁니다.
     response: 그 생각을 받아 주며 바로잡는 말을 씁니다.
 
