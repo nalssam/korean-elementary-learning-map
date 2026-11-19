@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 380" role="img" aria-labelledby="t">
+  <title id="t">고인돌을 세운 차례에 대한 한 가지 짐작, 첫째. 땅을 파고 받침돌 두 개를 세운다.</title>
+  <defs>
+  <pattern id="soil" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="#f3f0e8"/><circle cx="3" cy="3" r="1.6" fill="#586875"/><circle cx="9" cy="9" r="1.6" fill="#586875"/></pattern>
+  <pattern id="earth" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="#ffffff"/><line x1="0" y1="0" x2="0" y2="10" stroke="#586875" stroke-width="1.4"/></pattern>
+  <marker id="ah" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#18766b"/></marker>
+</defs>
+  <rect x="1.5" y="1.5" width="597" height="377" rx="16" fill="#fbfaf6" stroke="#e4dfd3" stroke-width="3"/>
+  
+  <circle cx="44" cy="44" r="22" fill="#ffffff" stroke="#132c3d" stroke-width="3"/><text x="44" y="53" font-family="Pretendard, 'Noto Sans KR', sans-serif" font-size="26" font-weight="700" fill="#132c3d" text-anchor="middle" paint-order="stroke" stroke="#fbfaf6" stroke-width="6" stroke-linejoin="round">1</text><rect x="20" y="300" width="560" height="56" fill="url(#earth)"/><line x1="20" y1="300" x2="580" y2="300" stroke="#132c3d" stroke-width="3"/><rect x="326" y="300" width="42" height="22" fill="#ffffff" stroke="#132c3d" stroke-width="2"/><rect x="448" y="300" width="42" height="22" fill="#ffffff" stroke="#132c3d" stroke-width="2"/><rect x="330" y="190" width="34" height="128" rx="4" fill="#d8d2c4" stroke="#132c3d" stroke-width="3"/><rect x="452" y="190" width="34" height="128" rx="4" fill="#d8d2c4" stroke="#132c3d" stroke-width="3"/>
+  <text x="504" y="220" font-family="Pretendard, 'Noto Sans KR', sans-serif" font-size="24" font-weight="700" fill="#132c3d" text-anchor="start" paint-order="stroke" stroke="#fbfaf6" stroke-width="6" stroke-linejoin="round">받침돌</text><line x1="490" y1="226" x2="500" y2="220" stroke="#18766b" stroke-width="2.5" stroke-linecap="round"/>
+
+</svg>
