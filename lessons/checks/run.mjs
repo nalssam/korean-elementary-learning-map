@@ -15,6 +15,7 @@ import { factIssues, sourceIssues } from '#lib/checks.ts';
 import { factSeal } from '#lib/seal.ts';
 import { Lesson } from '#schema/lesson.ts';
 import { UsageError, gitRoot, parseArgs, rel } from './lib.mjs';
+import { fileImageSize } from './files.mjs';
 import { REVIEW_LABEL } from '#lib/site.ts';
 import { REVIEW_KINDS } from '#schema/lesson.ts';
 import { BANNED, CLASSROOM, EMOJI, PAIN_WORDS, SERVICES, fileNameTitle, isPlayPath, parseAllow, straightQuotes, svgProblems } from './rules.mjs';
@@ -153,6 +154,27 @@ function checkWords({ lesson, sec, loc }) {
       if (w) sec.note('표현', at(loc, s.path, `무게가 있는 차시의 놀이 자료에 피해 낱말("${w[0]}")이 나옵니다. 학습지의 읽기와 생각 쓰기로 옮길 수 있는지 봅니다`));
     }
   }
+}
+
+/** 단계 장의 그림 상자는 가로로 넓다 (R22, 2 × 2 칸에 폭 전체). 이 비율보다 좁은 우리 그림은 상자 안에서 작게 놓인다. */
+const STEPS_MIN_RATIO = 2;
+
+/** 알림: 단계 장에서 쓰는 우리 그림(사진이 아닌 것)이 상자에 비해 좁은가 */
+function checkStepPictures({ lesson, sec, loc }) {
+  const byId = new Map(lesson.media.map((m) => [m.id, m]));
+  const seen = new Set();
+  lesson.slides.forEach((s, si) => {
+    if (s.layout !== 'steps') return;
+    s.steps.forEach((st, i) => {
+      const m = st.media && byId.get(st.media);
+      if (!m || m.kind === 'photo' || m.kind === 'map' || seen.has(m.id)) return;
+      const file = path.join(c.lessonDir(lesson.id), m.file);
+      const dim = fs.existsSync(file) ? fileImageSize(file) : undefined;
+      if (!dim || !dim.w || !dim.h || dim.w / dim.h >= STEPS_MIN_RATIO) return;
+      seen.add(m.id);
+      sec.note('그림', at(loc, `slides[${si}].steps[${i}].media`, `단계 그림 "${m.id}"(${m.file})은 가로 ${dim.w} × 세로 ${dim.h}(${(dim.w / dim.h).toFixed(1)}:1)입니다. 수업 화면의 단계 그림 상자는 가로로 넓은 꼴(2.6:1 남짓)이라 이 그림은 작게 놓입니다. viewBox 를 780 × 300 쯤으로 넓게 다시 그립니다`));
+    });
+  });
 }
 
 function checkMedia({ lesson, sec, loc }) {
@@ -388,6 +410,7 @@ async function main() {
     checkFacts(l);
     checkWords(l);
     checkMedia(l);
+    checkStepPictures(l);
     await checkPapercraft(l);
   }
   checkTerms(lessons);
