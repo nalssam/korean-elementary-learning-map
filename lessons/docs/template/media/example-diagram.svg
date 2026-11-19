@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <!-- 본보기 그림입니다. 새 차시에서는 실제 그림으로 바꾸거나, 이 그림과 이것을 가리키는 칸을 지웁니다. -->
+  <rect width="800" height="500" fill="#f3f0e8"/>
+  <rect x="40" y="40" width="720" height="420" fill="none" stroke="#e4dfd3" stroke-width="4"/>
+  <rect x="200" y="150" width="400" height="70" rx="12" fill="#18766b"/>
+  <rect x="250" y="220" width="60" height="140" fill="#586875"/>
+  <rect x="490" y="220" width="60" height="140" fill="#586875"/>
+  <line x1="120" y1="360" x2="680" y2="360" stroke="#132c3d" stroke-width="4"/>
+  <text x="400" y="430" text-anchor="middle" font-family="Pretendard, sans-serif" font-size="32" fill="#132c3d">본보기 그림 · 실제 그림으로 바꿉니다</text>
+</svg>

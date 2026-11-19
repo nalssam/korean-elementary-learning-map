@@ -24,7 +24,7 @@
 | `src/` | 사이트 화면 (Astro) |
 | `generators/` | PPTX와 페이퍼크래프트 전개도를 만드는 코드 |
 | `scripts/`, `checks/` | 빌드, 검사, 검수 기록 도구 |
-| `docs/` | 구현 계약서(`docs/CONTRACT.md`), 명세 본보기(`docs/template/lesson.yaml`), 형식 변경 기록(`docs/CHANGELOG.md`) |
+| `docs/` | 구현 계약서(`docs/CONTRACT.md`), 명세 본보기(`docs/template/lesson.yaml` 과 자리만 잡아 둔 그림 `docs/template/media/`), 형식 변경 기록(`docs/CHANGELOG.md`) |
 | `tests/` | 시험 |
 
 ## 돌려 보기
@@ -43,6 +43,8 @@ npm test          # 시험을 돌립니다
 
 전체를 만들어 보려면 `npm run build` 를 돌립니다. 사이트, 그림, PDF, PPTX, 검색 색인을 차례로 만들고 산출물을 검사합니다. PDF를 찍는 데 Chromium(`npx playwright install chromium`), PPTX를 만드는 데 python-pptx가 있는 Python이 필요합니다. 공개용으로 만들 때는 배포 주소를 `SITE_URL` 로 줍니다. 종이에 박히는 QR 주소가 여기에서 나오기 때문입니다.
 
+사이트는 기본 가지(`main`)에 합칠 때 깃허브의 `lessons-deploy` 가 배포합니다. 저장소 변수 `SITE_URL` 을 넣기 전에는 배포를 건너뛰고 실행 요약에 그 까닭을 한 줄 남깁니다. 배포는 날쌤이 `production` 환경에서 승인해야 나갑니다.
+
 자주 쓰는 도구는 이렇습니다.
 
 | 명령 | 하는 일 |
@@ -59,8 +61,8 @@ npm test          # 시험을 돌립니다
 |---|---|---|
 | `lessons/` 의 코드 | MIT | [`LICENSE`](LICENSE) |
 | `lessons/content/` 의 글과 직접 만든 그림, 전개도 도안, 만들어진 PDF·PPTX | CC BY-NC-SA 4.0 | [`LICENSE-CONTENT.md`](LICENSE-CONTENT.md) |
-| 남의 사진·그림 | 명세의 `credit` 에 적힌 조건 | 각 차시의 `lesson.yaml` |
-| 가져다 쓴 자료(성취기준 요약, 글꼴) | 원 자료의 조건 | [`NOTICE.md`](NOTICE.md) |
+| 남의 사진·그림 | CC BY-NC-SA 4.0 이 아니라 명세의 `credit` 에 적힌 제 조건 | 각 차시의 `lesson.yaml` |
+| 가져다 쓴 자료(성취기준 요약, 글꼴, 검색 도구) | 원 자료의 조건 | [`NOTICE.md`](NOTICE.md) |
 | `lessons/` 밖 (학습 지도 데이터와 코드) | 학습 지도 프로젝트의 조건 | 저장소 뿌리의 `LICENSE`, `NOTICE.md` |
 
 수업에 쓰고 학교에서 나누는 것은 자유입니다. 팔거나 유료 상품에 넣을 수는 없습니다.

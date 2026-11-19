@@ -91,6 +91,10 @@ test('미리 보기 빌드: 멀쩡한 산출물은 통과하고, 틀린 쪽수·
     fs.writeFileSync(index, fs.readFileSync(index, 'utf8').replace('</main>', `<p>${focus}</p><img src="/media/5-2/1/01/stone.svg" alt="" style="object-fit:cover;width:10px;height:50px"><script src="https://cdn.example/x.js"></script></main>`));
     fs.writeFileSync(path.join(OUT, c.pptxFile(lesson).file), pptxWith([{ cx: 1600, cy: 1600, image: pngHeader(1600, 900) }], SITE.aiNotice, lesson.slides.length, 1));
     fs.rmSync(path.join(OUT, c.pptxFile(c.loadLesson('5-2/1/04')).file));
+    // 그림 출처 장이 빠진 PPTX: 장 수가 명세의 수업 화면 장 수와 꼭 같다
+    const two = c.loadLesson('5-2/1/02-03');
+    const twoPics = c.shownMedia(two, 'slides').map(() => ({ cx: 1600, cy: 900, image: pngHeader(1600, 900) }));
+    fs.writeFileSync(path.join(OUT, c.pptxFile(two).file), pptxWith(twoPics, c.footerNotice(two), two.slides.length, 0));
     r = outputs();
     assert.equal(r.code, 1);
     const lines = r.out.split('\n');
@@ -104,6 +108,7 @@ test('미리 보기 빌드: 멀쩡한 산출물은 통과하고, 틀린 쪽수·
     has(/slides\.pptx 1번 장 그림 "그림 1": 가로세로 비율이 원본과 다릅니다 \(원본 1\.778, PPTX 1\.000\)/);
     has(/files\/5-2\/1\/01\/slides\.pptx: 초안의 PPTX 에 "AI 도구로 초안을 만들고 교사가 검수한 자료입니다\." 가 있습니다/);
     has(/files\/5-2\/1\/04\/slides\.pptx: PPTX 가 없습니다 \(빌드 4단계 generators\/pptx\/build\.mjs 가 만듭니다\)/);
+    has(new RegExp(`files/5-2/1/02-03/slides\\.pptx: ${two.slides.length}장입니다\\. 명세의 수업 화면 ${two.slides.length}장 뒤에 그림 출처 장이 있어야 합니다`));
 
     // ── 같은 dist 를 공개 빌드로 보면: 초안의 페이지·그림·파일과 localhost 주소가 걸린다 ──
     r = runNode('checks/outputs.mjs', ['--out', OUT], { CONTENT_DIR: FIXTURES, SITE_URL: 'https://example.org' });

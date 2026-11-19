@@ -89,7 +89,7 @@ media:
     credit:
       # 원본을 만든 이나 소장처. 직접 만든 것은 "몽당분필 날쌤"처럼 씁니다.
       holder: 몽당분필 날쌤
-      # 이용 조건. 직접 만든 것은 original, 남의 것은 KOGL-1~4, CC-BY 등 원본의 조건
+      # 이용 조건. 직접 만든 것은 original, 남의 것은 PD·CC0·KOGL-1·CC-BY·CC-BY-SA 가운데 하나 (원본에 적힌 조건)
       licence: original
     # 원본에 한 일: none 그대로 · cropped 일부를 잘랐다 · traced 본떠 새로 그렸다
     change: none
@@ -102,6 +102,8 @@ media:
     # 직접 그린 사실 그림이 근거로 삼은 사실
     facts: [f2]
   # 남의 사진은 이렇게 적습니다. 원본 페이지에서 이용 조건을 확인한 뒤에 넣습니다.
+  # 같은 그림을 공공누리 제1유형이나 퍼블릭 도메인으로 구할 수 있으면 그쪽을 씁니다. CC BY-SA 그림은 자르거나 본뜨지 않고 그대로 씁니다 (change: none).
+  # 제목(title)은 원본 페이지에 적힌 작품·소장품 이름입니다. 파일 이름(예: 사진 0154.jpg)을 적지 않습니다.
   - id: example-photo
     kind: photo
     file: media/example-photo.jpg
@@ -192,7 +194,7 @@ slides:
   # 그림 한 장을 크게: title 30자, media 는 보고 읽어 내는 그림, caption 40자. facts 는 이 장이 기대는 사실
   - layout: picture
     title: 자세히 봅시다
-    media: example-diagram
+    media: example-photo
     caption: 눈에 띄는 것을 찾아봅시다.
     facts: [f2]
   # 짧은 항목: points 2~4개 (항목마다 40자까지)
@@ -369,8 +371,8 @@ quiz:
       accept: [새낱말]
       explain: 오늘 배운 낱말은 새 낱말입니다.
       facts: [f1]
-      # 두 차시 묶음에서 이 문항을 푸는 차시 (적지 않으면 마지막 차시)
-      lesson: 1
+      # 두 차시 묶음(예: 02-03)에서는 이 문항을 푸는 차시를 "lesson: 2" 처럼 적습니다. 적지 않으면 마지막 차시입니다.
+      # 한 차시 묶음에서는 적지 않습니다.
 
 # 차시마다 따져 보는 자료 일곱 가지. state 는 skip(만들지 않음, reason 필수) · planned(만들 예정, idea 필수) · ready(만들었음).
 # reason 과 idea 는 제작 기록이라 사이트에 보이지 않습니다.

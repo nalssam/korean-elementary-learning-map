@@ -34,8 +34,10 @@ export const isPlayPath = (p) => /^(quiz\.|assets\.cards\.|assets\.web_activity\
 export const EMOJI = /\p{Extended_Pictographic}/u;
 
 /**
- * SVG 그림 파일에서 막는 것 (11절): 스크립트, on… 속성, foreignObject, 바깥 주소를 부르는 것.
+ * SVG 그림 파일에서 막는 것 (11절): 스크립트, on… 속성, foreignObject, 바깥 주소를 부르는 것,
+ * javascript: 주소, 움직임(<set>·<animate>)으로 링크 주소를 바꿔 쓰는 것, 그림이 아닌 data: 주소.
  * xmlns 와 DOCTYPE 의 주소, 그림 정보(rdf:resource 등)는 부르는 것이 아니라 이름이라 뺀다.
+ * 그림 안에 심은 사진(data:image/png·jpeg·gif·webp)은 바깥을 부르지 않고 코드도 돌지 않으므로 받는다.
  * 돌려주는 값은 [줄 번호, 까닭] 목록이다.
  */
 export function svgProblems(text) {
@@ -43,12 +45,28 @@ export function svgProblems(text) {
   const lineAt = (i) => text.slice(0, i).split('\n').length;
   const find = (re, why) => { for (const m of text.matchAll(re)) out.push([lineAt(m.index), why]); };
   find(/<script\b/gi, '<script> 가 있습니다. 그림 파일에는 스크립트를 넣지 않습니다');
-  find(/\son[a-z]+\s*=/gi, 'on… 속성(누르거나 열 때 도는 코드)이 있습니다. 지웁니다');
+  // <svg/onload=…> 처럼 빈칸 대신 / 로 띄운 속성도 브라우저는 속성으로 읽는다
+  find(/[\s/"']on[a-z]+\s*=/gi, 'on… 속성(누르거나 열 때 도는 코드)이 있습니다. 지웁니다');
   find(/<foreignObject\b/gi, '<foreignObject> 가 있습니다. 글은 <text> 로 적습니다');
-  find(/\s(?:xlink:)?(?:href|src)\s*=\s*["']\s*(?:https?:|ftp:|\/\/)/gi, '바깥 주소를 부르는 그림·링크가 있습니다. 그림 안에 넣거나 지웁니다');
+  find(/[\s/](?:xlink:)?(?:href|src)\s*=\s*["']?\s*(?:https?:|ftp:|\/\/)/gi, '바깥 주소를 부르는 그림·링크가 있습니다. 그림 안에 넣거나 지웁니다');
   find(/url\(\s*["']?\s*(?:https?:|ftp:|\/\/)/gi, '바깥 주소를 부르는 url(…) 이 있습니다. 지웁니다');
   find(/@import\b/gi, '@import 가 있습니다. 바깥 글꼴·스타일을 부르지 않습니다');
+  find(/(?:java|vb)script\s*:/gi, 'javascript: 주소(누르면 도는 코드)가 있습니다. 지웁니다');
+  find(/<(?:set|animate)\b[^>]*\battributeName\s*=\s*["']?\s*(?:xlink:)?href\b/gi, '<set>·<animate> 가 링크 주소(href)를 바꿔 씁니다. 지웁니다');
+  find(/(?:[\s/](?:xlink:)?(?:href|src)\s*=\s*["']?|url\(\s*["']?)\s*data:(?!image\/(?:png|jpe?g|gif|webp)[;,])/gi, '사진이 아닌 data: 주소(심어 둔 문서·SVG)가 있습니다. 그림은 따로 파일로 두거나 지웁니다');
   return out.sort((a, b) => a[0] - b[0]);
+}
+
+/**
+ * 출처 표시의 제목(credit.title)이 파일 이름인가. 제목은 사람이 읽는 이름이어야 한다 (안내 페이지의 그림 출처 목록에 그대로 찍힌다).
+ * 위키미디어 공용의 "GMJ 0154.jpg" 같은 파일 이름을 그대로 적으면 화면과 인쇄물의 출처 줄에 그대로 찍힌다.
+ * 돌려주는 값: 'name' 제목 전체가 파일 이름 · 'part' 제목 안에 파일 이름이 섞임 · undefined 괜찮음
+ */
+export function fileNameTitle(title) {
+  if (!title) return undefined;
+  const ext = /\.(?:jpe?g|png|gif|svg|webp|tiff?|bmp)\b/i;
+  if (/\.(?:jpe?g|png|gif|svg|webp|tiff?|bmp)\s*$/i.test(title)) return 'name';
+  return ext.test(title) ? 'part' : undefined;
 }
 
 /**

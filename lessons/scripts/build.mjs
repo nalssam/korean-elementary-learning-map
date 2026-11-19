@@ -7,7 +7,7 @@
 //   3. node scripts/render-pdf.mjs      (인쇄물)   dist/files/<id>/<kind>.pdf
 //   4. node generators/pptx/build.mjs   (슬라이드) dist/files/<id>/slides.pptx
 //   5. node checks/outputs.mjs          (저장소)   산출물 검사
-//   6. pagefind --site dist             (저장소)   검색 색인
+//   6. pagefind --site dist             (저장소)   검색 색인. 끝나면 Pagefind 의 MIT 고지를 dist/pagefind/LICENSE 로 복사한다
 //
 // 하나라도 실패하면 거기에서 멈추고 0 이 아닌 값으로 끝난다. 다음 단계가 앞 단계의 결과를 믿고 돌기 때문이다.
 // --out 을 주면 1단계(astro build --outDir)부터 6단계(pagefind --site)까지 같은 폴더를 쓴다. 2~5단계의 스크립트는 같은 --out 을 받는다.
@@ -36,16 +36,16 @@ function main() {
 
   // 담당이 따로 만드는 스크립트는 계약의 경로(10절)로만 부른다. 없으면 누가 만드는 것인지 알려 주고 멈춘다.
   const steps = [
-    { no: 1, name: 'astro build', file: at('node_modules', 'astro', 'bin', 'astro.mjs'), args: ['build', ...(out.length ? ['--outDir', dist] : [])], owner: 'npm ci 로 깝니다' },
+    { no: 1, name: 'astro build', file: at('node_modules', 'astro', 'bin', 'astro.mjs'), args: ['build', ...(out.length ? ['--outDir', dist] : [])], owner: 'npm ci 로 설치합니다' },
     { no: 2, name: '그림 복사', file: at('scripts', 'sync-media.mjs'), args: out, owner: '사이트 담당이 만듭니다' },
     { no: 3, name: 'PDF 만들기', file: at('scripts', 'render-pdf.mjs'), args: [...out, ...only], owner: '인쇄물 담당이 만듭니다' },
     { no: 4, name: 'PPTX 만들기', file: at('generators', 'pptx', 'build.mjs'), args: [...out, ...only], owner: '슬라이드 담당이 만듭니다' },
     { no: 5, name: '산출물 검사', file: at('checks', 'outputs.mjs'), args: [...out, ...only], owner: '저장소 담당이 만듭니다' },
-    { no: 6, name: '검색 색인', file: at('node_modules', 'pagefind', 'lib', 'runner', 'bin.cjs'), args: ['--site', dist], owner: 'npm ci 로 깝니다' },
+    { no: 6, name: '검색 색인', file: at('node_modules', 'pagefind', 'lib', 'runner', 'bin.cjs'), args: ['--site', dist], owner: 'npm ci 로 설치합니다' },
   ];
   const missing = steps.filter((s) => !fs.existsSync(s.file));
   if (missing.length) {
-    console.error(missing.map((s) => `${s.no}단계(${s.name})에 쓸 ${rel(s.file)} 이(가) 없습니다 (${s.owner}).`).join('\n') + '\n빌드를 시작하지 않습니다.');
+    console.error(missing.map((s) => `${s.no}단계(${s.name})에 쓸 파일이 없습니다: ${rel(s.file)} (${s.owner}).`).join('\n') + '\n빌드를 시작하지 않습니다.');
     return 1;
   }
 
@@ -56,11 +56,19 @@ function main() {
     // 환경 변수(SITE_URL, SITE_BASE, SHOW_DRAFTS, CONTENT_DIR, DIST_DIR, PYTHON, CHROMIUM_PATH)는 그대로 넘긴다
     const r = spawnSync(process.execPath, [s.file, ...s.args], { cwd: c.ROOT, stdio: 'inherit', env: process.env });
     if (r.error || r.status !== 0) {
-      console.error(`\n${s.no}단계(${s.name})에서 멈췄습니다${r.signal ? ` (${r.signal})` : r.status !== null ? ` (끝난 값 ${r.status})` : ''}. 위의 글을 읽고 고친 뒤 다시 npm run build 를 돌립니다.`);
+      console.error(`\n${s.no}단계(${s.name})에서 멈췄습니다${r.signal ? ` (${r.signal})` : r.status !== null ? ` (종료 코드 ${r.status})` : ''}. 위의 글을 읽고 고친 뒤 다시 npm run build 를 돌립니다.`);
       return r.status || 1;
     }
     console.log(`── ${s.no}/6 ${s.name} 끝 (${((Date.now() - started) / 1000).toFixed(1)}초)`);
   }
+  // 검색 색인(dist/pagefind/)의 스크립트와 wasm 은 Pagefind(MIT)의 것이라 고지를 함께 싣는다 (NOTICE.md 3절)
+  const licence = at('node_modules', 'pagefind', 'LICENSE', 'LICENSE');
+  const index = path.join(dist, 'pagefind');
+  if (!fs.existsSync(licence) || !fs.existsSync(index)) {
+    console.error(`Pagefind 의 이용 조건 고지를 싣지 못했습니다. 없는 것: ${fs.existsSync(index) ? rel(licence) : rel(index)}. npm ci 를 다시 돌립니다.`);
+    return 1;
+  }
+  fs.copyFileSync(licence, path.join(index, 'LICENSE'));
   console.log(`\n빌드를 마쳤습니다: ${rel(dist)}`);
   return 0;
 }

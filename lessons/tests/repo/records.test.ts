@@ -1,7 +1,7 @@
 // 기록 도구: npm run sign (scripts/sign.mjs) 과 사실 대조표 npm run factsheet (scripts/factsheet.mjs), 올리기 전 검사(.githooks/pre-push).
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import * as c from '#lib/content.ts';
@@ -62,8 +62,55 @@ test('sign: 적을 수 없는 기록은 까닭을 말하고 파일을 그대로 
   assert.equal(fs.readFileSync(t.file(ONE), 'utf8'), before);
   // 철자가 틀린 선택은 말없이 버리지 않는다 (--reslt fix 가 pass 로 적히면 안 된다)
   const r = sign(ONE, 'voice', '--by', 'x', '--reslt', 'fix');
-  assert.match(r.err, /^모르는 선택입니다: --reslt\n\n쓰는 법:/);
+  assert.match(r.err, /^모르는 선택입니다: --reslt\n\n쓰는 법 · 검수 기록\n/);
   assert.equal(fs.readFileSync(t.file(ONE), 'utf8'), before);
+});
+
+test('sign check: 사실 여럿이나 --all 을 한 번에 적는다', () => {
+  t.reset();
+  let r = sign(ONE, 'check', 'f1', 'f2', '--by', 'ai:검증자A');
+  assert.equal(r.code, 0, r.all);
+  assert.match(r.out, /^기록했습니다: 5-2\/1\/01 사실 f1 confirmed .*\n기록했습니다: 5-2\/1\/01 사실 f2 confirmed /);
+  const lesson = c.parseLessonText(fs.readFileSync(t.file(ONE), 'utf8'));
+  assert.deepEqual(lesson.facts.map((f) => f.checks.map((x) => x.by)), [['ai:검증자A'], ['ai:검증자A']]);
+  r = sign(ONE, 'check', '--all', '--by', 'ai:검증자B');
+  assert.equal(r.code, 0, r.all);
+  assert.ok(!c.publishGaps(ONE).some((g) => /확인한 이가/.test(g)), '두 사람이 모든 사실을 확인했습니다');
+  // 하나라도 틀린 id 가 있으면 아무것도 적지 않는다
+  const before = fs.readFileSync(t.file(ONE), 'utf8');
+  r = sign(ONE, 'check', 'f1', 'f9', '--by', 'ai:검증자C');
+  assert.equal(r.code, 2);
+  assert.match(r.err, /사실 f9 가 없습니다/);
+  assert.equal(fs.readFileSync(t.file(ONE), 'utf8'), before);
+});
+
+test('sign: 이미 적힌 이름과 같은 사람으로 세는 다른 철자는 받지 않는다', () => {
+  t.reset();
+  assert.equal(sign(ONE, 'check', 'f1', '--by', 'ai:검증자A').code, 0);
+  const before = fs.readFileSync(t.file(ONE), 'utf8');
+  for (const by of ['AI:검증자a', 'ai: 검증자A', 'ai:검증자\u200bA']) {
+    const r = sign(ONE, 'check', 'f2', '--by', by);
+    assert.equal(r.code, 2, by);
+    assert.match(r.err, /같은 사람으로 세는 이름이 다른 철자로 적혀 있습니다: "ai:검증자A"/);
+  }
+  assert.equal(fs.readFileSync(t.file(ONE), 'utf8'), before);
+  // 똑같은 철자는 받는다
+  assert.equal(sign(ONE, 'check', 'f2', '--by', 'ai:검증자A').code, 0);
+});
+
+test('sign: 쓰는 법은 틀린 갈래의 것만 보여 준다', () => {
+  t.reset();
+  let r = sign(ONE, 'check', '--by', 'x');
+  assert.equal(r.code, 2);
+  assert.match(r.err, /^확인한 사실의 id 를 적습니다[^\n]*\n\n쓰는 법 · 사실 확인\n/);
+  assert.doesNotMatch(r.err, /쓰는 법 · 검수 기록/);
+  r = sign(ONE, 'voice', 'f1', '--by', 'x');
+  assert.match(r.err, /^모르는 인자입니다: f1\n\n쓰는 법 · 검수 기록\n/);
+  assert.doesNotMatch(r.err, /쓰는 법 · 사실 확인/);
+  r = sign(ONE, 'vioce', '--by', 'x');
+  assert.match(r.err, /쓰는 법 · 검수 기록[\s\S]*쓰는 법 · 사실 확인/);
+  r = sign(ONE, 'check', 'f1', '--all', '--by', 'x');
+  assert.match(r.err, /^사실 id 와 --all 을 함께 쓰지 않습니다/);
 });
 
 test('sign: 명세에 형식 오류가 있으면 무엇을 고칠지 보여 주고 적지 않는다', () => {
@@ -100,6 +147,31 @@ test('pre-push: TEXTBOOK_STORE 가 없으면 한 줄을 찍고 0 으로 끝난�
   const r = spawnSync('sh', [hook, 'origin', 'https://example.org/x.git'], { cwd: path.dirname(c.ROOT), env, input: 'refs/heads/a 1111 refs/heads/a 2222\n', encoding: 'utf8' });
   assert.equal(r.status, 0);
   assert.equal(r.stdout, '베끼기 검사를 건너뜁니다 (비공개 자료가 없습니다). 기록은 날쌤이 PR 에서 적습니다\n');
+});
+
+test('pre-push: 작업 폴더가 올리는 커밋과 다르면(커밋하지 않은 고침, 다른 가지) 멈춘다', () => {
+  t.reset();
+  const git = (...args: string[]) => execFileSync('git', ['-c', 'user.name=시험', '-c', 'user.email=test@example.org', '-c', 'commit.gpgsign=false', ...args], { cwd: t.dir, stdio: 'pipe' }).toString().trim();
+  const store = path.join(path.dirname(t.dir), 'store');
+  fs.mkdirSync(store, { recursive: true });
+  try {
+    git('init', '-q'); git('add', '-A'); git('commit', '-q', '-m', '처음');
+    const head = git('rev-parse', 'HEAD');
+    const push = (local: string) => runNode('checks/pre-push.mjs', [], { CONTENT_DIR: t.dir, TEXTBOOK_STORE: store }, { input: `refs/heads/main ${local} refs/heads/main ${'0'.repeat(40)}\n` });
+    // 커밋하지 않은 고침
+    t.editText(ONE, (s) => s.replace('title: 시험용 한 차시', 'title: 고쳤지만 커밋하지 않은 차시'));
+    let r = push(head);
+    assert.equal(r.code, 1, r.all);
+    assert.match(r.err, /^올리기를 멈췄습니다\. 작업 폴더가 올리는 커밋과 달라 베끼기 검사를 믿을 수 없습니다\.\n  - 커밋하지 않은 고침이 있습니다 \(5-2\/1\/01\/lesson\.yaml\)/);
+    // 다른 커밋을 올린다
+    git('add', '-A'); git('commit', '-q', '-m', '고침');
+    r = push(head);
+    assert.equal(r.code, 1, r.all);
+    assert.match(r.err, /올리는 가지\(refs\/heads\/main\)가 지금 꺼낸 커밋\(HEAD\)이 아닙니다/);
+  } finally {
+    fs.rmSync(path.join(t.dir, '.git'), { recursive: true, force: true });
+    fs.rmSync(store, { recursive: true, force: true });
+  }
 });
 
 test('pre-push: 바뀐 파일에서 다시 검사할 묶음과 차시표를 고른다', () => {

@@ -7,6 +7,10 @@
 //   - generators/papercraft/modules/<이름>.ts        → 그 모듈을 쓰는 묶음
 // 기록이 이미 맞아 있어도 다시 돌린다. 주석은 지문에 들지 않으므로 기록은 주석을 지켜 주지 않는다.
 // 마지막으로 npm run check -- --push 를 돌린다. 하나라도 실패하면 올리기를 멈춘다.
+//
+// 검사는 작업 폴더의 파일을 읽는다. 그래서 작업 폴더가 올리는 커밋과 같을 때만 검사한다:
+//   - 올리는 커밋이 지금 HEAD 가 아니면(다른 가지를 올리는 git push origin 다른가지) 멈춘다.
+//   - 명세·그림·차시표(content/)나 전개도 모듈에 커밋하지 않은 고침이 있으면 멈춘다. 고친 글을 검사하고 고치기 전의 글을 올리게 된다.
 import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -52,6 +56,25 @@ export function targetsOf(files, prefix) {
   return { ids: [...ids].filter((id) => c.hasLesson(id)).sort(), registry };
 }
 
+/** 작업 폴더가 올리는 커밋과 다른 까닭. 같으면 빈 목록 */
+export function workTreeProblems(stdin) {
+  const repo = c.contentDir();
+  const at = (cwd, ...args) => execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024 }).toString();
+  const out = [];
+  const head = at(repo, 'rev-parse', 'HEAD').trim();
+  for (const line of stdin.split('\n')) {
+    const [ref, local] = line.trim().split(/\s+/);
+    if (!local || ZERO.test(local)) continue; // 가지를 지우는 올리기
+    if (local !== head) out.push(`올리는 가지(${ref})가 지금 꺼낸 커밋(HEAD)이 아닙니다. 그 가지로 옮겨(git switch) 다시 올립니다. 검사는 꺼내 둔 파일을 읽습니다`);
+  }
+  const dirty = [
+    ...at(repo, 'status', '--porcelain', '--', '.').split('\n'),
+    ...at(c.ROOT, 'status', '--porcelain', '--', 'generators/papercraft/modules').split('\n'),
+  ].filter(Boolean).map((l) => l.slice(3));
+  if (dirty.length) out.push(`커밋하지 않은 고침이 있습니다 (${dirty.slice(0, 5).join(', ')}${dirty.length > 5 ? ` 외 ${dirty.length - 5}개` : ''}). 커밋하거나 git stash 로 치운 뒤 다시 올립니다. 고친 글을 검사하고 고치기 전의 글을 올리게 됩니다`);
+  return out;
+}
+
 function run(args) {
   console.log(`\n$ node ${args.join(' ')}`);
   return spawnSync(process.execPath, args, { cwd: c.ROOT, stdio: 'inherit' }).status ?? 1;
@@ -61,7 +84,13 @@ function main() {
   const root = gitRoot();
   if (!root) { console.error('git 저장소가 아닙니다'); return 1; }
   const prefix = path.relative(root, c.ROOT).split(path.sep).join('/');
-  const { ids, registry } = targetsOf(pushedFiles(fs.readFileSync(0, 'utf8')), prefix ? `${prefix}/` : '');
+  const stdin = fs.readFileSync(0, 'utf8');
+  const problems = workTreeProblems(stdin);
+  if (problems.length) {
+    console.error(`올리기를 멈췄습니다. 작업 폴더가 올리는 커밋과 달라 베끼기 검사를 믿을 수 없습니다.\n${problems.map((p) => `  - ${p}`).join('\n')}`);
+    return 1;
+  }
+  const { ids, registry } = targetsOf(pushedFiles(stdin), prefix ? `${prefix}/` : '');
   let failed = false;
   console.log(`올리기 전 검사: 베끼기 검사 ${ids.length ? ids.join(', ') : '바뀐 명세 없음'}${registry ? ' · 차시표' : ''}`);
   if (ids.length && run(['checks/originality.mjs', ...ids])) failed = true;

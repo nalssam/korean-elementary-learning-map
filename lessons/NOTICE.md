@@ -49,3 +49,9 @@ SOFTWARE.
 - Pretendard (길형진), SIL Open Font License 1.1
 - npm 패키지 `pretendard` 에서 빌드할 때 사이트에 함께 실립니다. 저장소에는 글꼴 파일을 넣지 않습니다.
 - https://github.com/orioncactus/pretendard
+
+## 3. 사이트 검색 — Pagefind
+
+- Pagefind, MIT License (Copyright (c) Pagefind)
+- npm 패키지 `pagefind` 로 빌드할 때 검색 색인과 검색 화면의 스크립트를 만들어 사이트의 `pagefind/` 폴더에 싣습니다. 그 폴더에 원 저작권 고지(`pagefind/LICENSE`)를 함께 싣습니다.
+- https://github.com/CloudCannon/pagefind

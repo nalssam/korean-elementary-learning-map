@@ -7,7 +7,7 @@ import path from 'node:path';
 import * as c from '#lib/content.ts';
 import { tempContent } from '../contract/helpers.ts';
 import { runNode, scratch } from './helpers.ts';
-import { blockedAt, compareFile, normalize, sharedRuns } from '../../checks/originality.mjs';
+import { blockedAt, compareFile, normalize, sharedRuns, storeCoverage, svgText, yamlText } from '../../checks/originality.mjs';
 
 const t = tempContent('repo-originality');
 const STORE = path.join(scratch('store'), 'store');
@@ -22,6 +22,7 @@ function writeStore(extra: Record<string, string> = {}) {
   const files: Record<string, string> = {
     '5-2/textbook/008.txt': `앞의 글. ${TWELVE.split('').join(' ')}! 뒤의 글.`,
     '5-2/ppt/012.txt': `다른 쪽 ${NINE}`,
+    '5-2/guide/001.txt': '지어낸 지도서 쪽',
     '6-1/textbook/010.txt': '다른 학기의 글 시험용한차시묶음의본보기입니다',
     'README.txt': '형식에 맞지 않는 파일',
     ...extra,
@@ -57,7 +58,7 @@ test('겹친 글은 찍지 않고 "교과서 8쪽과 한글 13자" 처럼 쪽과
   t.editText(ONE, (s) => s.replace('# 시험용 가짜 명세입니다.', `# 시험용 가짜 명세입니다. ${TWELVE}`).replace('    title: 오늘 본 것을 말해 봅시다', `    title: ${NINE.slice(0, 9)} 말해 봅시다`));
   const r = guard(ONE);
   assert.equal(r.code, 1, r.all);
-  assert.match(r.out, /^베끼기 검사 · 비공개 자료 3쪽 \(copy-guard@[0-9a-f]{8}\) · 이름이 형식에 맞지 않아 뺀 파일 1개/);
+  assert.match(r.out, /^베끼기 검사 · 비공개 자료 4쪽 \(copy-guard@[0-9a-f]{8}\) · 이름이 형식에 맞지 않아 뺀 파일 1개/);
   assert.match(r.out, /고칠 것  lesson\.yaml 1번째 줄: 교과서 8쪽과 한글 13자가 이어서 같습니다/);
   assert.match(r.out, /알림     lesson\.yaml \d+번째 줄: PPT 12쪽과 한글 9자가 이어서 같습니다/);
   // 다른 학기의 자료와는 견주지 않는다
@@ -93,7 +94,7 @@ test('--record: 통과하면 copy-guard@<자료 지문> 으로 기록하고, 그
   assert.ok(after.includes('facts: [f1]'), '한 줄 목록의 꼴이 그대로입니다');
   assert.equal(c.reviewState(ONE).originality, 'pass');
   // 자료가 바뀌면 by 의 지문도 바뀐다
-  writeStore({ '5-2/guide/001.txt': '더한 자료' });
+  writeStore({ '5-2/guide/002.txt': '더한 자료' });
   assert.notEqual(/\((copy-guard@[0-9a-f]{8})\)/.exec(guard(ONE).out)![1], by);
 });
 
@@ -113,6 +114,58 @@ test('단원명은 겹쳐도 된다 (교과서에서 가져오는 것)', () => {
   const r = guard(ONE);
   assert.equal(r.code, 0, r.all);
   assert.doesNotMatch(r.out, /30쪽/);
+});
+
+test('자료가 모자라면 기록하지 않는다: 그 묶음의 교과서 쪽과 지도서 쪽이 하나 이상 있어야 한다', () => {
+  t.reset();
+  // 같은 학기의 쪽이 있어도 묶음(6~9쪽)과 상관없는 쪽뿐이면 견줄 것이 없다
+  fs.rmSync(STORE, { recursive: true, force: true });
+  fs.mkdirSync(path.join(STORE, '5-2', 'textbook'), { recursive: true });
+  fs.writeFileSync(path.join(STORE, '5-2', 'textbook', '999.txt'), '상관없는 쪽');
+  let r = guard(ONE, '--record');
+  assert.equal(r.code, 1, r.all);
+  assert.match(r.out, /비공개 자료에 교과서 6~9쪽이 없습니다\. 견줄 것이 모자라 기록하지 않습니다/);
+  assert.match(r.out, /비공개 자료에 이 학기의 지도서 쪽이 없습니다/);
+  assert.equal(c.reviewState(ONE).originality, 'none');
+  // 지도서가 없으면 교과서 쪽이 있어도 기록하지 않는다
+  writeStore();
+  fs.rmSync(path.join(STORE, '5-2', 'guide'), { recursive: true, force: true });
+  r = guard(ONE, '--record');
+  assert.equal(r.code, 1, r.all);
+  assert.match(r.out, /지도서 쪽이 없습니다/);
+  // 범위 안에서 빠진 쪽은 알림으로 적는다 (그림만 있는 쪽일 수 있다)
+  const pages = [6, 8, 9].map((page) => ({ semester: '5-2', kind: 'textbook', page })).concat([{ semester: '5-2', kind: 'guide', page: 3 }]);
+  assert.deepEqual(storeCoverage(pages, '5-2', [6, 9]), { problems: [], missing: [7] });
+  assert.deepEqual(storeCoverage(pages, '6-1', [6, 9]).problems.length, 2);
+});
+
+test('꼴만 바꿔 감춘 글도 찾는다: <tspan> 으로 나눈 글, 문자 참조, YAML 이스케이프', () => {
+  const pages = [{ kind: 'textbook', page: 8, norm: normalize(TWELVE).chars }];
+  const code = (s: string) => [...s].map((ch) => `&#x${ch.codePointAt(0)!.toString(16)};`).join('');
+  const svg = [
+    '<svg xmlns="http://www.w3.org/2000/svg">',
+    `<text><tspan>${TWELVE.slice(0, 5)}</tspan><tspan x="0" dy="10">${TWELVE.slice(5)}</tspan></text>`,
+    '</svg>',
+  ].join('\n');
+  assert.deepEqual(compareFile(svg, pages, [], 'media/a.svg').map((r) => [r.line, r.level]), [[2, 'fail']]);
+  const entities = `<svg>\n<text>${code(TWELVE)}</text>\n</svg>`;
+  assert.deepEqual(compareFile(entities, pages, [], 'media/b.svg').map((r) => [r.line, r.hangul]), [[2, 13]]);
+  const escaped = [...TWELVE].map((ch) => `\\u${ch.codePointAt(0)!.toString(16).toUpperCase()}`).join('');
+  const yaml = `id: x\ntitle: "${escaped}"\n`;
+  assert.deepEqual(compareFile(yaml, pages, [], 'lesson.yaml').map((r) => [r.line, r.hangul]), [[2, 13]]);
+  // 글자 그대로의 검사로는 셋 다 실패로 잡히지 않는다 (확장자를 주지 않으면 그대로만 본다)
+  for (const text of [svg, entities, yaml]) assert.deepEqual(compareFile(text, pages, []).filter((r) => r.level === 'fail'), []);
+  // 푼 글은 원래 파일의 자리를 기억한다
+  assert.equal(svgText('<a>가&#xB098;</a>').text, '가나');
+  assert.equal(yamlText('a: "\\uAC00"\n').text, '가\n');
+});
+
+test('전개도 모듈의 \\u 이스케이프도 풀어서 본다', () => {
+  t.reset();
+  writeStore();
+  const escaped = [...TWELVE].map((ch) => `\\u${ch.codePointAt(0)!.toString(16)}`).join('');
+  const found = compareFile(`const a = 1;\nconst label = '${escaped}';\n`, [{ kind: 'textbook', page: 8, norm: normalize(TWELVE).chars }], [], 'modules/x.ts');
+  assert.deepEqual(found.map((r) => [r.line, r.level]), [[2, 'fail']]);
 });
 
 test('TEXTBOOK_STORE 가 없거나 저장소 안에 있으면 멈춘다', () => {
