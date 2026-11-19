@@ -41,14 +41,20 @@ export async function serve(dir: string): Promise<{ url: string; close: () => Pr
 }
 
 /**
- * 지금 보이는 장에서 어긋난 곳을 찾아 글로 돌려준다 (브라우저 안에서 돈다).
+ * 지금 보이는 장에서 어긋난 곳을 찾아 글로 돌려준다 (브라우저 안에서 돈다. page.evaluate(slideProblems)).
  *  - 장 안의 모든 요소가 장의 사각형 안에 있다 (넘친 글, 밀려난 그림)
  *  - 글 상자가 넘치지 않는다 (scrollHeight·scrollWidth)
  *  - 글끼리 겹치지 않는다 (줄 상자를 서로 견준다)
- *  - 아이가 읽는 글은 무대 1920px 기준 44px 이상, 제목은 72px 이상이다
- *  - 그림이 실렸고 object-fit 이 contain 이다
+ *  - 아이가 읽는 글은 무대 1920px 기준 44px 이상(장에 맞게 줄어드는 글은 data-fit 의 가장 작은 크기 이상), 제목은 72px 이상이다
+ *  - 그 밖의 글도 28px 이상이다. 그림 출처와 장 번호만 뺀다 (docs/CONTRACT.md 8절)
+ *  - SVG 그림 안의 글(<text>)도 그려진 크기로 셈해 28px 이상이다
+ *  - 그림이 실렸고 object-fit 이 contain 이며, 그림 틀의 짧은 변이 200px 이상이다
+ *  - 출처 표시가 그려진 사진에서 24px 안에 있다
+ * 이 함수는 브라우저로 넘어가므로 바깥의 값을 쓰지 않는다 (숫자는 copy.ts 의 STAGE_TYPE.min, STAGE_PICTURE.shortSide 와 같다).
  */
-export function slideProblems(): string[] {
+export async function slideProblems(): Promise<string[]> {
+  const MIN = 28;
+  const SHORT_SIDE = 200;
   const out: string[] = [];
   const slide = document.querySelector<HTMLElement>('.slide:not([hidden])')!;
   const inner = slide.querySelector<HTMLElement>('.slide-in')!;
@@ -75,9 +81,13 @@ export function slideProblems(): string[] {
     for (const r of range.getClientRects()) if (r.width > 1) lines.push({ r, text: t.trim().slice(0, 16), el });
     // 글자 크기
     const fs = Number.parseFloat(getComputedStyle(el).fontSize) / u;
-    const meta = el.closest('.sl-counter, .media figcaption, .sl-notice, .sl-cover-meta, .sl-source, .sl-correct, .sl-num');
-    if (!meta && fs < 43.5) out.push(`글자가 작음 (${fs.toFixed(1)}px): "${t.trim().slice(0, 16)}"`);
-    if (el.closest('h2') && !el.closest('.sl-term-word') && fs < 71.5) out.push(`제목 글자가 작음 (${fs.toFixed(1)}px): "${t.trim().slice(0, 16)}"`);
+    const label = t.trim().slice(0, 16);
+    if (el.closest('.sl-counter, .media figcaption, .sl-shared-credit')) continue;
+    const meta = el.closest('.sl-notice, .sl-cover-meta, .sl-source, .sl-correct, .sl-num, .sl-draft, .sl-missing');
+    const fitted = el.closest('.sl-fit') ? el.closest<HTMLElement>('[data-fit]') : null;
+    const floor = meta ? MIN : fitted ? Math.min(...fitted.dataset.fit!.split(' ').map(Number)) : 44;
+    if (fs < floor - 0.5) out.push(`글자가 작음 (${fs.toFixed(1)}px): "${label}"`);
+    if (el.closest('h2') && !el.closest('.sl-term-word') && fs < 71.5) out.push(`제목 글자가 작음 (${fs.toFixed(1)}px): "${label}"`);
   }
   for (let i = 0; i < lines.length; i++) {
     for (let j = i + 1; j < lines.length; j++) {
@@ -87,11 +97,53 @@ export function slideProblems(): string[] {
       if (ox > 2 && oy > Math.min(a.height, b.height) * 0.3) out.push(`글이 겹침: "${lines[i].text}" / "${lines[j].text}"`);
     }
   }
+  // 그림 틀(figure): 출처 표시를 뺀 자리의 짧은 변
+  for (const f of inner.querySelectorAll<HTMLElement>('.media')) {
+    const r = f.getBoundingClientRect();
+    const cap = f.querySelector('figcaption');
+    const capH = cap && cap.getClientRects().length ? cap.getBoundingClientRect().height + Number.parseFloat(getComputedStyle(cap).marginTop) : 0;
+    const side = Math.min(r.width, r.height - capH) / u;
+    if (side < SHORT_SIDE - 0.5) out.push(`그림 틀이 작음 (짧은 변 ${side.toFixed(0)}px): ${f.querySelector('img')?.getAttribute('src') ?? name(f)}`);
+  }
   for (const img of inner.querySelectorAll('img')) {
-    if (!img.complete || img.naturalWidth === 0) out.push(`그림이 실리지 않음: ${img.getAttribute('src')}`);
-    if (getComputedStyle(img).objectFit !== 'contain') out.push(`그림이 contain 이 아님: ${img.getAttribute('src')}`);
-    const r = img.getBoundingClientRect();
-    if (r.height < 60 * u) out.push(`그림이 너무 작음 (${(r.height / u).toFixed(0)}px): ${img.getAttribute('src')}`);
+    const src = img.getAttribute('src') ?? '';
+    if (!img.complete || img.naturalWidth === 0) { out.push(`그림이 실리지 않음: ${src}`); continue; }
+    if (getComputedStyle(img).objectFit !== 'contain') out.push(`그림이 contain 이 아님: ${src}`);
+    // 출처 표시는 그려진 그림 바로 아래에 붙는다 (사진·PNG. SVG 는 아래에서 따로 본다)
+    const cap = img.closest('.media')?.querySelector('figcaption');
+    if (cap && cap.getClientRects().length && !/\.svg(?:[?#]|$)/i.test(src)) {
+      const r = img.getBoundingClientRect();
+      const k = Math.min(r.width / img.naturalWidth, r.height / img.naturalHeight);
+      const drawnBottom = r.top + (r.height + img.naturalHeight * k) / 2;
+      const gap = (cap.getBoundingClientRect().top - drawnBottom) / u;
+      if (gap > 24.5) out.push(`출처 표시가 그림에서 멀리 떨어짐 (${gap.toFixed(0)}px): ${src}`);
+    }
+    if (!/\.svg(?:[?#]|$)/i.test(src)) continue;
+    // SVG 안의 글: 따로 띄운 문서에서 글자 크기와 변환을 읽고, 장에 그려진 배율을 곱한다
+    const frame = document.createElement('iframe');
+    frame.style.cssText = 'position:fixed;left:-20000px;top:0;width:4000px;height:4000px;border:0;visibility:hidden';
+    document.body.append(frame);
+    try {
+      const doc = frame.contentDocument!;
+      doc.open();
+      doc.write(`<!doctype html><body style="margin:0">${await (await fetch(img.src)).text()}</body>`);
+      doc.close();
+      const svg = doc.querySelector('svg');
+      const vb = svg?.viewBox.baseVal;
+      if (!svg || !vb || !vb.width) { out.push(`SVG 의 viewBox 를 읽지 못함: ${src}`); continue; }
+      svg.setAttribute('width', String(vb.width));
+      svg.setAttribute('height', String(vb.height));
+      const r = img.getBoundingClientRect();
+      const drawn = Math.min(r.width / vb.width, r.height / vb.height) / u;
+      for (const t of svg.querySelectorAll<SVGGraphicsElement>('text, tspan')) {
+        const own = [...t.childNodes].filter((c) => c.nodeType === 3).map((c) => c.textContent).join('').trim();
+        if (!own) continue;
+        const m = t.getCTM();
+        const k = m ? Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) : 1;
+        const px = Number.parseFloat(frame.contentWindow!.getComputedStyle(t).fontSize) * k * drawn;
+        if (px < MIN - 0.5) out.push(`그림 안의 글자가 작음 (${px.toFixed(1)}px): "${own.slice(0, 16)}" ${src}`);
+      }
+    } finally { frame.remove(); }
   }
   return out;
 }

@@ -4,8 +4,10 @@
 //
 // 조작 (교실 앞에서 리모컨·키보드·마우스·터치로)
 //   다음 장: → ↓ Space PageDown Enter, 화면 오른쪽 클릭·탭     이전 장: ← ↑ Shift+Space PageUp, 화면 왼쪽 클릭·탭
-//   처음·끝: Home End     전체 화면: F     교사 메모: N     차시 안내로 돌아가기: Esc
-//   퀴즈 장: 다음 글쇠를 처음 누르면 정답이 드러나고, 한 번 더 누르면 다음 장으로 간다.
+//   처음·끝: Home(지금 차시의 첫 장) End     전체 화면: F     교사 메모: N     화면 가리기: B .     차시 안내로 돌아가기: Esc
+//   퀴즈 장: 다음 글쇠를 처음 누르면 정답이 드러나고, 한 번 더 누르면 다음 장으로 간다. 교사 메모의 정답·풀이도 그때 보인다.
+//   조작 단추는 마우스를 4px 넘게 움직이거나, 손가락·펜으로 화면을 누르거나, 키보드로 단추에 초점을 옮길 때만 보인다.
+//   손가락·펜으로 화면 아래쪽 12% 를 누르면 조작 단추만 보이고 장은 넘어가지 않는다.
 //   주소의 #4 는 4번 장에서 시작한다. 장을 넘기면 주소의 번호도 바뀐다 (새로 고쳐도 그 장이 열린다).
 // 스크립트가 돌지 않으면 모든 장을 위에서 아래로 늘어놓는다.
 import Base from '#src/layouts/Base.astro';
@@ -13,13 +15,15 @@ import { lessonRoute } from '#lib/content.ts';
 import type { Lesson } from '#schema/lesson.ts';
 import { href } from '#src/lib/url.ts';
 import Slide from './Slide.astro';
-import { NOTE_COPY, STAGE_COPY } from './copy.ts';
+import { CREDITS_ANCHOR, NOTE_COPY, STAGE_COPY } from './copy.ts';
+import { slideCounter } from './counter.ts';
 import './stage.css';
 
 interface Props { lesson: Lesson }
 const { lesson } = Astro.props;
 const total = lesson.slides.length;
 const k = STAGE_COPY.keys;
+const firstCount = slideCounter(lesson, 1).text;
 ---
 <Base title={`${lesson.title} 수업 화면`} kind="stage" lesson={lesson}>
   <script is:inline slot="head">document.documentElement.classList.add('stage-js');</script>
@@ -29,14 +33,16 @@ const k = STAGE_COPY.keys;
     </div>
     <nav class="hud" aria-label={STAGE_COPY.region}>
       <button type="button" data-act="prev"><span>{STAGE_COPY.prev}</span><kbd>{k.prev}</kbd></button>
-      <p class="hud-count" aria-live="polite"><span data-count>1</span> / {total}</p>
+      <p class="hud-count" aria-live="polite">{firstCount}</p>
       <button type="button" data-act="next"><span>{STAGE_COPY.next}</span><kbd>{k.next}</kbd></button>
       <span class="hud-gap"></span>
       <button type="button" data-act="notes" aria-pressed="false"><span>{STAGE_COPY.notes}</span><kbd>{k.notes}</kbd></button>
       <button type="button" data-act="fullscreen"><span>{STAGE_COPY.fullscreen}</span><kbd>{k.fullscreen}</kbd></button>
+      <a href={`${href(lessonRoute(lesson.id))}#${CREDITS_ANCHOR}`} data-act="credits"><span>{STAGE_COPY.credits}</span></a>
       <a href={href(lessonRoute(lesson.id))} data-act="exit"><span>{STAGE_COPY.exit}</span><kbd>{k.exit}</kbd></a>
     </nav>
-    <aside class="notes" hidden aria-labelledby="notes-heading">
+    <div class="stage-blank" hidden role="status" aria-label={STAGE_COPY.blank}></div>
+    <aside class="notes" hidden aria-labelledby="notes-heading" data-missing={STAGE_COPY.missing}>
       <h2 id="notes-heading">{NOTE_COPY.heading} <span class="notes-no"></span></h2>
       <div class="notes-body"></div>
       <p class="notes-hint" hidden>{STAGE_COPY.revealHint}</p>
@@ -48,13 +54,14 @@ const k = STAGE_COPY.keys;
   const screen = stage.querySelector<HTMLElement>('.screen')!;
   const slides = [...screen.querySelectorAll<HTMLElement>('.slide')];
   const total = slides.length;
-  const count = stage.querySelector<HTMLElement>('[data-count]')!;
+  const count = stage.querySelector<HTMLElement>('.hud-count')!;
   const notes = stage.querySelector<HTMLElement>('.notes')!;
   const notesBody = notes.querySelector<HTMLElement>('.notes-body')!;
   const notesNo = notes.querySelector<HTMLElement>('.notes-no')!;
   const notesHint = notes.querySelector<HTMLElement>('.notes-hint')!;
   const notesBtn = stage.querySelector<HTMLButtonElement>('[data-act="notes"]')!;
   const fsBtn = stage.querySelector<HTMLButtonElement>('[data-act="fullscreen"]')!;
+  const blank = stage.querySelector<HTMLElement>('.stage-blank')!;
   let cur = 0;
 
   const fromHash = () => {
@@ -62,23 +69,111 @@ const k = STAGE_COPY.keys;
     return Number.isInteger(n) ? Math.min(Math.max(n, 1), total) - 1 : 0;
   };
 
+  // ───── 그림을 불러오지 못하면 대체 글 대신 틀 하나와 짧은 안내를 둔다 (출처 표시는 남긴다) ─────
+  const missing = (img: HTMLImageElement) => {
+    if (!img.isConnected) return;
+    const box = document.createElement('p');
+    box.className = 'sl-missing';
+    box.textContent = notes.dataset.missing!;
+    img.replaceWith(box);
+  };
+  for (const img of screen.querySelectorAll<HTMLImageElement>('.media img')) {
+    if (img.complete && img.naturalWidth === 0) missing(img);
+    else img.addEventListener('error', () => missing(img), { once: true });
+  }
+
+  // ───── 장에 맞게 글 크기 고르기 (copy.ts 의 STAGE_FIT) ─────
+  const unit = (s: HTMLElement) => s.getBoundingClientRect().width / 1920;
+  /** 장 안의 글과 그림이 장의 본문 자리를 넘지 않는가 */
+  function fits(s: HTMLElement): boolean {
+    const inner = s.querySelector<HTMLElement>('.slide-in')!;
+    const box = inner.firstElementChild as HTMLElement;
+    if (box.scrollHeight > box.clientHeight + 1 || box.scrollWidth > box.clientWidth + 1) return false;
+    const limit = inner.getBoundingClientRect().bottom - Number.parseFloat(getComputedStyle(inner).paddingBottom) + 1;
+    for (const el of box.querySelectorAll<HTMLElement>('*')) {
+      if (el.scrollHeight > el.clientHeight + 1 && getComputedStyle(el).overflowY !== 'visible') return false;
+      if (el.getClientRects().length && el.getBoundingClientRect().bottom > limit) return false;
+    }
+    return true;
+  }
+  /** 그림 틀(figure)의 그림 자리 높이 가운데 가장 낮은 것 (무대 px) */
+  function lowestFrame(s: HTMLElement): number {
+    const u = unit(s);
+    let low = Infinity;
+    for (const f of s.querySelectorAll<HTMLElement>('.media')) {
+      const cap = f.querySelector('figcaption');
+      const h = f.getBoundingClientRect().height - (cap && cap.getClientRects().length ? cap.getBoundingClientRect().height : 0);
+      low = Math.min(low, h / u);
+    }
+    return low;
+  }
+  /** 그려진 그림 가운데 가장 작은 넓이 (무대 px²) */
+  function smallestPicture(s: HTMLElement): number {
+    const u = unit(s);
+    let low = Infinity;
+    for (const img of s.querySelectorAll<HTMLImageElement>('.media img')) {
+      const r = img.getBoundingClientRect();
+      if (!img.naturalWidth || !r.width) continue;
+      const k = Math.min(r.width / img.naturalWidth, r.height / img.naturalHeight);
+      low = Math.min(low, (img.naturalWidth * k / u) * (img.naturalHeight * k / u));
+    }
+    return low;
+  }
+  function fitSlide(s: HTMLElement) {
+    if (s.dataset.fitted) return;
+    const box = s.querySelector<HTMLElement>('.slide-in')!.firstElementChild as HTMLElement;
+    const sizes = (box.dataset.fit ?? '').split(' ').filter(Boolean);
+    const picture = Number(box.dataset.fitPicture ?? 0);
+    const ok = () => fits(s) && (!picture || lowestFrame(s) >= picture - 0.5);
+    const pick = () => {
+      for (const size of sizes) {
+        box.style.setProperty('--fit', size);
+        if (ok()) return true;
+      }
+      return false;
+    };
+    pick();
+    // 그림이 넷인 단계 장: 한 줄과 2 × 2 가운데 넘치지 않으면서 그림이 더 크게 그려지는 쪽
+    const list = s.querySelector<HTMLElement>('[data-arrange]');
+    if (list) {
+      const row = { fit: box.style.getPropertyValue('--fit'), area: fits(s) ? smallestPicture(s) : 0 };
+      list.dataset.arrange = 'grid';
+      const grid = pick() ? smallestPicture(s) : 0;
+      if (grid <= row.area) {
+        list.dataset.arrange = 'row';
+        box.style.setProperty('--fit', row.fit);
+      }
+    }
+    s.dataset.fitted = 'true';
+  }
+  // 글꼴이 늦게 실리거나 화면 크기가 바뀌면 다시 잰다
+  const refit = () => { for (const s of slides) delete s.dataset.fitted; fitSlide(slides[cur]); };
+  document.fonts?.ready.then(refit);
+  document.fonts?.addEventListener('loadingdone', refit);
+  addEventListener('resize', refit);
+
   function show(i: number, revealed = false) {
     cur = Math.min(Math.max(i, 0), total - 1);
     slides.forEach((s, j) => {
       s.hidden = j !== cur;
       if (j === cur && s.dataset.quiz) s.dataset.revealed = String(revealed);
     });
-    count.textContent = String(cur + 1);
+    fitSlide(slides[cur]);
+    count.textContent = slides[cur].dataset.count!;
     const want = `#${cur + 1}`;
     if (location.hash !== want) history.replaceState(null, '', want);
     renderNotes();
   }
 
+  // 교사 메모는 반 아이들이 보는 화면에 뜬다. 퀴즈 장의 정답·풀이는 화면에 정답이 드러난 뒤에만 보여 준다.
   function renderNotes() {
     const s = slides[cur];
-    notesNo.textContent = `${cur + 1} / ${total}`;
-    notesBody.replaceChildren(...[...s.querySelector('.slide-notes')!.children].map((c) => c.cloneNode(true)));
-    notesHint.hidden = !(s.dataset.quiz && s.dataset.revealed !== 'true');
+    const hidden = !!s.dataset.quiz && s.dataset.revealed !== 'true';
+    notesNo.textContent = s.dataset.count!;
+    notesBody.replaceChildren(...[...s.querySelector('.slide-notes')!.children]
+      .filter((c) => !(hidden && c.classList.contains('notes-answer')))
+      .map((c) => c.cloneNode(true)));
+    notesHint.hidden = !hidden;
   }
 
   function next() {
@@ -99,45 +194,74 @@ const k = STAGE_COPY.keys;
     else document.documentElement.requestFullscreen?.().catch(() => {});
   }
   if (!document.fullscreenEnabled) fsBtn.hidden = true;
+  // 화면 가리기: 발표용 리모컨의 '화면 가리기' 단추가 보내는 글쇠 (B, .). 다음·이전 키를 누르면 장은 그대로 두고 다시 보인다.
+  const setBlank = (on: boolean) => { blank.hidden = !on; };
+  blank.addEventListener('click', () => setBlank(false));
 
+  const NEXT = ['ArrowRight', 'ArrowDown', 'PageDown', 'Enter'];
+  const PREV = ['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'];
   document.addEventListener('keydown', (e) => {
     if (e.altKey || e.ctrlKey || e.metaKey) return;
     const t = e.target as HTMLElement;
-    // 단추에 초점이 있을 때 Space·Enter 는 그 단추를 누른다
+    // 키보드로 단추에 초점을 옮겼을 때 Space·Enter 는 그 단추를 누른다
     if ((e.key === ' ' || e.key === 'Enter') && t.closest('button, a')) return;
     const k = e.key;
-    if (['ArrowRight', 'ArrowDown', 'PageDown', 'Enter'].includes(k) || (k === ' ' && !e.shiftKey)) next();
-    else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(k) || (k === ' ' && e.shiftKey)) prev();
-    else if (k === 'Home') show(0);
+    const isNext = NEXT.includes(k) || (k === ' ' && !e.shiftKey);
+    const isPrev = PREV.includes(k) || (k === ' ' && e.shiftKey);
+    if (!blank.hidden && (isNext || isPrev)) setBlank(false);
+    else if (isNext) next();
+    else if (isPrev) prev();
+    else if (k === 'Home') show(Number(slides[cur].dataset.first) - 1);
     else if (k === 'End') show(total - 1);
     else if (k === 'f' || k === 'F' || k === 'ㄹ') toggleFullscreen();
     else if (k === 'n' || k === 'N' || k === 'ㅜ') toggleNotes();
-    else if (k === 'Escape') { if (!notes.hidden) toggleNotes(false); else location.href = stage.dataset.exit!; }
+    else if (k === 'b' || k === 'B' || k === '.' || k === 'ㅠ') setBlank(blank.hidden === true);
+    else if (k === 'Escape') { if (!blank.hidden) setBlank(false); else if (!notes.hidden) toggleNotes(false); else location.href = stage.dataset.exit!; }
     else return;
     e.preventDefault();
   });
 
-  // 화면 왼쪽 3분의 1을 누르면 이전 장, 나머지는 다음 장
-  screen.addEventListener('click', (e) => {
-    if ((e.target as HTMLElement).closest('a, button')) return;
-    const r = screen.getBoundingClientRect();
-    if (e.clientX - r.left < r.width / 3) prev(); else next();
-  });
-
-  stage.querySelector('[data-act="prev"]')!.addEventListener('click', prev);
-  stage.querySelector('[data-act="next"]')!.addEventListener('click', next);
-  notesBtn.addEventListener('click', () => toggleNotes());
-  fsBtn.addEventListener('click', toggleFullscreen);
-  window.addEventListener('hashchange', () => { if (fromHash() !== cur) show(fromHash()); });
-
-  // 조작 단추는 마우스를 움직이거나 단추에 초점이 갈 때만 보인다 (아이들이 보는 화면을 가리지 않게)
+  // 조작 단추는 마우스를 움직이거나, 손가락·펜으로 누르거나, 단추에 키보드 초점이 갈 때만 보인다 (아이들이 보는 화면을 가리지 않게)
   let idle = 0;
   const wake = () => {
     stage.classList.add('is-awake');
     clearTimeout(idle);
     idle = window.setTimeout(() => stage.classList.remove('is-awake'), 2500);
   };
-  document.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') wake(); });
+  // 브라우저는 장이 바뀌거나 페이지가 열릴 때 마우스가 그대로인데도 pointermove 를 보낸다. 4px 넘게 움직였을 때만 깨운다.
+  let anchor: { x: number; y: number } | undefined;
+  document.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    if (!anchor) { anchor = { x: e.clientX, y: e.clientY }; return; }
+    if (Math.hypot(e.clientX - anchor.x, e.clientY - anchor.y) > 4) { anchor = { x: e.clientX, y: e.clientY }; wake(); }
+  });
+  // 손가락·펜: 누를 때마다 깨운다. 화면 아래쪽 12% 는 조작 단추 자리라서 눌러도 장을 넘기지 않는다.
+  let touchBar = false;
+  document.addEventListener('pointerdown', (e) => {
+    touchBar = false;
+    if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
+    touchBar = e.clientY > innerHeight * 0.88;
+    wake();
+  }, { capture: true });
+
+  // 화면 왼쪽 3분의 1을 누르면 이전 장, 나머지는 다음 장
+  screen.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).closest('a, button')) return;
+    if (touchBar) { touchBar = false; return; }
+    const r = screen.getBoundingClientRect();
+    if (e.clientX - r.left < r.width / 3) prev(); else next();
+  });
+
+  // 마우스로 누른 단추는 초점을 놓는다: 조작 단추가 다시 숨고, Space·Enter 가 그 단추를 또 누르지 않게
+  const press = (act: () => void) => (e: MouseEvent) => {
+    act();
+    if (e.detail > 0) (e.currentTarget as HTMLElement).blur();
+  };
+  stage.querySelector<HTMLElement>('[data-act="prev"]')!.addEventListener('click', press(prev));
+  stage.querySelector<HTMLElement>('[data-act="next"]')!.addEventListener('click', press(next));
+  notesBtn.addEventListener('click', press(() => toggleNotes()));
+  fsBtn.addEventListener('click', press(toggleFullscreen));
+  window.addEventListener('hashchange', () => { if (fromHash() !== cur) show(fromHash()); });
 
   show(fromHash());
 </script>

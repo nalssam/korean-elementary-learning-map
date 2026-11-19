@@ -12,11 +12,13 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
-  ROOT, answerText, cacheDir, creditFull, creditShort, distDir, getMedia, getPassage, mediaFile, pptxFile, sheetFooter,
-  shownMedia, slideNotes, termMeaning, visibleLessons,
+  ROOT, answerText, cacheDir, creditList, creditShort, distDir, footerNotice, getMedia, getPassage, isPublic, mediaFile, pptxFile,
+  reviewedOn, sheetFooter, shownMedia, slideNotes, termMeaning, visibleLessons,
 } from '#lib/content.ts';
+import { SITE } from '#lib/site.ts';
 import { coverText } from '#src/components/slides/cover.ts';
-import { CREDIT_COPY, NOTE_COPY, SLIDE_COPY, STAGE_TYPE } from '#src/components/slides/copy.ts';
+import { slideCounter } from '#src/components/slides/counter.ts';
+import { CREDIT_COPY, NOTE_COPY, SLIDE_COPY, STAGE_FIT, STAGE_PICTURE, STAGE_TYPE } from '#src/components/slides/copy.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const argv = process.argv.slice(2);
@@ -27,6 +29,8 @@ if (onlyAt >= 0 && (!only || only.startsWith('--'))) fail('--only 뒤에 묶음 
 const DIST = distDir();
 const CACHE = cacheDir();
 const PNG_WIDTH = 1600;
+/** 초안 PPTX 의 만든 날·고친 날. 빌드할 때마다 파일이 달라지지 않게 고정한다. */
+const DRAFT_DATE = '2026-01-01';
 const FONT_DIR = path.join(ROOT, 'node_modules', 'pretendard', 'dist', 'public', 'static', 'alternative');
 
 function fail(msg) {
@@ -108,7 +112,7 @@ async function mediaEntry(lesson, ref) {
 
 async function slideEntry(lesson, slide, no) {
   const notes = [...slideNotes(lesson, no)];
-  const base = { no, layout: slide.layout, notes };
+  const base = { no, layout: slide.layout, notes, counter: slideCounter(lesson, no).text };
   const media = async (ref) => (ref ? await mediaEntry(lesson, ref) : undefined);
   switch (slide.layout) {
     case 'title': {
@@ -148,17 +152,28 @@ async function lessonEntry(lesson) {
   const slides = [];
   for (let i = 0; i < lesson.slides.length; i++) slides.push(await slideEntry(lesson, lesson.slides[i], i + 1));
   const c = coverText(lesson);
+  const draft = !isPublic(lesson);
   return {
     id: lesson.id,
     title: lesson.title,
     pptx: path.join(CACHE, 'files', lesson.id, 'slides.pptx'),
     cover: { meta: c.meta, notice: c.notice },
+    // 공개하지 않은 차시는 2번 장부터 장마다 왼쪽 아래에 초안 표시를 찍는다 (1번 장은 표지 아래에 있다)
+    draft: draft ? footerNotice(lesson) : null,
+    // 파일 정보(core.xml). 날짜는 빌드할 때마다 바뀌지 않게 정해 둔다: 공개된 차시는 승인한 날, 초안은 고정된 날.
+    doc: {
+      title: `${draft ? '[검수 전 초안] ' : ''}${lesson.title} 수업 화면`,
+      author: SITE.author,
+      keywords: SITE.licence.name,
+      date: `${reviewedOn(lesson) ?? DRAFT_DATE}T00:00:00Z`,
+    },
     slides,
     credits: {
       heading: CREDIT_COPY.heading,
       empty: CREDIT_COPY.empty,
       more: CREDIT_COPY.more,
-      items: shownMedia(lesson, 'slides').map(creditFull),
+      // 수업 중에 띄우는 장이라 그림 제목을 빼고, 같은 출처는 한 줄로 묶는다 (docs/CONTRACT.md 8절)
+      items: creditList(shownMedia(lesson, 'slides')).map(({ text, sourceUrl, licenceUrl }) => ({ text, sourceUrl, licenceUrl })),
       footer: sheetFooter(lesson),
     },
   };
@@ -188,6 +203,8 @@ async function main() {
     colors: tokenColors(),
     fonts,
     type: STAGE_TYPE,
+    fit: STAGE_FIT,
+    picture: STAGE_PICTURE,
     copy: { slide: SLIDE_COPY },
     lessons: entries,
   };

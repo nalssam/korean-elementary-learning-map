@@ -1,15 +1,18 @@
 ---
 // 짧은 항목 2~4개. 곁그림이 있으면 오른쪽에 둔다.
+// 그림이 없으면 항목을 크게(STAGE_FIT.points) 쓰고 제목 아래 남은 자리의 위아래 가운데에 둔다.
 import Media from '#src/components/Media.astro';
+import { STAGE_FIT } from './copy.ts';
 import type { SlideProps } from './types.ts';
 
 type Props = SlideProps<'points'>;
 const { lesson, slide } = Astro.props;
+const fit = slide.media ? undefined : STAGE_FIT.points;
 ---
-<div class:list={['sl-points', slide.media && 'has-media']}>
+<div class:list={['sl-points', slide.media && 'has-media']} data-fit={fit?.join(' ')} style={fit ? `--fit: ${fit.at(-1)}` : undefined}>
   <h2 class="sl-title">{slide.title}</h2>
   <div class="sl-points-body">
-    <ol class="sl-list">
+    <ol class:list={['sl-list', fit && 'sl-fit']}>
       {slide.points.map((p, i) => <li><span class="sl-num" aria-hidden="true">{i + 1}</span><span class="sl-li-text">{p}</span></li>)}
     </ol>
     {slide.media && <Media lesson={lesson} id={slide.media} caption={false} class="sl-media" />}

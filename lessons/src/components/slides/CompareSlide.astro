@@ -1,21 +1,24 @@
 ---
 // 둘을 나란히 견주기. 양쪽에 같은 짜임(이름표, 그림, 항목)을 둔다.
+// 그림이 없으면 항목을 크게(STAGE_FIT.compare), 있으면 그림 틀이 STAGE_PICTURE.compareMin 보다 낮아지지 않게 항목을 먼저 줄인다 (STAGE_FIT.compareMedia).
 import Media from '#src/components/Media.astro';
+import { STAGE_FIT, STAGE_PICTURE } from './copy.ts';
 import type { SlideProps } from './types.ts';
 
 type Props = SlideProps<'compare'>;
 const { lesson, slide } = Astro.props;
 const sides = [slide.left, slide.right];
 const anyMedia = sides.some((s) => s.media);
+const fit = anyMedia ? STAGE_FIT.compareMedia : STAGE_FIT.compare;
 ---
-<div class="sl-compare">
+<div class="sl-compare" data-fit={fit.join(' ')} data-fit-picture={anyMedia ? STAGE_PICTURE.compareMin : undefined} style={`--fit: ${fit.at(-1)}`}>
   <h2 class="sl-title">{slide.title}</h2>
   <div class:list={['sl-compare-body', anyMedia && 'has-media']}>
     {sides.map((side) => (
       <section class="sl-card">
         <h3 class="sl-label">{side.label}</h3>
         {side.media && <Media lesson={lesson} id={side.media} caption={false} class="sl-media" />}
-        <ul class="sl-bullets">{side.points.map((p) => <li>{p}</li>)}</ul>
+        <ul class="sl-bullets sl-fit">{side.points.map((p) => <li>{p}</li>)}</ul>
       </section>
     ))}
   </div>

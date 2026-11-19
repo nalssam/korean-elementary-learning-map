@@ -1,21 +1,31 @@
 ---
 // 차례가 있는 단계 2~5개. 그림이 하나라도 있으면 가로로 늘어놓고, 없으면 위에서 아래로 늘어놓는다.
+// 그림이 넷이면 한 줄(4칸)과 2 × 2(칸마다 그림 왼쪽, 글 오른쪽) 가운데 그림이 더 크게 그려지는 쪽을 Stage.astro 의 스크립트가 골라 data-arrange 에 적는다.
+// 모든 단계 그림의 출처 표시가 같으면 그림마다 찍지 않고 목록 아래에 한 번만 찍는다.
+import { creditShort, getMedia } from '#lib/content.ts';
 import Media from '#src/components/Media.astro';
+import { STAGE_FIT } from './copy.ts';
 import type { SlideProps } from './types.ts';
 
 type Props = SlideProps<'steps'>;
 const { lesson, slide } = Astro.props;
-const across = slide.steps.some((s) => s.media);
+const pictured = slide.steps.filter((s) => s.media);
+const across = pictured.length > 0;
+const credits = [...new Set(pictured.map((s) => creditShort(getMedia(lesson, s.media!))))];
+const shared = pictured.length > 1 && credits.length === 1 ? credits[0] : undefined;
+const fit = STAGE_FIT.stepsMedia;
 ---
-<div class="sl-steps">
+<div class:list={['sl-steps', shared && 'has-shared-credit']} data-fit={across ? fit.join(' ') : undefined} style={across ? `--fit: ${fit.at(-1)}` : undefined}>
   <h2 class="sl-title">{slide.title}</h2>
-  <ol class:list={['sl-steps-list', across ? 'is-across' : 'is-down']} style={`--n: ${slide.steps.length}`}>
+  <ol class:list={['sl-steps-list', across ? 'is-across' : 'is-down']} style={`--n: ${slide.steps.length}`}
+    data-arrange={pictured.length === 4 && slide.steps.length === 4 ? 'auto' : undefined}>
     {slide.steps.map((s) => (
       <li class="sl-step">
         <span class="sl-chip">{s.label}</span>
         {across && (s.media ? <Media lesson={lesson} id={s.media} caption={false} class="sl-media" /> : <span class="sl-media-gap" />)}
-        <span class="sl-step-text">{s.text}</span>
+        <span class:list={['sl-step-text', across && 'sl-fit']}>{s.text}</span>
       </li>
     ))}
   </ol>
+  {shared && <p class="sl-shared-credit">{shared}</p>}
 </div>

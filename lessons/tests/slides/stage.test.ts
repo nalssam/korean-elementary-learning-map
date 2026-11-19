@@ -1,7 +1,8 @@
 // 수업 화면(/<id>/slides/)을 빌드해 Chromium 으로 열어 본다.
 //  - 명세의 장 하나가 화면 한 장이고, 모든 장이 1920 × 1080, 1280 × 720, 1024 × 768 에서 넘치거나 겹치지 않는다
 //  - 형식이 허락하는 가장 긴 글로 채운 장(stress.ts)도 넘치지 않는다
-//  - 조작: 글쇠·클릭·주소의 #번호·퀴즈 정답 드러내기·교사 메모·차시 안내로 돌아가기
+//  - 조작: 글쇠·클릭·터치·주소의 #번호·퀴즈 정답 드러내기·교사 메모·화면 가리기·차시 안내로 돌아가기
+//  - 조작 단추는 가만히 있으면 숨는다 (열자마자, 단추를 마우스로 누른 뒤에도)
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -11,7 +12,9 @@ import type { Browser, Page } from 'playwright';
 import { ROOT, answerText, footerNotice, loadLesson, slideNotes, visibleLessons } from '#lib/content.ts';
 import { FIXTURES, buildSite, noChromium } from '../contract/helpers.ts';
 import { copyMedia, serve, slideProblems } from './helpers.ts';
-import { STRESS_ID, makeStress } from './stress.ts';
+import { SMALL_LABEL, STRESS_ID, makeStress } from './stress.ts';
+import { slideCounter } from '#src/components/slides/counter.ts';
+import { NOTE_COPY } from '#src/components/slides/copy.ts';
 
 const OUT = path.join(ROOT, '.cache', 'tests', `slides-stage-${process.pid}`);
 const skip = await noChromium();
@@ -75,7 +78,11 @@ test('가장 긴 글로 채운 장도 넘치지 않는다 (모든 layout, 그림
   try {
     const layouts = new Set(loadLesson(STRESS_ID).slides.map((x) => x.layout));
     assert.equal(layouts.size, 11, '모든 layout 이 들어 있어야 합니다');
-    assert.deepEqual(await sweep(s.url, [STRESS_ID], [[1920, 1080], [1024, 768]]), []);
+    const bad = await sweep(s.url, [STRESS_ID], [[1920, 1080], [1024, 768]]);
+    // 그림 안의 글이 22 단위인 도해는 일부러 넣은 것이다. 재는 함수가 그것을 잡아야 하고, 그 밖에는 어긋난 곳이 없어야 한다.
+    const known = bad.filter((b) => b.includes('그림 안의 글자가 작음') && b.includes(`"${SMALL_LABEL.text}"`) && b.includes(`${SMALL_LABEL.media}.svg`));
+    assert.equal(known.length, 2, `22 단위 글을 화면 크기마다 한 번씩 잡아야 합니다:\n${bad.join('\n')}`);
+    assert.deepEqual(bad.filter((b) => !known.includes(b)), []);
   } finally { await s.close(); }
 });
 
@@ -95,6 +102,8 @@ test('장 수·표지·교사 메모·조작', { skip }, async () => {
     for (let i = 1; i <= one.slides.length; i++) {
       assert.deepEqual(await page.locator(`#s${i} .slide-notes li`).allTextContents(), slideNotes(one, i), `${i}번 장 메모`);
     }
+    // 장 번호: 한 차시 묶음은 "2 / 20"
+    assert.equal(await page.locator('#s2 .sl-counter').textContent(), `2 / ${one.slides.length}`);
     // 다음·이전: → Space PageDown / ← PageUp
     await page.keyboard.press('ArrowRight'); assert.equal(await cur(), 2);
     assert.equal(new URL(page.url()).hash, '#2');
@@ -117,7 +126,20 @@ test('장 수·표지·교사 메모·조작', { skip }, async () => {
     assert.equal(await answer.isVisible(), true);
     assert.equal(await page.locator('#s4 [data-answer] .sl-ox-glyph').textContent(), answerText(one.quiz.items[0]));
     await page.keyboard.press('ArrowRight'); assert.equal(await cur(), 5);
-    // 교사 메모 (N): 지금 장의 메모와 퀴즈의 정답·풀이
+    // 교사 메모 (N): 반 아이들이 보는 화면에 뜨므로 퀴즈의 정답·풀이는 정답이 드러나기 전에 보이지 않는다
+    await open(page, `${s.url}/5-2/1/01/slides/#4`);
+    await page.keyboard.press('n');
+    assert.equal(await page.locator('.notes').isVisible(), true);
+    const before = (await page.locator('.notes-body').textContent())!;
+    assert.ok(!before.includes(NOTE_COPY.answer) && !before.includes(one.quiz.items[0].explain), before);
+    assert.equal(await page.locator('.notes dl').count(), 0);
+    assert.equal(await page.locator('.notes-hint').isVisible(), true);
+    await page.keyboard.press('ArrowRight');
+    assert.ok((await page.locator('.notes-body').textContent())!.includes(one.quiz.items[0].explain));
+    assert.equal(await page.locator('.notes-hint').isVisible(), false);
+    await page.keyboard.press('n');
+    // 지금 장의 메모와 퀴즈의 정답·풀이 (앞 장으로 돌아오면 정답이 드러난 채다)
+    await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowLeft');
     await page.keyboard.press('n');
     assert.equal(await page.locator('.notes').isVisible(), true);
@@ -132,6 +154,17 @@ test('장 수·표지·교사 메모·조작', { skip }, async () => {
     await open(page, `${s.url}/5-2/1/02-03/slides/#5`);
     assert.equal(await cur(), 5);
     assert.equal(await page.locator('#s5 .sl-notice').count(), 0, '둘째 표지에는 초안 표시를 다시 찍지 않는다');
+    // 두 차시 묶음의 장 번호는 차시마다 따로 센다. Home 은 지금 차시의 첫 장으로 간다.
+    const two = loadLesson('5-2/1/02-03');
+    assert.equal(slideCounter(two, 5).text, '3차시 1 / 4');
+    assert.equal(await page.locator('#s5 .sl-counter').textContent(), '3차시 1 / 4');
+    assert.equal(await page.locator('.hud-count').textContent(), '3차시 1 / 4');
+    assert.equal(await page.locator('#s1 .sl-counter').textContent(), '2차시 1 / 4');
+    await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight');
+    assert.equal(await cur(), 7);
+    await page.keyboard.press('Home'); assert.equal(await cur(), 5);
+    // 초안은 장마다 왼쪽 아래에 초안 표시를 찍는다 (1번 장은 표지 아래에 있다)
+    for (let i = 2; i <= two.slides.length; i++) assert.equal(await page.locator(`#s${i} .sl-draft`).textContent(), footerNotice(two));
     // 범위 밖의 번호는 끝 장으로
     await open(page, `${s.url}/5-2/1/02-03/slides/#99`);
     assert.equal(await cur(), 8);
@@ -139,6 +172,80 @@ test('장 수·표지·교사 메모·조작', { skip }, async () => {
     assert.deepEqual(await page.evaluate(slideProblems), []);
     await page.evaluate(() => { document.querySelector('#s8 h2')!.textContent = '아주 긴 제목을 '.repeat(40); });
     assert.ok((await page.evaluate(slideProblems)).some((p) => p.startsWith('장 밖으로 나감')));
+  } finally { await page.close(); await s.close(); }
+});
+
+test('조작 단추: 가만히 두면 숨고, 마우스로 누른 뒤에도 숨고, 손가락으로 아래쪽을 누르면 장을 넘기지 않고 보인다', { skip }, async () => {
+  const s = await site('hud', FIXTURES);
+  const hud = (p: Page) => p.locator('.hud').evaluate((e) => Number(getComputedStyle(e).opacity));
+  const no = (p: Page) => p.evaluate(() => Number(document.querySelector<HTMLElement>('.slide:not([hidden])')!.dataset.no));
+  try {
+    // 열고 3초 동안 아무것도 하지 않으면 숨어 있다 (브라우저가 보내는 가짜 pointermove 로 깨지 않는다)
+    const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+    await page.mouse.move(640, 360);
+    await open(page, `${s.url}/5-2/1/01/slides/#2`);
+    await page.mouse.move(640, 360);
+    await page.waitForTimeout(3000);
+    assert.equal(await hud(page), 0);
+    // 실제로 움직이면 보인다
+    await page.mouse.move(700, 400, { steps: 4 });
+    await page.waitForTimeout(300);
+    assert.equal(await hud(page), 1);
+    // 교사 메모 단추를 마우스로 누르고 3.5초 기다리면 다시 숨고, Space 는 다음 장으로 간다
+    await page.locator('[data-act="notes"]').click();
+    assert.equal(await page.locator('.notes').isVisible(), true);
+    await page.waitForTimeout(3500);
+    assert.equal(await hud(page), 0);
+    await page.keyboard.press('Space');
+    assert.equal(await no(page), 3);
+    // 그림 출처 링크는 차시 안내 페이지의 접힌 그림 출처로 간다
+    assert.equal(await page.locator('[data-act="credits"]').getAttribute('href'), '/5-2/1/01/#credits');
+    // 화면 가리기: B 로 가리고, 다음 키를 누르면 장은 그대로 두고 다시 보인다
+    await page.keyboard.press('b');
+    assert.equal(await page.locator('.stage-blank').isVisible(), true);
+    await page.keyboard.press('ArrowRight');
+    assert.equal(await page.locator('.stage-blank').isVisible(), false);
+    assert.equal(await no(page), 3);
+    await page.keyboard.press('.');
+    assert.equal(await page.locator('.stage-blank').isVisible(), true);
+    await page.keyboard.press('ArrowLeft');
+    assert.equal(await page.locator('.stage-blank').isVisible(), false);
+    assert.equal(await no(page), 3);
+    await page.close();
+
+    // 터치 화면: 3.5초 가만히 둔 뒤 아래 가장자리를 누르면 조작 단추가 보이고 장은 그대로, 가운데를 누르면 다음 장
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, hasTouch: true });
+    const tp = await ctx.newPage();
+    await open(tp, `${s.url}/5-2/1/01/slides/#2`);
+    await tp.waitForTimeout(3500);
+    assert.equal(await hud(tp), 0);
+    await tp.touchscreen.tap(900, 712);
+    await tp.waitForTimeout(300);
+    assert.equal(await hud(tp), 1);
+    assert.equal(new URL(tp.url()).hash, '#2');
+    await tp.touchscreen.tap(900, 360);
+    assert.equal(await no(tp), 3);
+    assert.equal(new URL(tp.url()).hash, '#3');
+    await ctx.close();
+  } finally { await s.close(); }
+});
+
+test('그림 파일을 불러오지 못하면 틀과 짧은 안내를 두고 출처 표시는 남긴다', { skip }, async () => {
+  const s = await site('missing', FIXTURES);
+  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  try {
+    const one = loadLesson('5-2/1/01');
+    const at = one.slides.findIndex((x) => x.layout === 'picture') + 1;
+    const ref = (one.slides[at - 1] as { media: string }).media;
+    const file = one.media.find((m) => m.id === ref)!.file;
+    fs.rmSync(path.join(s.out, 'media', '5-2/1/01', path.basename(file)));
+    await page.goto(`${s.url}/5-2/1/01/slides/#${at}`);
+    const box = page.locator(`#s${at} .sl-missing`);
+    await box.waitFor();
+    assert.equal(await box.textContent(), '그림을 불러오지 못했습니다');
+    assert.equal(await box.evaluate((e) => getComputedStyle(e).fontSize), '30px');
+    assert.equal(await page.locator(`#s${at} .media img`).count(), 0);
+    assert.ok(await page.locator(`#s${at} .media-credit`).isVisible());
   } finally { await page.close(); await s.close(); }
 });
 
