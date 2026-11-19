@@ -274,6 +274,15 @@ export function frontSize(front: string): 'xl' | 'lg' | 'md' | 'sm' {
   return 'sm';
 }
 
+/**
+ * 카드 뒷면의 글을 문장으로 나눈다 (R32). 문장은 ". ", "? ", "! " 뒤에 글이 더 이어지는 자리에서 끝나고, 문장부호는 그 문장에 남는다.
+ * 뒷면은 문장마다 새 줄에서 시작하고 문장마다 따로 고르게 접힌다. "…있는 / 곳. 무덤이나…" 처럼 한 문장의 끝이 다음 줄 첫머리로 밀리지 않는다.
+ * "17.8cm" 처럼 문장부호 뒤에 빈칸이 없으면 나누지 않는다.
+ */
+export function backSentences(text: string): string[] {
+  return text.trim().split(/(?<=[.?!])\s+(?=\S)/).filter((s) => s !== '');
+}
+
 // ───────────────────────────── 바닥글 앞의 틈 ─────────────────────────────
 
 /** 본문(.sheet-body)의 높이(mm). src/styles/print.css 와 docs/CONTRACT.md 7절의 값이다. */

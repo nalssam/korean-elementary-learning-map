@@ -209,7 +209,8 @@ const rowCredit = (credit: string, n: number) => credit.replace(/^([^:]+):/, `$1
         const credits = figs.map((f) => creditShort(getMedia(lesson, (f.block as { media: string }).media)));
         const shared = credits.every((c) => c === credits[0]);
         // 단의 폭을 그림의 가로세로 비에 비례해 나눈다: 그러면 모든 그림이 같은 높이로 그려져 위끝과 아래끝이 맞는다 (R15, C3-08).
-        // 크기를 읽지 못한 그림은 정사각형으로 친다.
+        // 크기를 읽지 못한 그림은 정사각형으로 친다. 학습지 페이지(worksheet.astro)의 <script> 가 설명의 폭을 재어 단의 폭과 그림 높이를 다시 정한다 (R34).
+        // 이 비율은 스크립트가 돌지 않을 때의 꼴이다.
         const ratios = figs.map((f) => {
           const size = fileImageSize(mediaFile(lesson, (f.block as { media: string }).media)) as { w: number; h: number } | undefined;
           return size && size.w > 0 && size.h > 0 ? size.w / size.h : 1;
@@ -220,7 +221,7 @@ const rowCredit = (credit: string, n: number) => credit.replace(/^([^:]+):/, `$1
               const fb = f.block as { media: string; show_caption: boolean };
               const caption = fb.show_caption ? getMedia(lesson, fb.media).caption : undefined;
               return (
-                <div class="ws-figcell" data-part={f.where}>
+                <div class="ws-figcell" data-part={f.where} data-ratio={ratios[figs.indexOf(f)].toFixed(4)}>
                   <Media lesson={lesson} id={fb.media} caption={false} />
                   <p class="ws-fig-caption">{caption ? k(caption) : ''}</p>
                 </div>
@@ -238,3 +239,4 @@ const rowCredit = (credit: string, n: number) => credit.replace(/^([^:]+):/, `$1
     }
   }
 })}
+

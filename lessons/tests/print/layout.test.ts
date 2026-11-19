@@ -139,3 +139,12 @@ test('카드 높이: 덱의 가장 많이 든 쪽의 줄이 본문을 나누어 
   // 그림 줄: 줄의 어느 한 장에 그림이 있으면 그 줄의 두 장 모두
   assert.deepEqual(L.pictureRows([{}, {}, { media: 'a' }, {}, undefined, undefined]), [false, false, true, true, false, false]);
 });
+
+test('카드 뒷면의 문장 나누기: 문장부호 뒤에 글이 이어지는 자리에서 나누고 문장부호는 앞 문장에 남긴다 (R32)', () => {
+  assert.deepEqual(L.backSentences('옛사람의 자취가 남아 있는 곳. 무덤이나 집터 같은 것'), ['옛사람의 자취가 남아 있는 곳.', '무덤이나 집터 같은 것']);
+  assert.deepEqual(L.backSentences('무엇일까요? 돌입니다! 아주 커요.'), ['무엇일까요?', '돌입니다!', '아주 커요.']);
+  // 한 문장, 끝의 문장부호, 빈칸 없는 소수점은 나누지 않는다
+  assert.deepEqual(L.backSentences('옛사람이 남긴 물건.'), ['옛사람이 남긴 물건.']);
+  assert.deepEqual(L.backSentences('길이 17.8cm 인 돌 도구'), ['길이 17.8cm 인 돌 도구']);
+  assert.deepEqual(L.backSentences('  큰 돌.   작은 돌  '), ['큰 돌.', '작은 돌']);
+});

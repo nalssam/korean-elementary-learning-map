@@ -40,5 +40,7 @@
 .card[data-picture-row] .card-word[data-size='xl'] { font-size: 22pt; }
 .card[data-picture-row] .card-word[data-size='lg'] { font-size: 19pt; }
 
-/* 뒷면: 한 줄 풀이 (50자까지) */
-.card-meaning { margin: 0; font-size: 14pt; font-weight: 500; line-height: 1.5; text-wrap: balance; }
+/* 뒷면: 풀이 (50자까지). 문장마다 새 줄에서 시작하고(.card-sentence), 문장마다 따로 고르게 접는다 (R32).
+   한 덩어리로 고르게 접으면 앞 문장의 끝("곳.")이 다음 줄 첫머리로 밀린다. 긴 한 문장도 마지막 줄에 짧은 낱말 하나만 남기지 않는다. */
+.card-meaning { margin: 0; font-size: 14pt; font-weight: 500; line-height: 1.5; }
+.card-sentence { display: block; text-wrap: balance; }

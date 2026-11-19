@@ -175,8 +175,8 @@ body[data-kind='stage'] { background: var(--bg); }
 .sl-steps-list.is-across .sl-chip { justify-self: start; }
 .sl-steps-list.is-across .media, .sl-media-gap { flex: 1 1 0; min-height: 0; }
 .sl-step-text { line-height: 1.35; min-width: 0; }
-/* 그림 넷: 2 × 2 (R22). 칸마다 위에 머리 한 줄(단계 표와 단계 글), 그 아래에 칸 폭 전체와 남은 높이를 다 쓰는 그림 상자.
-   그림은 상자 안에 contain 으로 가운데 놓인다. 머리 글의 크기(--fit)는 스크립트가 STAGE_STEPS.gridFit 에서 고른다.
+/* 그림 넷: 2 × 2 (R22). 칸마다 위에 머리 한 줄(단계 표와 단계 글), 그 아래 남은 자리에 그림.
+   그림은 그 자리 안에 contain 으로 가운데 놓인다. 그림의 테두리는 그림의 것이라 그려진 그림에 꼭 맞고, 칸의 폭 전체를 채우지 않아도 된다 (R36). 머리 글의 크기(--fit)는 스크립트가 STAGE_STEPS.gridFit 에서 고른다.
    단계 표는 글과 같은 크기로, 글은 표의 안쪽 여백만큼 내려 두 글의 줄이 맞는다. 글이 두 줄이 되면 표 옆에서 줄을 바꾼다. */
 .sl-steps-list.is-across[data-arrange='grid'] { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); align-content: stretch; column-gap: calc(48 * var(--u)); row-gap: calc(32 * var(--u)); }
 .sl-steps-list.is-across[data-arrange='grid'] .sl-step {

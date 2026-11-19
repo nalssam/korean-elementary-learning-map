@@ -37,24 +37,25 @@ const robots = showDrafts() || draft ? 'noindex,nofollow' : kind === 'site' ? un
     <slot />
     {(kind === 'site' || kind === 'student') && <p class="site-notice">{footerNotice(lesson)}</p>}
     <script>
-      // 인쇄 페이지에서 사진 테두리의 자리를 잰다 (Media.astro 의 @media print). 그려진 그림의 자리는 상자 크기, 그림의 가로세로, object-position 으로 정해진다.
-      // 값은 상자에 대한 백분율로 적어, 화면 미리보기와 인쇄의 배율이 달라도 그대로 맞는다.
+      // 인쇄 페이지에서 사진의 <img> 상자를 그려진 그림의 크기로 줄인다 (Media.astro 의 @media print 가 그 둘레에 선을 긋는다).
+      // 그려진 그림의 자리는 상자 크기, 그림의 가로세로, object-position 으로 정해진다. 줄인 만큼은 바깥 여백으로 돌려
+      // 상자가 차지하던 자리(여백까지 친 크기)와 그림이 놓인 자리가 그대로다. 그래서 그림을 놓는 쪽의 짜임은 바뀌지 않는다.
       // 모든 페이지에 실리지만 인쇄 페이지(data-kind="print")에서만 일한다. 조건으로 감싼 <script> 는 Astro 가 처리하지 않는다.
-      // 스크립트가 돌지 않으면 바탕 사각형의 크기가 0 이라 테두리가 없을 뿐 그림은 그대로 찍힌다.
+      // 스크립트가 돌지 않으면 data-framed 가 붙지 않아 테두리가 없을 뿐 그림은 그대로 찍힌다 (빈 띠를 두르지 않는다).
       function placeFrame(img: HTMLImageElement) {
-        const W = img.clientWidth, H = img.clientHeight; // 안쪽 여백을 포함한 상자 (테두리 없음)
+        img.removeAttribute('data-framed');
+        for (const p of ['width', 'height', 'margin']) img.style.removeProperty(p);
+        const W = img.clientWidth, H = img.clientHeight;
         if (!img.naturalWidth || !W || !H) return;
-        const t = Number.parseFloat(getComputedStyle(img).paddingTop) || 0;
-        // 인쇄에서 쓰는 여백(0.5pt = 2/3px)으로 잰다. 화면에서 잴 때는 여백이 0 이므로 같은 비율로 맞춘다.
-        const pad = t || 2 / 3;
-        const cw = W - 2 * pad, ch = H - 2 * pad;
-        const k = Math.min(cw / img.naturalWidth, ch / img.naturalHeight);
+        const k = Math.min(W / img.naturalWidth, H / img.naturalHeight);
         const dw = img.naturalWidth * k, dh = img.naturalHeight * k;
-        const [px, py] = getComputedStyle(img).objectPosition.split(' ').map((v) => (v.endsWith('%') ? Number.parseFloat(v) / 100 : 0.5));
-        const fw = dw + 2 * pad, fh = dh + 2 * pad;
-        img.style.setProperty('--frame-size', `${(fw / W) * 100}% ${(fh / H) * 100}%`);
-        // background-position 의 백분율은 '남는 자리의 몇 %' 다. 그림이 남는 자리에서 놓인 비율(object-position)과 같다.
-        img.style.setProperty('--frame-pos', `${px * 100}% ${py * 100}%`);
+        if (W - dw > 0.25 || H - dh > 0.25) {
+          const [px, py] = getComputedStyle(img).objectPosition.split(' ').map((v) => (v.endsWith('%') ? Number.parseFloat(v) / 100 : 0.5));
+          img.style.width = `${dw}px`;
+          img.style.height = `${dh}px`;
+          img.style.margin = `${(H - dh) * py}px ${(W - dw) * (1 - px)}px ${(H - dh) * (1 - py)}px ${(W - dw) * px}px`;
+        }
+        img.dataset.framed = '';
       }
       function placeAll() {
         if (document.body.dataset.kind !== 'print') return;
@@ -66,6 +67,8 @@ const robots = showDrafts() || draft ? 'noindex,nofollow' : kind === 'site' ? un
       placeAll();
       window.addEventListener('beforeprint', placeAll);
       window.addEventListener('resize', placeAll);
+      // 그림 상자의 크기를 스크립트로 바꾸는 쪽(학습지의 그림 줄)이 바꾼 뒤에 알린다
+      window.addEventListener('media-layout', placeAll);
     </script>
   </body>
 </html>
