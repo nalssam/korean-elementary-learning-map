@@ -1,26 +1,50 @@
 ---
-// 둘을 나란히 견주기. 양쪽에 같은 짜임(이름표, 그림, 항목)을 둔다.
-// 그림이 없으면 항목을 크게(STAGE_FIT.compare), 있으면 그림 틀이 STAGE_PICTURE.compareMin 보다 낮아지지 않게 항목을 먼저 줄인다 (STAGE_FIT.compareMedia).
+// 둘을 나란히 견주기. 그림은 셋 가운데 한 가지다 (R23, 형식이 섞지 못하게 막는다).
+//  - 그림 없음: 두 상자를 나란히, 항목을 크게(STAGE_FIT.compare).
+//  - 쪽마다 그림 하나(left.media, right.media): 두 상자를 나란히. 이름표·그림 상자·항목을 두 상자에서 같은 높이의 줄에 맞춘다(subgrid).
+//    그래서 두 그림 상자의 높이가 같고, 출처 표시와 첫 항목이 같은 높이에 선다. 그림 틀이 STAGE_PICTURE.compareMin 보다
+//    낮아지지 않게 항목을 먼저 줄인다 (STAGE_FIT.compareMedia).
+//  - 함께 보는 그림 하나(media): 글 곁에 그림 하나를 두는 두 칸 짜임(R12). 왼쪽에 두 상자를 위아래로 쌓고, 오른쪽에 그림.
+//    그림 칸의 폭과 항목 크기는 Stage.astro 의 스크립트가 sideCandidates() 의 차례대로 해 보고 고른다.
+// 상자 안의 목록은 점을 머리표로 쓴다 (R27).
 import { keepParticle } from '#lib/site.ts';
 import Media from '#src/components/Media.astro';
-import { STAGE_FIT, STAGE_PICTURE } from './copy.ts';
+import { STAGE_FIT, STAGE_PICTURE, STAGE_SIDE, sideCandidates } from './copy.ts';
 import type { SlideProps } from './types.ts';
 
 type Props = SlideProps<'compare'>;
 const { lesson, slide } = Astro.props;
 const sides = [slide.left, slide.right];
-const anyMedia = sides.some((s) => s.media);
-const fit = anyMedia ? STAGE_FIT.compareMedia : STAGE_FIT.compare;
+const shared = slide.media;
+const anyMedia = !shared && sides.some((s) => s.media);
+const fit = shared ? STAGE_FIT.compareShared : anyMedia ? STAGE_FIT.compareMedia : STAGE_FIT.compare;
+const side = shared ? sideCandidates(fit) : undefined;
+const style = `--fit: ${fit.at(-1)}${side ? `; --pic: ${STAGE_SIDE.picture.at(-1)}` : ''}`;
 ---
-<div class="sl-compare" data-fit={fit.join(' ')} data-fit-picture={anyMedia ? STAGE_PICTURE.compareMin : undefined} style={`--fit: ${fit.at(-1)}`}>
+<div class:list={['sl-compare', shared && 'has-shared']} data-fit={fit.join(' ')} data-fit-picture={anyMedia ? STAGE_PICTURE.compareMin : undefined}
+  data-side={side ? JSON.stringify(side) : undefined} data-max-lines={side ? STAGE_SIDE.maxLines.compare : undefined} style={style}>
   <h2 class="sl-title">{keepParticle(slide.title)}</h2>
-  <div class:list={['sl-compare-body', anyMedia && 'has-media']}>
-    {sides.map((side) => (
-      <section class="sl-card">
-        <h3 class="sl-label">{keepParticle(side.label)}</h3>
-        {side.media && <Media lesson={lesson} id={side.media} caption={false} class="sl-media" />}
-        <ul class="sl-bullets sl-fit">{side.points.map((p) => <li>{keepParticle(p)}</li>)}</ul>
-      </section>
-    ))}
-  </div>
+  {shared ? (
+    <div class="sl-compare-body sl-side">
+      <div class="sl-compare-stack">
+        {sides.map((s) => (
+          <section class="sl-card">
+            <h3 class="sl-label">{keepParticle(s.label)}</h3>
+            <ul class="sl-bullets sl-fit">{s.points.map((p) => <li>{keepParticle(p)}</li>)}</ul>
+          </section>
+        ))}
+      </div>
+      <Media lesson={lesson} id={shared} caption={false} class="sl-media sl-side-media" />
+    </div>
+  ) : (
+    <div class:list={['sl-compare-body', anyMedia && 'has-media']}>
+      {sides.map((s) => (
+        <section class="sl-card">
+          <h3 class="sl-label">{keepParticle(s.label)}</h3>
+          {anyMedia && (s.media ? <Media lesson={lesson} id={s.media} caption={false} class="sl-media" /> : <span class="sl-media-gap" />)}
+          <ul class="sl-bullets sl-fit">{s.points.map((p) => <li>{keepParticle(p)}</li>)}</ul>
+        </section>
+      ))}
+    </div>
+  )}
 </div>

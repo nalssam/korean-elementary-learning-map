@@ -2,7 +2,9 @@
 //  - 명세의 장 하나가 화면 한 장이고, 모든 장이 1920 × 1080, 1280 × 720, 1024 × 768 에서 넘치거나 겹치지 않는다
 //  - 형식이 허락하는 가장 긴 글로 채운 장(stress.ts)도 넘치지 않는다
 //  - 글 곁에 그림 하나를 둔 장은 두 칸 짜임(R12)을 지킨다: 그림 칸 42% 이상, 그림을 크게, 세로 가운데(긴 글은 위 끝), 빈 자리 3분의 1 남짓
-//  - 그림 넷의 단계 장은 2 × 2 로 제목 아래를 다 쓴다 (R13)
+//  - 그림 넷의 단계 장은 2 × 2 로 제목 아래를 다 쓰고, 칸마다 머리 한 줄 아래에 칸 폭 전체의 그림 상자를 둔다 (R22)
+//  - 견주기 장: 함께 보는 그림 하나는 두 칸 짜임, 쪽마다 그림이면 출처 표시와 첫 항목이 같은 높이 (R23)
+//  - 교사 메모 창은 장을 가리지 않는다 (R24). QR 창 (R25). 정답 표와 머리표 (R27)
 //  - ○× 표시와 읽는 말은 lib 의 MARK·MARK_LABEL (R17), 닫는 따옴표와 조사는 한 줄에 (R18)
 //  - 조작: 글쇠·클릭·터치·주소의 #번호·퀴즈 정답 드러내기·교사 메모·화면 가리기·차시 안내로 돌아가기
 //  - 조작 단추는 가만히 있으면 숨는다 (열자마자, 단추를 마우스로 누른 뒤에도)
@@ -16,8 +18,10 @@ import { ROOT, answerText, footerNotice, loadLesson, slideNotes, visibleLessons 
 import { FIXTURES, buildSite, noChromium } from '../contract/helpers.ts';
 import { MARK, MARK_LABEL } from '#lib/site.ts';
 import { copyMedia, serve, sideProblems, slideProblems } from './helpers.ts';
-import { QUOTED_QUESTION, SMALL_LABEL, STRESS_ID, makeStress } from './stress.ts';
-import { SLIDE_COPY } from '#src/components/slides/copy.ts';
+import { DOLMEN_STEPS, QUOTED_QUESTION, SMALL_LABEL, STRESS_ID, makeStress } from './stress.ts';
+import { QR_COPY, SLIDE_COPY, STAGE_COPY } from '#src/components/slides/copy.ts';
+import { studentPages } from '#src/components/slides/qr.ts';
+import QRCode from 'qrcode';
 import { slideCounter } from '#src/components/slides/counter.ts';
 import { NOTE_COPY } from '#src/components/slides/copy.ts';
 
@@ -100,15 +104,19 @@ test('가장 긴 글로 채운 장도 넘치지 않는다 (모든 layout, 그림
         await open(page, `${s.url}/${STRESS_ID}/slides/#${at}`);
         assert.equal(await page.locator(`#s${at} .sl-side`).count(), 1, `${at}번 장이 두 칸 짜임이 아닙니다`);
       }
-      // R13: 그림 넷이고 글이 짧은 단계 장은 2 × 2 로 놓이고, 그림 하나가 1920 무대에서 폭 500px 이상이다
+      // R22: 그림 넷이고 글이 짧은 단계 장은 2 × 2 로 놓이고, 그림 상자는 칸 폭 전체(1920 무대에서 500px 넘게)이며 그림은 그 안에 contain 으로 가장 크게
       const four = lesson.slides.findIndex((x) => x.layout === 'steps' && x.steps.length === 4 && x.steps.every((st) => st.media === 'labelled')) + 1;
       await open(page, `${s.url}/${STRESS_ID}/slides/#${four}`);
       assert.equal(await page.locator(`#s${four} [data-arrange]`).getAttribute('data-arrange'), 'grid');
-      const widths = await page.locator(`#s${four} .media img`).evaluateAll((imgs) => imgs.map((i) => {
-        const im = i as HTMLImageElement; const r = im.getBoundingClientRect();
-        return im.naturalWidth * Math.min(r.width / im.naturalWidth, r.height / im.naturalHeight);
-      }));
-      for (const w of widths) assert.ok(w >= 500, `2 × 2 의 그림 폭 ${w.toFixed(0)}px`);
+      for (const f of await page.locator(`#s${four} .sl-step > .media`).evaluateAll((els) => els.map((e) => {
+        const step = e.parentElement!.getBoundingClientRect(); const r = e.getBoundingClientRect(); const im = e.querySelector('img')!; const ir = im.getBoundingClientRect();
+        const k = Math.min(ir.width / im.naturalWidth, ir.height / im.naturalHeight);
+        return { box: r.width, cell: step.width, drawnW: im.naturalWidth * k, drawnH: im.naturalHeight * k, w: ir.width, h: ir.height };
+      }))) {
+        assert.ok(Math.abs(f.box - f.cell) < 1, `그림 상자 폭 ${f.box} / 칸 폭 ${f.cell}`);
+        assert.ok(f.box >= 500, `그림 상자 폭 ${f.box.toFixed(0)}px`);
+        assert.ok(Math.abs(f.drawnW - f.w) < 1 || Math.abs(f.drawnH - f.h) < 1, '그림이 상자에 맞게 가장 크게 그려지지 않았습니다');
+      }
       // R18: 닫는 따옴표와 조사 사이에 WORD JOINER 를 넣어, 문제 글이 어디에서 줄을 바꾸든 ’ 와 은 이 한 줄에 있다
       const q = lesson.quiz.items.findIndex((it) => it.q === QUOTED_QUESTION) + 1;
       const at = lesson.slides.findIndex((x) => x.layout === 'quiz' && x.item === q) + 1;
@@ -139,6 +147,268 @@ test('가장 긴 글로 채운 장도 넘치지 않는다 (모든 layout, 그림
       assert.deepEqual(split, [], `’ 와 은 이 다른 줄로 갈렸습니다 (앞에 붙인 낱말 수: ${split})`);
     } finally { await page.close(); }
   } finally { await s.close(); }
+});
+
+/** 가장 긴 글 묶음을 빌드해 내준다 (R22·R23 를 재는 시험이 같이 쓴다) */
+async function stressSite(name: string) {
+  const content = path.join(OUT, `${name}-content`);
+  fs.cpSync(FIXTURES, content, { recursive: true });
+  const file = path.join(content, ...STRESS_ID.split('/'), 'lesson.yaml');
+  const raw = YAML.parse(fs.readFileSync(file, 'utf8'));
+  makeStress(content, raw);
+  fs.writeFileSync(file, YAML.stringify(raw));
+  return site(name, content);
+}
+
+test('단계 장 2 × 2 (R22): 실제 차시의 단계 글 넷이 머리 한 줄에 40px 이상, 그림 상자는 칸 폭 전체, 제목 아래를 다 쓴다', { skip }, async () => {
+  const s = await stressSite('steps');
+  const lesson = loadLesson(STRESS_ID);
+  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  try {
+    const at = lesson.slides.findIndex((x) => x.layout === 'steps' && x.steps.map((st) => st.text).join() === DOLMEN_STEPS.join() && x.steps.every((st) => st.media?.startsWith('step'))) + 1;
+    assert.ok(at > 0);
+    await open(page, `${s.url}/${STRESS_ID}/slides/#${at}`);
+    assert.equal(await page.locator(`#s${at} [data-arrange]`).getAttribute('data-arrange'), 'grid');
+    const m = await page.evaluate((no) => {
+      const sl = document.querySelector<HTMLElement>(`#s${no}`)!;
+      const u = sl.getBoundingClientRect().width / 1920;
+      const inner = sl.querySelector<HTMLElement>('.slide-in')!;
+      const pad = Number.parseFloat(getComputedStyle(inner).paddingBottom);
+      const bodyBottom = inner.getBoundingClientRect().bottom - pad;
+      const title = sl.querySelector<HTMLElement>('.sl-title')!;
+      const list = sl.querySelector<HTMLElement>('.sl-steps-list')!;
+      const credit = sl.querySelector<HTMLElement>('.sl-shared-credit');
+      const steps = [...sl.querySelectorAll<HTMLElement>('.sl-step')].map((st) => {
+        const text = st.querySelector<HTMLElement>('.sl-step-text')!;
+        const chip = st.querySelector<HTMLElement>('.sl-chip')!;
+        const range = document.createRange(); range.selectNodeContents(text);
+        const tops = new Set([...range.getClientRects()].filter((r) => r.width > 1).map((r) => Math.round(r.top)));
+        const fig = st.querySelector<HTMLElement>('.media')!; const fr = fig.getBoundingClientRect();
+        const im = fig.querySelector('img')!; const ir = im.getBoundingClientRect();
+        const k = Math.min(ir.width / im.naturalWidth, ir.height / im.naturalHeight);
+        return {
+          lines: tops.size, size: Number.parseFloat(getComputedStyle(text).fontSize) / u, chip: Number.parseFloat(getComputedStyle(chip).fontSize) / u,
+          chipRight: chip.getBoundingClientRect().right, textLeft: text.getBoundingClientRect().left, headBottom: Math.max(chip.getBoundingClientRect().bottom, text.getBoundingClientRect().bottom),
+          figTop: fr.top, figW: fr.width / u, cellW: st.getBoundingClientRect().width / u, drawnW: (im.naturalWidth * k) / u,
+          cx: (ir.left + ir.width / 2 - (fr.left + fr.width / 2)) / u,
+        };
+      });
+      return {
+        steps,
+        titleGap: (list.getBoundingClientRect().top - (title.getBoundingClientRect().bottom + Number.parseFloat(getComputedStyle(title).marginBottom))) / u,
+        bottomGap: (bodyBottom - (credit ?? list).getBoundingClientRect().bottom) / u,
+      };
+    }, at);
+    for (const [i, st] of m.steps.entries()) {
+      assert.equal(st.lines, 1, `${i + 1}단계 글이 ${st.lines}줄입니다`);
+      assert.ok(st.size >= 40 - 0.5, `${i + 1}단계 글 ${st.size.toFixed(1)}px`);
+      assert.ok(Math.abs(st.chip - st.size) < 0.5, '단계 표와 글의 크기가 다릅니다');
+      assert.ok(st.textLeft > st.chipRight, '단계 표와 글이 한 줄에 나란하지 않습니다');
+      assert.ok(st.figTop >= st.headBottom - 1, '그림 상자가 머리 아래에 있지 않습니다');
+      assert.ok(Math.abs(st.figW - st.cellW) < 1 && st.figW >= 500, `그림 상자 폭 ${st.figW.toFixed(0)}px (칸 ${st.cellW.toFixed(0)}px)`);
+      assert.ok(st.drawnW >= 500, `${i + 1}단계 그림 폭 ${st.drawnW.toFixed(0)}px`);
+      assert.ok(Math.abs(st.cx) < 1, '그림이 상자의 가운데에 있지 않습니다');
+    }
+    // 제목 아래 자리를 모두 쓴다: 목록은 제목 바로 아래에서 시작하고, 목록(과 출처 표시)이 본문 자리의 아래 끝까지 닿는다
+    assert.ok(Math.abs(m.titleGap) < 2, `제목과 목록 사이 ${m.titleGap.toFixed(0)}px`);
+    assert.ok(Math.abs(m.bottomGap) < 2, `목록 아래 빈 자리 ${m.bottomGap.toFixed(0)}px`);
+
+    // 꼴이 다른 그림(사진, 정사각형, 넓은 도해, 세로로 긴 도해)도 2 × 2 의 상자 안에 contain 으로 가운데 놓인다
+    const mixed = lesson.slides.findIndex((x) => x.layout === 'steps' && x.steps.some((st) => st.media === 'sample')) + 1;
+    await open(page, `${s.url}/${STRESS_ID}/slides/#${mixed}`);
+    assert.equal(await page.locator(`#s${mixed} [data-arrange]`).getAttribute('data-arrange'), 'grid');
+    assert.deepEqual(await page.evaluate(slideProblems), []);
+    const offs = await page.locator(`#s${mixed} .sl-step > .media img`).evaluateAll((imgs) => imgs.map((i) => {
+      const im = i as HTMLImageElement; const r = im.getBoundingClientRect(); const f = im.closest('.media')!.getBoundingClientRect();
+      return { fit: getComputedStyle(im).objectFit, pos: getComputedStyle(im).objectPosition, dx: Math.abs(r.left + r.width / 2 - (f.left + f.width / 2)) };
+    }));
+    for (const o of offs) { assert.equal(o.fit, 'contain'); assert.equal(o.pos, '50% 50%'); assert.ok(o.dx < 1); }
+  } finally { await page.close(); await s.close(); }
+});
+
+test('견주기 장 (R23): 쪽마다 그림이면 출처 표시와 첫 항목이 같은 높이, 함께 보는 그림 하나는 두 칸 짜임', { skip }, async () => {
+  const s = await stressSite('compare');
+  const lesson = loadLesson(STRESS_ID);
+  try {
+    for (const [w, h] of [[1920, 1080], [1366, 768], [1024, 768]] as const) {
+      const page = await browser.newPage({ viewport: { width: w, height: h } });
+      // 쪽마다 그림 하나 (꼴과 항목 수가 다른 두 쪽, 실제 차시 17번 장과 같은 꼴)
+      const pair = lesson.slides.findIndex((x) => x.layout === 'compare' && x.left.media === 'square' && x.right.media === 'sample') + 1;
+      await open(page, `${s.url}/${STRESS_ID}/slides/#${pair}`);
+      const m = await page.evaluate((no) => {
+        const cards = [...document.querySelectorAll<HTMLElement>(`#s${no} .sl-card`)];
+        return cards.map((c) => ({
+          fig: c.querySelector('.media')!.getBoundingClientRect().height,
+          credit: c.querySelector('.media-credit')!.getBoundingClientRect().top,
+          bullet: c.querySelector('.sl-bullets > li')!.getBoundingClientRect().top,
+        }));
+      }, pair);
+      assert.ok(Math.abs(m[0].fig - m[1].fig) < 1, `${w}×${h}: 그림 상자 높이 ${m[0].fig} / ${m[1].fig}`);
+      assert.ok(Math.abs(m[0].credit - m[1].credit) < 1, `${w}×${h}: 출처 표시 높이 ${m[0].credit} / ${m[1].credit}`);
+      assert.ok(Math.abs(m[0].bullet - m[1].bullet) < 1, `${w}×${h}: 첫 항목 높이 ${m[0].bullet} / ${m[1].bullet}`);
+      assert.deepEqual(await page.evaluate(slideProblems), []);
+      // 함께 보는 그림 하나 (R23a): 왼쪽에 상자 둘을 위아래로, 오른쪽에 그림. R12 의 잣대(sideProblems)를 지킨다
+      const shared = lesson.slides.findIndex((x) => x.layout === 'compare' && !!x.media) + 1;
+      await open(page, `${s.url}/${STRESS_ID}/slides/#${shared}`);
+      const k = await page.evaluate((no) => {
+        const cards = [...document.querySelectorAll<HTMLElement>(`#s${no} .sl-side .sl-card`)].map((c) => c.getBoundingClientRect());
+        const fig = document.querySelector<HTMLElement>(`#s${no} .sl-side > .media`)!.getBoundingClientRect();
+        return { n: cards.length, stacked: cards.length === 2 && cards[1].top >= cards[0].bottom, left: cards.every((c) => c.right < fig.left) };
+      }, shared);
+      assert.deepEqual(k, { n: 2, stacked: true, left: true }, `${w}×${h}`);
+      assert.deepEqual(await page.evaluate(sideProblems), [], `${w}×${h}`);
+      assert.deepEqual(await page.evaluate(slideProblems), [], `${w}×${h}`);
+      await page.close();
+    }
+  } finally { await s.close(); }
+});
+
+test('교사 메모 창은 장을 가리지 않는다 (R24): 장 전체가 메모 창 위에 들어가고, 닫으면 제 크기로 돌아온다', { skip }, async () => {
+  const s = await site('notes', FIXTURES);
+  try {
+    for (const [w, h] of [[1920, 1080], [1366, 768], [1024, 768]] as const) {
+      const page = await browser.newPage({ viewport: { width: w, height: h } });
+      for (const [id, no] of [['5-2/1/05', 3], ['5-2/1/02-03', 2], ['5-2/1/02-03', 6], ['5-2/1/01', 2]] as const) {
+        await open(page, `${s.url}/${id}/slides/#${no}`);
+        const rect = () => page.evaluate(() => { const r = document.querySelector<HTMLElement>('.slide:not([hidden])')!.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; });
+        const full = await rect();
+        await page.keyboard.press('n');
+        assert.equal(await page.locator('.notes').isVisible(), true);
+        const small = await rect();
+        const notesTop = await page.locator('.notes').evaluate((e) => e.getBoundingClientRect().top);
+        assert.ok(small.y >= -0.5 && small.y + small.h <= notesTop + 0.5, `${id} ${no}번 장 ${w}×${h}: 장(${small.y}–${small.y + small.h})이 메모 창(${notesTop})과 겹칩니다`);
+        assert.ok(small.x >= -0.5 && small.x + small.w <= w + 0.5, `${id} ${no}번 장 ${w}×${h}: 장이 화면 밖으로 나갑니다`);
+        assert.ok(Math.abs(small.w / small.h - 16 / 9) < 0.01, '16:9 가 아닙니다');
+        assert.ok(Math.abs(small.x + small.w / 2 - w / 2) < 1, '가운데가 아닙니다');
+        // 줄여 그린 장도 넘치거나 겹치지 않는다
+        assert.deepEqual(await page.evaluate(slideProblems), [], `${id} ${no}번 장 ${w}×${h} (메모 창을 연 채)`);
+        // 메모 창을 연 채로 장을 넘겨도 장은 메모 창 위에 있다
+        await page.keyboard.press('ArrowRight');
+        const next = await rect();
+        assert.ok(next.y + next.h <= notesTop + 0.5);
+        await page.keyboard.press('ArrowLeft');
+        // 화면 가리기는 메모 창까지 모두 가린다
+        await page.keyboard.press('b');
+        assert.deepEqual(await page.locator('.stage-blank').evaluate((e) => { const r = e.getBoundingClientRect(); return [r.top, r.height, Number(getComputedStyle(e).zIndex) > Number(getComputedStyle(document.querySelector('.notes')!).zIndex)]; }), [0, h, true]);
+        await page.keyboard.press('ArrowRight');
+        await page.keyboard.press('n');
+        assert.deepEqual(await rect(), full, `${id} ${no}번 장 ${w}×${h}: 메모 창을 닫아도 제 크기로 돌아오지 않았습니다`);
+      }
+      await page.close();
+    }
+  } finally { await s.close(); }
+});
+
+/** QR 그림(SVG path)을 칸 배열로 되읽는다 (Qr.astro 는 둘레에 네 칸의 여백을 두고 가로로 이은 검은 칸을 그린다) */
+function readQr(d: string, size: number): boolean[][] {
+  const grid = Array.from({ length: size }, () => Array<boolean>(size).fill(false));
+  for (const m of d.matchAll(/M(\d+) (\d+)h(\d+)/g)) {
+    const [x, y, run] = m.slice(1).map(Number);
+    for (let i = 0; i < run; i++) grid[y - 4][x - 4 + i] = true;
+  }
+  return grid;
+}
+
+test('QR 창 (R25): Q 와 단추로 열고, 학생 페이지의 QR 과 주소만 싣고, Esc·Q·바깥 누르기로 닫는다', { skip }, async () => {
+  const s = await site('qr', FIXTURES);
+  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  try {
+    const lesson = loadLesson('5-2/1/02-03');
+    const want = studentPages(lesson);
+    assert.deepEqual(want.map((p) => p.name), ['확인 퀴즈', '웹 활동']);
+    await open(page, `${s.url}/5-2/1/02-03/slides/#2`);
+    const layer = page.locator('.qr-layer');
+    assert.equal(await layer.isVisible(), false);
+    await page.keyboard.press('q');
+    assert.equal(await layer.isVisible(), true);
+    assert.equal(await page.locator('.qr-heading').textContent(), QR_COPY.heading);
+    // 이름, QR, 주소. 주소는 차시 안내 페이지와 같은 absoluteUrl()
+    assert.deepEqual(await page.locator('.qr-name').allTextContents(), want.map((p) => p.name));
+    assert.deepEqual(await page.locator('.qr-addr').allTextContents(), want.map((p) => p.url));
+    const kit = fs.readFileSync(path.join(s.out, '5-2', '1', '02-03', 'index.html'), 'utf8');
+    for (const p of want) assert.ok(kit.includes(p.url), `안내 페이지에 같은 주소가 없습니다: ${p.url}`);
+    // QR 을 칸 배열로 되읽어 그 주소를 담은 QR 과 견준다 (주소를 바꾸면 칸이 달라진다)
+    const paths = await page.locator('.qr-layer .qr-ink').evaluateAll((els) => els.map((e) => e.getAttribute('d')!));
+    assert.equal(paths.length, want.length);
+    want.forEach((p, i) => {
+      const { modules } = QRCode.create(p.url, { errorCorrectionLevel: 'M' });
+      const expect = Array.from({ length: modules.size }, (_, y) => Array.from({ length: modules.size }, (_, x) => !!modules.get(y, x)));
+      assert.deepEqual(readQr(paths[i], modules.size), expect, `${p.name} QR 이 주소와 맞지 않습니다`);
+    });
+    // 교실 뒤에서도 찍히게 크게: 1920 × 1080 에서 한 변 360px 넘게. 장 위에 뜨고, 바깥 주소를 부르지 않는다
+    for (const r of await page.locator('.qr-layer .qr').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().width))) assert.ok(r >= 360, `QR ${r}px`);
+    // 열려 있는 동안 다른 글쇠는 장을 넘기지 않는다
+    await page.keyboard.press('ArrowRight');
+    assert.equal(new URL(page.url()).hash, '#2');
+    await page.keyboard.press('Escape');
+    assert.equal(await layer.isVisible(), false);
+    assert.equal(new URL(page.url()).pathname, '/5-2/1/02-03/slides/', 'Esc 가 차시 안내로 나갔습니다');
+    await page.keyboard.press('q');
+    await page.keyboard.press('q');
+    assert.equal(await layer.isVisible(), false);
+    // 조작 단추로 열고, 창 바깥을 누르면 닫힌다 (장은 넘어가지 않는다)
+    await page.mouse.move(900, 500); await page.mouse.move(960, 540, { steps: 4 });
+    const btn = page.locator('[data-act="qr"]');
+    assert.equal(await btn.locator('span').textContent(), STAGE_COPY.qr);
+    await btn.click();
+    assert.equal(await layer.isVisible(), true);
+    await page.mouse.click(30, 540);
+    assert.equal(await layer.isVisible(), false);
+    assert.equal(new URL(page.url()).hash, '#2');
+    // 닫기 단추
+    await page.keyboard.press('q');
+    await page.locator('.qr-close').click();
+    assert.equal(await layer.isVisible(), false);
+    // 준비된 학생 페이지가 없으면 싣지 않는다 (확인 퀴즈는 형식이 모든 차시에 요구하므로 실제로는 늘 하나 이상이다)
+    const bare = { ...lesson, quiz: { items: [] }, assets: { ...lesson.assets, web_activity: { state: 'planned' } } } as unknown as typeof lesson;
+    assert.deepEqual(studentPages(bare), []);
+  } finally { await page.close(); await s.close(); }
+});
+
+test('정답 표와 머리표 (R27): 정답은 청록 표와 번호를 그대로, 산호색은 정답에 쓰지 않는다. 항목은 번호, 상자 안은 점, 마무리는 확인 표시', { skip }, async () => {
+  const s = await stressSite('marks');
+  const lesson = loadLesson(STRESS_ID);
+  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  try {
+    for (let no = 1; no <= lesson.slides.length; no++) {
+      const sl = lesson.slides[no - 1];
+      await open(page, `${s.url}/${STRESS_ID}/slides/#${no}`);
+      if (sl.layout === 'quiz') await page.keyboard.press('ArrowRight');
+      const r = await page.evaluate((n) => {
+        const root = document.querySelector<HTMLElement>(`#s${n}`)!;
+        const probe = document.createElement('i'); probe.style.color = 'var(--coral)'; document.body.append(probe);
+        const coral = getComputedStyle(probe).color; probe.remove();
+        const teal = (() => { const p = document.createElement('i'); p.style.color = 'var(--teal)'; document.body.append(p); const c = getComputedStyle(p).color; p.remove(); return c; })();
+        const coralIn = (el: Element) => { const cs = getComputedStyle(el); return [cs.color, cs.backgroundColor, cs.borderTopColor].includes(coral); };
+        const answer = root.querySelector('[data-answer]');
+        const tag = answer?.querySelector<HTMLElement>('.sl-correct');
+        const num = answer?.querySelector<HTMLElement>('.sl-num');
+        return {
+          coralOnAnswer: answer ? [answer, ...answer.querySelectorAll('*')].some((e) => coralIn(e)) : false,
+          tag: tag ? { shown: tag.getClientRects().length > 0, color: getComputedStyle(tag).color, border: getComputedStyle(tag).borderTopColor, bg: getComputedStyle(tag).backgroundColor } : null,
+          num: num ? { shown: num.getClientRects().length > 0, bg: getComputedStyle(num).backgroundColor, rowBg: getComputedStyle(answer!).backgroundColor } : null,
+          teal,
+          points: [...root.querySelectorAll('.sl-points .sl-list > li')].map((li) => !!li.querySelector(':scope > .sl-num')),
+          dots: [...root.querySelectorAll('.sl-bullets > li, .sl-materials > li')].map((li) => getComputedStyle(li, '::before').backgroundColor === teal && getComputedStyle(li, '::before').borderRadius === '50%'),
+          checks: [...root.querySelectorAll('.sl-checks > li')].map((li) => getComputedStyle(li, '::before').borderRightColor === teal && getComputedStyle(li, '::before').transform !== 'none'),
+        };
+      }, no);
+      assert.equal(r.coralOnAnswer, false, `${no}번 장: 정답에 산호색이 있습니다`);
+      if (r.tag) {
+        assert.ok(r.tag.shown, `${no}번 장: 정답 표가 보이지 않습니다`);
+        assert.equal(r.tag.color, r.teal); assert.equal(r.tag.border, r.teal);
+      }
+      if (r.num) {
+        assert.ok(r.num.shown, `${no}번 장: 정답 칸의 번호가 없습니다`);
+        assert.notEqual(r.num.bg, r.num.rowBg, `${no}번 장: 정답 칸의 번호 동그라미가 바탕에 묻힙니다`);
+      }
+      if (sl.layout === 'points') assert.deepEqual(r.points, sl.points.map(() => true), `${no}번 장: 항목에 번호가 없습니다`);
+      assert.ok(r.dots.every(Boolean), `${no}번 장: 상자 안 목록의 머리표가 점이 아닙니다`);
+      if (sl.layout === 'compare') assert.equal(r.dots.length, sl.left.points.length + sl.right.points.length);
+      if (sl.layout === 'activity') assert.equal(r.dots.length, sl.materials.length);
+      if (sl.layout === 'closing') { assert.equal(r.checks.length, sl.points.length); assert.ok(r.checks.every(Boolean)); }
+    }
+  } finally { await page.close(); await s.close(); }
 });
 
 test('장 수·표지·교사 메모·조작', { skip }, async () => {
