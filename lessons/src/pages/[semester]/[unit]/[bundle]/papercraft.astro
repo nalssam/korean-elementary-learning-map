@@ -1,0 +1,130 @@
+---
+// 페이퍼크래프트 인쇄 페이지 (docs/CONTRACT.md 7절 '페이퍼크래프트').
+// 앞쪽들: 전개도 모듈(generators/papercraft/modules/<module>.ts)이 그린 190 × 249mm SVG 를 한 쪽에 하나씩 싣는다.
+// 마지막 쪽: 명세의 steps·try_it·reflect 로 만드는 '만드는 법'. 모듈이 완성 모습(preview)을 내놓으면 함께 싣는다.
+// 실제 크기(100%)로 찍혀야 조각이 서로 맞는다. 인쇄 틀(PrintLayout, Sheet)은 그대로 쓴다.
+import PrintLayout from '#src/components/print/PrintLayout.astro';
+import Sheet from '#src/components/print/Sheet.astro';
+import { lessonPaths, loadLesson, printJobs } from '#lib/content.ts';
+
+export function getStaticPaths() { return lessonPaths('papercraft'); }
+
+/** 전개도 모듈의 꼴. sheets 는 계약(7절)이 정한 것이고, preview 는 이 페이지가 더 받는 선택 내보내기다. */
+interface PapercraftModule {
+  sheets(texts: string[]): { title: string; sub: string; svg: string }[];
+  /** 완성 모습 SVG (viewBox 를 가진 그림 하나). 없으면 만드는 법 쪽에 그림을 싣지 않는다. */
+  preview?(): string;
+}
+
+// 모듈은 빌드할 때 한꺼번에 읽어 둔다 (명세가 이름으로 고른다)
+const modules = import.meta.glob<{ default: PapercraftModule }>('/generators/papercraft/modules/*.ts', { eager: true });
+
+const lesson = loadLesson(Astro.props.id);
+const job = printJobs(lesson).find((j) => j.kind === 'papercraft')!;
+const pc = lesson.assets.papercraft;
+if (pc.state !== 'ready') throw new Error(`${lesson.id}: 페이퍼크래프트가 ready 가 아닌데 페이지를 만들려 합니다`);
+const mod = modules[`/generators/papercraft/modules/${pc.module}.ts`]?.default;
+if (!mod) throw new Error(`${lesson.id}: 전개도 모듈 generators/papercraft/modules/${pc.module}.ts 가 없습니다 (assets.papercraft.module 을 확인합니다)`);
+const sheets = mod.sheets(pc.texts);
+if (sheets.length + 1 !== job.pages) {
+  throw new Error(`${lesson.id}: 전개도 ${sheets.length}쪽과 만드는 법 1쪽을 합해 ${sheets.length + 1}쪽인데 명세의 assets.papercraft.pages 는 ${job.pages} 입니다. pages 를 고칩니다 (맞는 값: ${sheets.length + 1})`);
+}
+const preview = mod.preview?.();
+
+// 반·이름 칸: 학생마다 뽑으면 이름, 모둠이나 짝이 함께 쓰면 모둠 이름, 학급에 한 부면 없음
+const name = job.print.per === 'student' ? 'student' : job.print.per === 'class' ? 'none' : 'group';
+const materials = job.print.materials;
+// 생각해 보기의 쓰는 줄 수. 한 쪽(249mm)에 글을 다 싣고도 완성 모습 그림에 45mm 이상이 남는 만큼만 준다 (3줄까지).
+// 글의 높이는 어림이다: 13pt 한 줄 약 6.7mm 에 38자, 12pt 한 줄 약 6.4mm 에 42자. 실제로 넘치면 render-pdf 가 빌드를 멈춘다.
+const rows = (s: string, per: number) => Math.max(1, Math.ceil([...s].length / per));
+const fixed = 10 + 5
+  + 8 + pc.steps.reduce((h, s) => h + rows(s, 38) * 6.7 + 2.2, 0) + 5
+  + (pc.try_it.length ? 8 + pc.try_it.reduce((h, s) => h + rows(s, 42) * 6.4 + 1.5, 0) + 5 : 0)
+  + (pc.reflect.length ? 8 + pc.reflect.reduce((h, s) => h + rows(s, 42) * 6.4 + 3, 0) + 5 : 0)
+  + 12;
+const writeLines = [3, 2, 1].find((n) => 249 - fixed - n * 10 * pc.reflect.length >= 45) ?? 1;
+---
+<PrintLayout lesson={lesson} job={job}>
+  {sheets.map((s, i) => (
+    <Sheet lesson={lesson} job={job} no={i + 1} title={s.title} sub={s.sub} name={name}>
+      <Fragment set:html={s.svg} />
+    </Sheet>
+  ))}
+  <Sheet lesson={lesson} job={job} no={job.pages} title={pc.title} sub="만드는 법" name={name}>
+    <div class="pc-guide">
+      <p class="pc-need">
+        <span class="pc-tag">준비물</span>
+        <span>{[job.print.paper, ...materials].join(', ')}</span>
+      </p>
+
+      <section class="pc-steps" aria-labelledby="pc-steps-title">
+        <h2 id="pc-steps-title">만드는 순서</h2>
+        <ol>{pc.steps.map((step) => <li>{step}</li>)}</ol>
+      </section>
+
+      {preview && (
+        <figure class="pc-preview">
+          <div class="pc-preview-art" set:html={preview} />
+          <figcaption>완성한 모습</figcaption>
+        </figure>
+      )}
+
+      {pc.try_it.length > 0 && (
+        <section class="pc-try" aria-labelledby="pc-try-title">
+          <h2 id="pc-try-title">해 보기</h2>
+          <ul>{pc.try_it.map((t) => <li>{t}</li>)}</ul>
+        </section>
+      )}
+
+      {pc.reflect.length > 0 && (
+        <section class="pc-reflect" aria-labelledby="pc-reflect-title">
+          <h2 id="pc-reflect-title">생각해 보기</h2>
+          <ol class:list={{ 'pc-numbered': pc.reflect.length > 1 }}>
+            {pc.reflect.map((q) => (
+              <li>
+                <p>{q}</p>
+                {Array.from({ length: writeLines }, () => <span class="pc-line" aria-hidden="true"></span>)}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+    </div>
+  </Sheet>
+</PrintLayout>
+
+<style is:global>
+  /* 만드는 법 쪽. 본문(190 × 249mm)을 세로로 나눈다: 글은 제 높이만 쓰고, 완성 모습 그림이 남는 높이를 쓴다.
+     흑백으로 뽑아도 읽히게 색 대신 굵기와 테두리로 나눈다. 지시문 13pt, 본문 12pt 이상, 쓰는 줄 간격 10mm (7절). */
+  .pc-guide { display: flex; flex-direction: column; gap: 5mm; height: 100%; color: var(--ink); }
+  .pc-guide h2 { margin: 0 0 2mm; font-size: 13pt; font-weight: 700; line-height: 1.3; }
+  .pc-guide ol, .pc-guide ul { margin: 0; padding: 0; list-style: none; }
+
+  .pc-need { flex: none; display: flex; align-items: baseline; gap: 3mm; margin: 0; font-size: 12pt; line-height: 1.45; }
+  .pc-tag { flex: none; padding: 0.4mm 2.2mm; border: 0.3mm solid var(--ink); border-radius: 1.2mm; font-size: 11pt; font-weight: 700; }
+
+  .pc-steps { flex: none; }
+  .pc-steps ol { counter-reset: pc-step; display: grid; gap: 2.2mm; }
+  .pc-steps li { counter-increment: pc-step; position: relative; padding-left: 10mm; font-size: 13pt; line-height: 1.45; }
+  .pc-steps li::before {
+    content: counter(pc-step); position: absolute; left: 0; top: 0.2mm;
+    width: 6.6mm; height: 6.6mm; border: 0.35mm solid var(--ink); border-radius: 50%;
+    display: grid; place-items: center; font-size: 11pt; font-weight: 700; line-height: 1;
+  }
+
+  .pc-preview { flex: 1 1 0; min-height: 40mm; max-height: 105mm; display: flex; flex-direction: column; margin: 0; padding: 3mm 4mm 2mm; border: 0.3mm solid var(--rule-soft); border-radius: 2mm; }
+  .pc-preview-art { flex: 1 1 0; min-height: 0; }
+  .pc-preview-art svg { max-height: 100%; }
+  .pc-preview figcaption { flex: none; margin-top: 1.5mm; text-align: center; font-size: 10pt; color: var(--ink-dim); }
+
+  .pc-try, .pc-reflect { flex: none; }
+  .pc-try li { position: relative; padding-left: 5mm; font-size: 12pt; line-height: 1.5; }
+  .pc-try li::before { content: ''; position: absolute; left: 0.6mm; top: 2.6mm; width: 2mm; height: 2mm; border: 0.3mm solid var(--ink); }
+  .pc-try li + li { margin-top: 1.5mm; }
+
+  .pc-reflect ol { counter-reset: pc-q; display: grid; gap: 3mm; }
+  .pc-reflect li { counter-increment: pc-q; }
+  .pc-reflect p { margin: 0; font-size: 12pt; line-height: 1.5; }
+  .pc-reflect .pc-numbered p::before { content: counter(pc-q) '. '; font-weight: 700; }
+  .pc-line { display: block; height: 10mm; border-bottom: 0.3mm solid var(--rule); }
+</style>
