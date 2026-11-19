@@ -40,7 +40,8 @@ body[data-kind='site'] .site-notice { width: 100%; margin-block: var(--s3) var(-
 /* 현재 위치 */
 .crumbs { margin-bottom: var(--s5); font-size: var(--fs-sm); color: var(--gray); }
 .crumbs ol { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s2); }
-.crumbs li + li::before { content: '/'; margin-right: var(--s2); color: var(--gray); }
+/* 가름표는 앞 칸 뒤에 붙인다. 줄이 바뀌어도 새 줄이 '/' 로 시작하지 않는다. */
+.crumbs li:not(:last-child)::after { content: '/'; margin-left: var(--s2); color: var(--gray); }
 .crumbs a { color: var(--gray); }
 .crumbs a:hover { color: var(--navy); }
 
@@ -103,6 +104,7 @@ a.finder-hit:hover { border-color: var(--teal); background: var(--teal-soft); }
 a.finder-hit .finder-what { color: var(--teal); }
 .finder-hit.is-off .finder-what { font-weight: 400; color: var(--gray); }
 .finder-hit-text { display: grid; gap: var(--s1); }
+.finder-hit-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s2); }
 .finder-excerpt { font-size: var(--fs-sm); color: var(--gray); }
 .finder-excerpt mark { background: var(--teal-soft); color: var(--navy); }
 .finder-msg { font-size: var(--fs-sm); color: var(--gray); }
@@ -280,8 +282,36 @@ ol.sources { padding-left: 1.6em; list-style: decimal; }
 .report-way { display: grid; gap: var(--s2); align-content: start; padding: var(--s5); border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
 .report-way h2 { font-size: var(--fs-lg); font-weight: 800; }
 .report-way p:last-child { margin-top: var(--s2); }
+.not-found-links { display: flex; flex-wrap: wrap; gap: var(--s3); margin-top: var(--s5); }
+
+/* ───────────── 손가락으로 누르는 자리 ─────────────
+   휴대폰과 태블릿에서는 링크·단추가 높이 44px 아래로 내려가지 않게 한다 (WCAG 2.5.5).
+   글자 크기와 줄은 그대로 두고 누르는 상자만 키운다: 줄로 늘어선 링크는 inline-flex 와 min-height 로,
+   문장 안에 낀 링크는 위아래 padding 으로 (inline 상자의 padding 은 줄 간격을 바꾸지 않고 누르는 자리만 넓힌다). */
+body[data-kind='site'] { --tap: calc(var(--s6) + var(--s3)); /* 44px */ }
+@media (max-width: 760px), (pointer: coarse) {
+  .site-name, .site-nav a, .crumbs a, .crumbs [aria-current], .action-sub, .mat-links a, .step-uses a, .period-open, .qr-open a,
+  .source-list a, .source-credit a, .site-foot-links a, .pager-link, .lesson-title, .unit-meta a, .finder-hit {
+    display: inline-flex; align-items: center; min-height: var(--tap);
+  }
+  .site-nav a { padding-block: 0; }
+  .site-head .wrap, .crumbs ol, .mat-links, .step-uses, .source-credit, .site-foot-links { row-gap: 0; }
+  .crumbs li { display: inline-flex; align-items: center; }
+  .source-list li { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--s1); }
+  .source-list .fine { margin-left: 0; }
+  .pager-link { display: grid; align-content: center; }
+  .step-uses, .site-foot-links { align-items: center; }
+  /* 문장 안의 링크 */
+  :is(.kit-report, .sec-note, .site-foot, .prose p, .prose li, .finder-hint, .report-lesson) a:not(.btn) { padding-block: calc((var(--tap) - 1em) / 2); }
+  .fold > summary { min-height: var(--tap); }
+}
 
 /* ───────────── 좁은 화면 ───────────── */
+/* 좁은 휴대폰에서는 현재 위치의 단원 이름을 줄여 한 줄에 둔다 (1단원 유적과 … → 1단원) */
+@media (max-width: 479px) {
+  .crumb-rest { display: none; }
+}
+
 @media (max-width: 760px) {
   body[data-kind='site'] > main { padding-block: var(--s5) var(--s6); }
   .page-title { font-size: var(--fs-xl); }

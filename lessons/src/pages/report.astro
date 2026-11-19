@@ -1,17 +1,20 @@
 ---
 // 오류 제보. 양식을 넣지 않는다. 제보 양식(SITE.reportUrl. 비어 있으면 뺀다)과 깃허브 이슈로 가는 링크만 두고, 링크에는 차시 id 만 붙인다 (docs/CONTRACT.md 3절).
 // 차시 안내 페이지의 '오류 제보'는 /report/?id=5-2/1/01 로 온다. 정적 페이지라서 id 는 브라우저에서 읽어 링크에 붙인다.
-import { bundleOf, lessonsLabel, semesterLabel, visibleLessons } from '#lib/content.ts';
+import { absoluteUrl, bundleOf, lessonRoute, lessonsLabel, semesterLabel, visibleLessons } from '#lib/content.ts';
 import { SITE } from '#lib/site.ts';
 import SiteLayout from '#src/layouts/SiteLayout.astro';
 import { href } from '#src/lib/url.ts';
 
-// 이번 빌드에 실린 차시의 id 와 이름. 실리지 않은 차시의 id 는 받지 않는다.
+// 이번 빌드에 실린 차시의 id 와 이름, 안내 페이지 주소. 실리지 않은 차시의 id 는 받지 않는다.
 const lessons = Object.fromEntries(visibleLessons().map((l) => {
   const ref = bundleOf(l);
-  return [l.id, `${semesterLabel(ref.semester.id)} ${ref.unit.no}단원 ${lessonsLabel(ref.lessons)} · ${l.title}`];
+  return [l.id, { label: `${semesterLabel(ref.semester.id)} ${ref.unit.no}단원 ${lessonsLabel(ref.lessons)} · ${l.title}`, url: absoluteUrl(lessonRoute(l.id)) }];
 }));
-const issue = `${SITE.repo}/issues/new`;
+// 깃허브 이슈는 저장소의 이슈 양식(.github/ISSUE_TEMPLATE)으로 바로 연다. 빈 이슈로 열면 양식의 안내(개인 정보를 적지 말 것)를 건너뛴다.
+const issue = `${SITE.repo}/issues/new?template=lessons-error.yml`;
+const copyright = `${SITE.repo}/issues/new?template=lessons-copyright.yml`;
+const privacy = '쓴 글과 붙인 그림은 누구나 볼 수 있습니다. 아이 이름·얼굴이 나온 사진, 학교 이름, 연락처는 올리지 마세요.';
 ---
 <SiteLayout title="오류 제보" current="report" crumbs={[{ label: '처음', href: href('/') }, { label: '오류 제보' }]}>
   <article class="prose">
@@ -30,7 +33,8 @@ const issue = `${SITE.repo}/issues/new`;
         )}
         <section class="report-way">
           <h2>깃허브 이슈</h2>
-          <p>깃허브 계정이 있어야 합니다. 쓴 글은 누구나 볼 수 있습니다.</p>
+          <p>깃허브 계정이 있어야 합니다.</p>
+          <p>{privacy}</p>
           <p><a class:list={['btn', !SITE.reportUrl && 'btn-primary']} href={issue} data-report-issue>깃허브 이슈 쓰기</a></p>
         </section>
       </div>
@@ -42,10 +46,9 @@ const issue = `${SITE.repo}/issues/new`;
       <li>어디인지. 수업 화면 몇 번 장, 학습지 몇 쪽, 확인 퀴즈 몇 번 문항처럼 적습니다.</li>
       <li>무엇이 틀렸는지. 맞는 내용을 확인할 수 있는 공개 자료가 있으면 주소를 함께 적습니다.</li>
     </ul>
-    <p>이름, 학교, 연락처는 적지 않아도 됩니다.</p>
 
     <h2>사진과 그림의 권리</h2>
-    <p>사진이나 그림의 권리에 문제가 있으면 같은 곳으로 알려 주세요. 어느 차시의 어느 그림인지 적으면 됩니다.</p>
+    <p>사진이나 그림의 권리에 문제가 있으면 <a href={copyright} data-report-copyright>저작권 신고 양식</a>으로 알려 주세요. 어느 차시의 어느 그림인지 적으면 됩니다. 신고를 받으면 그 자료를 먼저 사이트에서 내리고 확인합니다.</p>
 
     <h2>고친 뒤에는</h2>
     <p>공개한 차시의 사실을 고치면 그 차시 안내 페이지의 '공개한 뒤 고친 내용'에 날짜와 함께 남깁니다.</p>
@@ -53,15 +56,18 @@ const issue = `${SITE.repo}/issues/new`;
   <script>
     class ReportLinks extends HTMLElement {
       connectedCallback() {
-        const lessons = JSON.parse(this.dataset.lessons ?? '{}') as Record<string, string>;
+        const lessons = JSON.parse(this.dataset.lessons ?? '{}') as Record<string, { label: string; url: string }>;
         const id = new URLSearchParams(location.search).get('id') ?? '';
         // 이번 빌드에 실린 차시의 id 만 받는다. 그 밖의 글은 링크에 붙이지 않는다.
         if (!Object.hasOwn(lessons, id)) return;
         const note = this.querySelector<HTMLElement>('[data-report-lesson]');
-        if (note) { note.textContent = `제보할 차시: ${lessons[id]}`; note.hidden = false; }
-        // 깃허브 이슈: 제목 첫머리에 차시 id 를 넣어 둔다
+        if (note) { note.textContent = `제보할 차시: ${lessons[id].label}`; note.hidden = false; }
+        // 깃허브 이슈 양식: '어느 차시' 칸(id: lesson)에 차시 id 를 채워 둔다
         const issue = this.querySelector<HTMLAnchorElement>('[data-report-issue]');
-        if (issue) { const url = new URL(issue.href); url.searchParams.set('title', `[${id}] `); issue.href = url.href; }
+        if (issue) { const url = new URL(issue.href); url.searchParams.set('lesson', id); issue.href = url.href; }
+        // 저작권 신고 양식: '문제가 된 자료의 주소' 칸(id: url)에 차시 안내 페이지 주소를 채워 둔다
+        const copyright = document.querySelector<HTMLAnchorElement>('[data-report-copyright]');
+        if (copyright) { const url = new URL(copyright.href); url.searchParams.set('url', lessons[id].url); copyright.href = url.href; }
         // 제보 양식: 주소에 차시 id 를 붙여 넘긴다
         const form = this.querySelector<HTMLAnchorElement>('[data-report-form]');
         if (form) { const url = new URL(form.href); url.searchParams.set('lesson', id); form.href = url.href; }

@@ -28,7 +28,7 @@ before(() => {
 
 test('미리 보기: 사이트 화면이 모두 만들어진다', () => {
   const pages = htmlFiles(drafts).sort();
-  for (const p of ['index.html', '5-2/index.html', '5-2/1/index.html', '5-2/2/index.html', 'about/index.html', 'licence/index.html', 'report/index.html',
+  for (const p of ['index.html', '404.html', '5-2/index.html', '5-2/1/index.html', '5-2/2/index.html', 'about/index.html', 'licence/index.html', 'report/index.html',
     '5-2/1/01/index.html', '5-2/1/02-03/index.html', '5-2/1/04/index.html', '5-2/1/05/index.html']) assert.ok(pages.includes(p), `${p} 가 없습니다`);
   // 차시표만 있고 명세가 없는 묶음과 차시표가 없는 학기에는 페이지가 없다
   assert.ok(!pages.includes('5-2/2/01/index.html'));
@@ -84,8 +84,30 @@ test('차시 안내 페이지: 차례와 쉬는 시간, 띄우기 링크', () =>
       // 초안 표시
       assert.match(html, /<body data-kind="site" data-draft="true">/);
       assert.ok(html.includes(`<p class="site-flag">`) && html.includes(SITE.draftNotice));
-      // 큰 버튼: 페이퍼크래프트가 ready 가 아니면 '만들기 인쇄'가 없다
-      assert.equal(html.includes('만들기 인쇄'), lesson.assets.papercraft.state === 'ready', lesson.id);
+      // 큰 버튼: 페이퍼크래프트가 ready 인 묶음에만 '페이퍼크래프트 인쇄'가 붙는다. 만들기 세트와 헷갈리는 '만들기 인쇄'는 쓰지 않는다 (6절).
+      const papercraft = lesson.assets.papercraft.state === 'ready';
+      assert.equal(/<a class="btn btn-big" href="[^"]*\/papercraft\/">페이퍼크래프트 인쇄<\/a>/.test(html), papercraft, lesson.id);
+      assert.ok(!html.includes('만들기 인쇄'), lesson.id);
+      // 페이퍼크래프트의 인쇄물 줄(준비물이나 '더 해 볼 자료')과 PDF 링크
+      const job = c.printJobs(lesson).find((j) => j.kind === 'papercraft');
+      assert.equal(Boolean(job), papercraft, lesson.id);
+      if (job && lesson.assets.papercraft.state === 'ready') {
+        assert.ok(html.includes(`<span class="mat-kind">${job.label}</span>`) && html.includes(`<span class="mat-title">${esc(lesson.assets.papercraft.title)}</span>`), `${lesson.id} 페이퍼크래프트 줄`);
+        assert.ok(html.includes(`href="${job.route}"`) && html.includes(`href="${job.file}"`), `${lesson.id} 페이퍼크래프트 링크`);
+      }
+      // 쪽수는 어느 교과서의 것인지 밝힌다 (차시표의 textbook)
+      const tb = c.loadRegistry().textbook;
+      assert.ok(html.includes(`${tb.publisher}(${tb.author}) 교과서 ${c.pagesLabel(c.bundleOf(lesson).pages)}`), `${lesson.id} 교과서 이름`);
+      // 현재 위치의 단원 이름은 좁은 화면에서 감추는 뒷부분으로 따로 싼다
+      assert.ok(html.includes(`<span class="crumb-rest"> ${esc(c.bundleOf(lesson).unit.title)}</span>`), `${lesson.id} 현재 위치`);
+      // 웹 활동은 확인 퀴즈 곁의 카드에 한 번만 나온다. 제목(h3)에는 이름표가 끼지 않는다.
+      if (lesson.assets.web_activity.state === 'ready') {
+        assert.match(html, /<h3 class="qr-title">웹 활동<\/h3>/);
+        assert.ok(!html.includes('QR 코드 보기'), lesson.id);
+      }
+      // 검색 색인: 시간표·분·장 번호는 빼고, 초안 표시를 메타로 싣는다
+      assert.match(html, /<ol class="timebar" aria-hidden="true" data-pagefind-ignore>/);
+      assert.ok(html.includes('data-pagefind-meta="draft:검수 전 초안"'), lesson.id);
       assert.ok(html.includes(`href="/${lesson.id}/slides/"`) && html.includes(`href="/${lesson.id}/worksheet/"`));
       // 차시마다 시간표, 그 사이에 쉬는 시간
       const flows = c.flowByLesson(lesson);
@@ -122,12 +144,32 @@ test('외부 주소를 부르지 않는다 (script·link·img)', () => {
 test('이용 조건·소개·오류 제보', () => {
   const licence = read(drafts, 'licence/index.html');
   assert.ok(licence.includes(SITE.licence.name) && licence.includes(SITE.licenceNote) && licence.includes('MIT'));
-  assert.ok(read(drafts, 'about/index.html').includes(SITE.author));
+  // 남의 그림은 CC BY-NC-SA 에 들지 않는다. 이 사이트가 쓰는 조건에는 '변경 금지'가 없다 (5절).
+  assert.ok(licence.includes(`${SITE.licence.name} 에 들지 않고`));
+  assert.ok(!licence.includes('변경을 금지한'));
+  assert.ok(licence.includes('legalcode.ko') && licence.includes('Pagefind(MIT)'));
+  assert.ok(licence.includes(`href="${SITE.repo}/blob/main/lessons/LICENSE"`));
+  const about = read(drafts, 'about/index.html');
+  assert.ok(about.includes(SITE.author));
+  assert.ok(about.includes('사실마다 두 확인자가 출처와 맞는지 따로 봅니다. 확인자는 AI일 수도 있고'));
+  assert.ok(about.includes('시험용 출판사와 관계없이 만든 것이며, 시험용 출판사나 교과서 집필진이 만들거나 보증한 자료가 아닙니다.'));
   const report = read(drafts, 'report/index.html');
-  // 양식을 넣지 않는다. 깃허브 이슈 링크만 (제보 양식 주소는 비어 있으면 뺀다)
+  // 양식을 넣지 않는다. 깃허브 이슈 양식으로 가는 링크만 (제보 양식 주소는 비어 있으면 뺀다)
   assert.ok(!/<form\b/.test(report.replace(/<form class="(finder|search)-form"/g, '')));
-  assert.ok(report.includes(`href="${SITE.repo}/issues/new"`));
+  assert.ok(report.includes(`href="${SITE.repo}/issues/new?template=lessons-error.yml"`));
+  assert.ok(report.includes(`href="${SITE.repo}/issues/new?template=lessons-copyright.yml"`));
+  assert.ok(report.includes('아이 이름·얼굴이 나온 사진, 학교 이름, 연락처는 올리지 마세요.'));
   assert.equal(/<a [^>]*data-report-form/.test(report), SITE.reportUrl !== '');
+});
+
+test('404: 첫 화면과 오류 제보로 가는 링크, 검색 색인에서 빠진다', () => {
+  const html = read(drafts, '404.html');
+  assert.ok(html.includes('<title>찾는 페이지가 없습니다'));
+  assert.ok(html.includes('주소가 바뀌었거나 아직 공개하지 않은 차시입니다.'));
+  assert.ok(html.includes('href="/"') && html.includes('href="/report/"'));
+  assert.ok(!html.includes('data-pagefind-body'));
+  // 다른 사이트 화면은 색인에 들어간다
+  assert.ok(read(drafts, 'about/index.html').includes('data-pagefind-body'));
 });
 
 test('sync-media: 이번 빌드에 실리는 차시의 명세에 적힌 그림만 복사한다', () => {
@@ -175,6 +217,8 @@ test('공개 빌드: 공개된 묶음만 링크하고, 초안 표시가 없다',
     assert.ok(sem.includes('10~15쪽'));
     const kit = read(out, '5-2/1/01/index.html');
     assert.ok(!kit.includes('data-draft') && !kit.includes('class="site-flag"'));
+    // 공개한 차시는 검색 결과에 초안 표시가 붙지 않는다
+    assert.ok(!kit.includes('data-pagefind-meta="draft:'));
     assert.ok(kit.includes('https://example.org/korean-elementary/5-2/1/01/quiz/'));
     assert.ok(!kit.includes('localhost'));
     // 승인한 날을 보여 준다

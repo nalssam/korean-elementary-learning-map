@@ -34,16 +34,29 @@ export interface FinderQuery {
   by: 'page' | 'lesson' | 'either';
 }
 
-/** 적은 글에서 찾을 숫자를 읽는다. "34", "34쪽", "5차시", "2단원 5차시". 숫자가 없으면 undefined. */
+/** 첫 화면의 두 찾기(쪽수·차시로 찾기, 낱말로 찾기)가 서로에게 '내가 결과를 띄웠다'고 알리는 이벤트 이름. detail 은 보낸 쪽('finder' 또는 'search')이다. */
+export const FIND_EVENT = 'site-find';
+
+/** 적은 글을 읽지 못했을 때의 한 줄. 찾기 단추를 눌렀을 때 보여 준다. */
+export const QUERY_HELP = '쪽수나 차시 번호를 숫자 하나로 넣어 주세요. 예: 34, 34쪽, 5차시';
+
+// 받는 꼴: [N단원] [p.]숫자 [쪽|p|차시]. 숫자는 하나만 받는다.
+// "-1", "1.5", "6-9" 처럼 숫자가 둘이거나 부호가 붙은 글은 어느 쪽을 찾을지 모르므로 받지 않는다 (예전에는 첫 숫자만 읽어 1 이나 6 을 찾았다).
+const QUERY = /^(?:(\d{1,2})\s*단원\s*)?(?:(p)\.?\s*)?(\d{1,3})\s*(쪽|차시|p)?$/i;
+
+/**
+ * 적은 글에서 찾을 숫자를 읽는다. "34", "34쪽", "p.34", "5차시", "2단원 5차시", "2단원 1".
+ * 전각 숫자(７)와 전각 글자는 NFKC 로 바꾸어 읽는다. 꼴에 맞지 않거나 0 이면 undefined.
+ */
 export function parseQuery(text: string): FinderQuery | undefined {
-  const t = text.trim();
-  const unit = /(\d{1,2})\s*단원/.exec(t);
-  // 단원 번호를 뺀 나머지에서 첫 숫자를 읽는다
-  const rest = unit ? t.replace(unit[0], ' ') : t;
-  const m = /\d{1,3}/.exec(rest);
+  const m = QUERY.exec(text.normalize('NFKC').trim());
   if (!m) return undefined;
-  const by = /차시/.test(rest) ? 'lesson' : /쪽|p/i.test(rest) ? 'page' : unit ? 'lesson' : 'either';
-  return { n: Number(m[0]), by, ...(unit ? { unit: Number(unit[1]) } : {}) };
+  const [, unitText, pagePrefix, num, suffix] = m;
+  const n = Number(num);
+  if (n < 1) return undefined;
+  const unit = unitText === undefined ? undefined : Number(unitText);
+  const by = suffix === '차시' ? 'lesson' : suffix || pagePrefix ? 'page' : unit !== undefined ? 'lesson' : 'either';
+  return { n, by, ...(unit !== undefined ? { unit } : {}) };
 }
 
 export interface FinderHits {

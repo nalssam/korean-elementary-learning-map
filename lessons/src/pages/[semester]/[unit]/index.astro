@@ -5,7 +5,7 @@ import SiteLayout from '#src/layouts/SiteLayout.astro';
 import { href } from '#src/lib/url.ts';
 import LessonList from '#src/components/site/LessonList.astro';
 import PrintRowItem from '#src/components/site/PrintRowItem.astro';
-import { allRows, printRows, progressLabel, progressOf } from '#src/components/site/data.ts';
+import { allRows, printRows, progressLabel, progressOf, textbookLabel } from '#src/components/site/data.ts';
 import { standardCode } from '#src/components/site/format.ts';
 
 export function getStaticPaths() {
@@ -38,8 +38,8 @@ const nextUnit = units.find((u) => u.no === unit.no + 1);
   <header class="page-head">
     <p class="eyebrow">{semester} · {unit.no}단원</p>
     <h1 class="page-title">{unit.title}</h1>
-    <p class="page-meta">
-      <span>교과서 {pagesLabel(unitPages(unit))}</span>
+    <p class="page-meta" data-pagefind-ignore>
+      <span>{textbookLabel()} {pagesLabel(unitPages(unit))}</span>
       <span>{lessonCount}차시</span>
       <span>{progressLabel(progress)}</span>
       {progress.drafts > 0 && <span class="chip chip-plain">초안 {progress.drafts}차시</span>}

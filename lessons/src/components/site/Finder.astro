@@ -40,7 +40,7 @@ const data = finderData(semester);
 )}
 
 <script>
-  import { emptyMessage, findBundles, parseQuery } from './finder.ts';
+  import { FIND_EVENT, QUERY_HELP, emptyMessage, findBundles, parseQuery } from './finder.ts';
   import type { FinderBundle, FinderSemester } from './finder.ts';
 
   // 명세의 글(차시 이름)은 글자로만 넣는다. innerHTML 을 쓰지 않는다.
@@ -78,9 +78,13 @@ const data = finderData(semester);
         return section;
       };
 
+      // 낱말로 찾기를 쓰면 이쪽 결과를 지운다. 두 결과가 한 화면에 겹쳐 서지 않게 한다.
+      document.addEventListener(FIND_EVENT, (e) => { if ((e as CustomEvent<string>).detail !== 'finder') results.replaceChildren(); });
+
       /** 결과를 그리고, 찾은 묶음을 돌려준다 */
       const show = (): FinderBundle[] => {
         results.replaceChildren();
+        if (input.value.trim()) document.dispatchEvent(new CustomEvent(FIND_EVENT, { detail: 'finder' }));
         const q = parseQuery(input.value);
         if (!q) return [];
         const semester = current();
@@ -102,7 +106,7 @@ const data = finderData(semester);
         // 찾은 묶음이 하나뿐이고 열 수 있으면 바로 간다. 여럿이면 목록에서 고른다 (12 는 12쪽일 수도 12차시일 수도 있다).
         if (found.length === 1 && found[0].href) location.href = found[0].href;
         else if (!parseQuery(input.value)) {
-          results.replaceChildren(el('p', 'finder-msg', '쪽수나 차시 번호를 숫자로 넣어 주세요.'));
+          results.replaceChildren(el('p', 'finder-msg', QUERY_HELP));
           input.focus();
         }
       });

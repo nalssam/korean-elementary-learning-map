@@ -37,7 +37,8 @@ const webAside = web && !usedInFlow(lesson).has('web_activity');
       <article class="qr-card">
         <Qr url={absoluteUrl(playRoute)} label={`${ASSET_LABEL.web_activity} QR 코드`} />
         <div class="qr-text">
-          <h3 class="qr-title">{ASSET_LABEL.web_activity}{webAside && <span class="chip chip-plain">더 해 볼 자료</span>}</h3>
+          <h3 class="qr-title">{ASSET_LABEL.web_activity}</h3>
+          {webAside && <p class="qr-tag" data-pagefind-ignore><span class="chip chip-plain">더 해 볼 자료</span></p>}
           <p class="qr-desc">{web.title}</p>
           <p class="qr-url" data-pagefind-ignore>{absoluteUrl(playRoute)}</p>
           <p class="qr-open" data-pagefind-ignore><a href={href(playRoute)}>{ASSET_LABEL.web_activity} 열기</a></p>

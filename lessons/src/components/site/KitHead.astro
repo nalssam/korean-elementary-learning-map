@@ -1,9 +1,10 @@
 ---
 // 차시 안내 페이지의 머리: 차시·쪽수, 차시 이름과 소개, 검수 상태, 목표, 성취기준, 다룰 때 살필 것.
 // 차시 번호·쪽수·성취기준은 명세가 아니라 차시표에서 온다 (bundleOf, standardsOf).
-import { bundleOf, lessonsLabel, pagesLabel, reviewedOn, scored, semesterLabel, standardsOf } from '#lib/content.ts';
+import { bundleOf, isPublic, lessonsLabel, pagesLabel, reviewedOn, scored, semesterLabel, standardsOf } from '#lib/content.ts';
 import { REVIEW_LABEL, ROLE_LABEL } from '#lib/site.ts';
 import type { Lesson } from '#schema/lesson.ts';
+import { textbookLabel } from './data.ts';
 import { koDate, standardCode } from './format.ts';
 
 interface Props { lesson: Lesson }
@@ -14,14 +15,17 @@ const standards = standardsOf(lesson.id);
 // 묶음에 성취기준을 따로 적지 않았으면 단원의 성취기준이 그대로 나온다. 그때는 단원의 것이라고 밝힌다.
 const ownStandards = ref.bundle.standards.length > 0;
 const reviewed = reviewedOn(lesson);
-const where = [lessonsLabel(ref.lessons), `교과서 ${pagesLabel(ref.pages)}`, ...(role ? [role] : [])];
+// 쪽수는 출판사마다 다르므로 어느 교과서의 쪽수인지 함께 적는다 (registry 의 textbook)
+const where = [lessonsLabel(ref.lessons), `${textbookLabel()} ${pagesLabel(ref.pages)}`, ...(role ? [role] : [])];
 const level = lesson.sensitivity.level;
+// 검색: 차시 이름과 소개·목표에 무게를 더 주고, 검수 전 초안이면 결과에 표시가 붙도록 draft 를 메타로 싣는다 (Search.astro).
+// 공개 빌드에는 초안이 실리지 않으므로 이 메타는 미리 보기에서만 쓰인다.
 ---
-<header class="kit-head">
+<header class="kit-head" data-pagefind-meta={isPublic(lesson) ? undefined : 'draft:검수 전 초안'}>
   <p class="eyebrow" data-pagefind-meta={`where:${semesterLabel(ref.semester.id)} ${ref.unit.no}단원 ${lessonsLabel(ref.lessons)} · ${pagesLabel(ref.pages)}`}>{where.join(' · ')}</p>
-  <h1 class="page-title">{lesson.title}</h1>
-  <p class="lead">{lesson.tagline}</p>
-  <p class="kit-state">
+  <h1 class="page-title" data-pagefind-weight="10">{lesson.title}</h1>
+  <p class="lead" data-pagefind-weight="5">{lesson.tagline}</p>
+  <p class="kit-state" data-pagefind-ignore>
     {reviewed
       ? <span class="chip">{REVIEW_LABEL.owner} <time datetime={reviewed}>{koDate(reviewed)}</time></span>
       : <span class="chip chip-plain">검수 전 초안</span>}
@@ -31,7 +35,7 @@ const level = lesson.sensitivity.level;
   <div class="kit-facts">
     <section aria-labelledby="goal-title">
       <h2 class="facts-title" id="goal-title">목표</h2>
-      <ul class="dots">{lesson.objectives.map((o) => <li>{o}</li>)}</ul>
+      <ul class="dots" data-pagefind-weight="5">{lesson.objectives.map((o) => <li>{o}</li>)}</ul>
     </section>
     <section aria-labelledby="standards-title">
       <h2 class="facts-title" id="standards-title">{ownStandards ? '성취기준' : '단원의 성취기준'}</h2>

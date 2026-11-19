@@ -24,7 +24,7 @@ const { prev, next } = neighbours(lesson.id);
 const crumbs = [
   { label: '처음', href: href('/') },
   { label: semester, href: href(`/${ref.semester.id}/`) },
-  { label: `${ref.unit.no}단원 ${ref.unit.title}`, href: href(`/${ref.semester.id}/${ref.unit.no}/`) },
+  { label: `${ref.unit.no}단원`, rest: ref.unit.title, href: href(`/${ref.semester.id}/${ref.unit.no}/`) },
   { label: lessonsLabel(ref.lessons) },
 ];
 ---
