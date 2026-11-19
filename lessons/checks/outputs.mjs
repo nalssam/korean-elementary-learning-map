@@ -17,6 +17,7 @@ import http from 'node:http';
 import path from 'node:path';
 import * as c from '#lib/content.ts';
 import { SITE } from '#lib/site.ts';
+import { CREDIT_COPY } from '#src/components/slides/copy.ts';
 import { UsageError, parseArgs, rel } from './lib.mjs';
 import { fileImageSize, readPdf, readPptx, squash } from './files.mjs';
 
@@ -128,7 +129,11 @@ async function checkLesson(dist, lesson, report, publicBuild) {
   if (buf.length > LIMIT.pptx) report.fail(where, `파일이 ${(buf.length / MB).toFixed(1)}MB 입니다 (${LIMIT.pptx / MB}MB 까지). 그림을 줄입니다`);
   let deck;
   try { deck = readPptx(buf); } catch (e) { report.fail(where, `PPTX 를 읽을 수 없습니다 (${e.message})`); return; }
-  if (deck.slides !== lesson.slides.length) report.fail(where, `${deck.slides}장입니다. 명세의 수업 화면은 ${lesson.slides.length}장입니다 (8절: 명세의 한 장이 PPTX 한 장)`);
+  // 명세의 한 장이 PPTX 한 장이고, 그 뒤에 그림 출처 장(8절의 '마지막 장')이 붙는다. 출처가 길면 슬라이드 담당의 생성기가 여러 장으로 나눈다.
+  const n = lesson.slides.length;
+  const extra = deck.slideTexts.slice(n);
+  if (deck.slides <= n) report.fail(where, `${deck.slides}장입니다. 명세의 수업 화면 ${n}장 뒤에 그림 출처 장이 있어야 합니다 (8절: 명세의 한 장이 PPTX 한 장, 마지막 장은 그림 출처)`);
+  else if (extra.some((t) => !t.startsWith(CREDIT_COPY.heading))) report.fail(where, `${deck.slides}장입니다. 명세의 수업 화면은 ${n}장이고, 그 뒤의 ${extra.length}장이 모두 그림 출처 장이어야 합니다 (8절: 명세의 한 장이 PPTX 한 장)`);
   if (publicBuild && LOCAL_HOST.test(deck.xml)) report.fail(where, 'PPTX 에 localhost·127.0.0.1 주소가 있습니다. 주소는 absoluteUrl() 로 만듭니다');
   const text = squash(deck.text);
   if (draft && text.includes(squash(SITE.aiNotice))) report.fail(where, `초안의 PPTX 에 "${SITE.aiNotice}" 가 있습니다. 표지에는 footerNotice(lesson) 을 찍습니다`);

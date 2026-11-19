@@ -62,7 +62,7 @@ export function pngHeader(w: number, h: number): Buffer {
 }
 
 /** 그림 하나가 든 PPTX 한 장 (python-pptx 가 쓰는 꼴을 줄인 것) */
-export function pptxWith(pictures: { cx: number; cy: number; image: Buffer; crop?: string }[], text = '표지', slides = 1): Buffer {
+export function pptxWith(pictures: { cx: number; cy: number; image: Buffer; crop?: string }[], text = '표지', slides = 1, credits = 0): Buffer {
   const pics = pictures.map((p, i) => `<p:pic><p:nvPicPr><p:cNvPr id="${i + 2}" name="그림 ${i + 1}"/></p:nvPicPr><p:blipFill><a:blip r:embed="rId${i + 2}"/>${p.crop ?? ''}<a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${p.cx}" cy="${p.cy}"/></a:xfrm></p:spPr></p:pic>`).join('');
   const rels = pictures.map((_, i) => `<Relationship Id="rId${i + 2}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image${i + 1}.png"/>`).join('');
   const files: Record<string, string | Buffer> = {
@@ -72,5 +72,7 @@ export function pptxWith(pictures: { cx: number; cy: number; image: Buffer; crop
   };
   pictures.forEach((p, i) => { files[`ppt/media/image${i + 1}.png`] = p.image; });
   for (let n = 2; n <= slides; n++) files[`ppt/slides/slide${n}.xml`] = `<?xml version="1.0"?><p:sld><p:cSld><p:spTree><p:sp><p:txBody><a:p><a:r><a:t>${n}번 장</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:sld>`;
+  // 명세의 장 뒤에 붙는 그림 출처 장 (8절의 마지막 장)
+  for (let n = 1; n <= credits; n++) files[`ppt/slides/slide${slides + n}.xml`] = `<?xml version="1.0"?><p:sld><p:cSld><p:spTree><p:sp><p:txBody><a:p><a:r><a:t>그림 출처</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:sld>`;
   return writeZip(files);
 }

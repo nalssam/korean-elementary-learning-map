@@ -42,7 +42,7 @@ test('PPTX 를 읽어 장 수, 글, 그림의 표시 크기와 자르기 값을 
   assert.deepEqual(imageSize(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190 249"></svg>'), 'a.svg'), { w: 190, h: 249 });
 });
 
-/** printJobs() 의 쪽수와 방향대로 PDF 를 찍고(바닥글은 sheetFooter()), 수업 화면 장 수만큼의 PPTX 를 만든다 */
+/** printJobs() 의 쪽수와 방향대로 PDF 를 찍고(바닥글은 sheetFooter()), 수업 화면 장 수에 그림 출처 한 장을 더한 PPTX 를 만든다 */
 async function fillFiles(out: string, page: import('playwright').Page) {
   for (const lesson of c.visibleLessons()) {
     for (const job of c.printJobs(lesson)) {
@@ -53,7 +53,7 @@ async function fillFiles(out: string, page: import('playwright').Page) {
       fs.writeFileSync(file, await page.pdf({ preferCSSPageSize: true, printBackground: true }));
     }
     const pics = c.shownMedia(lesson, 'slides').map(() => ({ cx: 1600, cy: 900, image: pngHeader(1600, 900) }));
-    fs.writeFileSync(path.join(out, c.pptxFile(lesson).file), pptxWith(pics, c.footerNotice(lesson), lesson.slides.length));
+    fs.writeFileSync(path.join(out, c.pptxFile(lesson).file), pptxWith(pics, c.footerNotice(lesson), lesson.slides.length, 1));
   }
 }
 
@@ -89,7 +89,7 @@ test('미리 보기 빌드: 멀쩡한 산출물은 통과하고, 틀린 쪽수·
     const index = path.join(OUT, '5-2', '1', '01', 'index.html');
     const focus = c.findBundle('5-2/1/01')!.bundle.focus;
     fs.writeFileSync(index, fs.readFileSync(index, 'utf8').replace('</main>', `<p>${focus}</p><img src="/media/5-2/1/01/stone.svg" alt="" style="object-fit:cover;width:10px;height:50px"><script src="https://cdn.example/x.js"></script></main>`));
-    fs.writeFileSync(path.join(OUT, c.pptxFile(lesson).file), pptxWith([{ cx: 1600, cy: 1600, image: pngHeader(1600, 900) }], SITE.aiNotice, lesson.slides.length));
+    fs.writeFileSync(path.join(OUT, c.pptxFile(lesson).file), pptxWith([{ cx: 1600, cy: 1600, image: pngHeader(1600, 900) }], SITE.aiNotice, lesson.slides.length, 1));
     fs.rmSync(path.join(OUT, c.pptxFile(c.loadLesson('5-2/1/04')).file));
     r = outputs();
     assert.equal(r.code, 1);

@@ -86,8 +86,10 @@ export function readPptx(buf) {
     xml.push(s);
     if (/^ppt\/(slides|notesSlides)\/[^/]+\.xml$/.test(name)) for (const m of s.matchAll(/<a:t>([^<]*)<\/a:t>/g)) text.push(unxml(m[1]));
   }
+  const slideTexts = [];
   slideNames.forEach((name, i) => {
     const s = zip.get(name)().toString('utf8');
+    slideTexts.push([...s.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map((m) => unxml(m[1])).join(''));
     const relsName = name.replace('slides/', 'slides/_rels/') + '.rels';
     const rels = new Map();
     if (zip.has(relsName)) for (const m of zip.get(relsName)().toString('utf8').matchAll(/<Relationship\b[^>]*>/g)) {
@@ -110,7 +112,7 @@ export function readPptx(buf) {
       });
     }
   });
-  return { text: text.join(''), xml: xml.join('\n'), pictures, slides: slideNames.length };
+  return { text: text.join(''), xml: xml.join('\n'), pictures, slides: slideNames.length, slideTexts };
 }
 
 // ───────────── PDF ─────────────

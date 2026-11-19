@@ -42,8 +42,7 @@ const k = STAGE_COPY.keys;
       <p class="notes-hint" hidden>{STAGE_COPY.revealHint}</p>
     </aside>
   </main>
-</Base>
-
+  <!-- 스크립트는 Base 안에 둔다. 틀 밖에 두면 </html> 뒤에 붙는다 -->
 <script>
   const stage = document.querySelector<HTMLElement>('.stage')!;
   const screen = stage.querySelector<HTMLElement>('.screen')!;
@@ -142,3 +141,4 @@ const k = STAGE_COPY.keys;
 
   show(fromHash());
 </script>
+</Base>
