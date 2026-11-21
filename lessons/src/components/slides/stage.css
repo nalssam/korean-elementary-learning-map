@@ -41,14 +41,22 @@ body[data-kind='stage'] { background: var(--bg); }
 :where(.slide-in) :where(p, h2, h3, ol, ul, li, dl) { margin: 0; padding: 0; }
 :where(.slide-in) :where(ol, ul) { list-style: none; }
 
-.sl-counter {
-  position: absolute; right: calc(48 * var(--u)); bottom: calc(36 * var(--u));
-  font-size: calc(24 * var(--u)); line-height: 1; color: var(--gray); font-variant-numeric: tabular-nums;
+/* 장의 둘레 (R55): 왼쪽 아래 바닥글 줄(stageFooter)과 오른쪽 아래 장 번호. 같은 크기(STAGE_TYPE.footer·counter = 24)로 한 줄에 선다.
+   바닥글 줄의 '  |  ' 앞뒤 두 칸을 그대로 둔다 (white-space: pre). 장 번호는 Pretendard Medium(500), 숫자 폭을 고르게. */
+.sl-foot, .sl-counter {
+  position: absolute; bottom: calc(36 * var(--u));
+  font-size: calc(24 * var(--u)); line-height: 1; color: var(--gray);
 }
-/* 공개하지 않은 차시: 장마다 왼쪽 아래에 초안 표시 (STAGE_TYPE.draft) */
-.sl-draft {
-  position: absolute; left: calc(var(--pad-x) * var(--u)); bottom: calc(34 * var(--u)); max-width: calc(1400 * var(--u));
-  font-size: calc(28 * var(--u)); line-height: 1; color: var(--gray);
+.sl-foot { left: calc(var(--pad-x) * var(--u)); white-space: pre; }
+.sl-counter { right: calc(48 * var(--u)); font-weight: 500; font-variant-numeric: tabular-nums; }
+/* 흐름 단계 머리말 "01 도입" (R55, STAGE_TYPE.phase · STAGE_PHASE). 제 머리말이 없는 장의 제목 위에 청록 굵게.
+   머리말은 위 여백(80) 안에 놓는다: 40 에서 한 줄(36)을 쓰고 4 를 띄우면 제목이 머리말 없는 장과 같은 80 에서 시작한다.
+   그래서 본문 자리는 그대로다 (단계 장 2 × 2 의 그림, 글 곁 그림 칸의 크기가 머리말 때문에 줄지 않는다). */
+.slide[data-phase] .slide-in { padding-top: calc(40 * var(--u)); }
+.sl-phase {
+  flex: none; height: calc(36 * var(--u)); margin-bottom: calc(4 * var(--u));
+  font-size: calc(30 * var(--u)); font-weight: 700; line-height: 1.2; color: var(--teal);
+  letter-spacing: 0.01em; font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 /* 장에 맞게 줄어드는 글 (copy.ts 의 STAGE_FIT). 스크립트가 data-fit 의 크기를 앞에서부터 해 보고 --fit 을 고른다. */
 .sl-fit { font-size: calc(var(--fit) * var(--u)); }
@@ -96,7 +104,6 @@ body[data-kind='stage'] { background: var(--bg); }
 .sl-cover-sub { font-size: calc(52 * var(--u)); color: var(--gray); margin-top: calc(32 * var(--u)); line-height: 1.35; }
 .sl-cover-foot { border-top: 1px solid var(--line); padding-top: calc(28 * var(--u)); display: flex; flex-direction: column; gap: calc(8 * var(--u)); }
 .sl-cover-meta { font-size: calc(30 * var(--u)); color: var(--navy); }
-.sl-notice { font-size: calc(30 * var(--u)); color: var(--gray); }
 
 /* ───────── 글 곁에 그림 하나 (질문·항목, R12) ─────────
    제목 아래(질문 장은 장 전체)를 두 칸으로 나눈다. 글은 왼쪽, 그림은 오른쪽 칸(폭 --pic, copy.ts 의 STAGE_SIDE)에 둔다.
@@ -203,7 +210,6 @@ body[data-kind='stage'] { background: var(--bg); }
 .sl-box-text { line-height: 1.4; }
 
 /* ───────── 읽기 자료 ───────── */
-.slide[data-layout='passage'] .slide-in { padding-top: calc(80 * var(--u)); padding-bottom: calc(88 * var(--u)); }
 .sl-passage .sl-title { margin-bottom: calc(36 * var(--u)); }
 .sl-passage-text { flex: none; display: flex; flex-direction: column; gap: calc(20 * var(--u)); line-height: 1.5; }
 .sl-source { flex: none; margin-top: calc(20 * var(--u)); font-size: calc(30 * var(--u)); color: var(--gray); line-height: 1.3; }

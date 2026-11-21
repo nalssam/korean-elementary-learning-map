@@ -9,12 +9,13 @@ import { STAGE_FIT, STAGE_SIDE, sideCandidates } from './copy.ts';
 import type { SlideProps } from './types.ts';
 
 type Props = SlideProps<'points'>;
-const { lesson, slide } = Astro.props;
+const { lesson, slide, phase } = Astro.props;
 const fit = slide.media ? STAGE_FIT.pointsMedia : STAGE_FIT.points;
 const side = slide.media ? sideCandidates(fit) : undefined;
 const style = `--fit: ${fit.at(-1)}${side ? `; --pic: ${STAGE_SIDE.picture.at(-1)}` : ''}`;
 ---
 <div class:list={['sl-points', slide.media && 'has-media']} data-fit={fit.join(' ')} data-side={side ? JSON.stringify(side) : undefined} data-max-lines={side ? STAGE_SIDE.maxLines.points : undefined} style={style}>
+  {phase && <p class="sl-phase">{phase}</p>}
   <h2 class="sl-title">{keepParticle(slide.title)}</h2>
   <div class:list={['sl-points-body', slide.media && 'sl-side']}>
     <ol class="sl-list sl-fit">

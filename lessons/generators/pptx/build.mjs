@@ -1,7 +1,8 @@
 // 수업 화면 PPTX 만들기 (빌드 4단계). 저장소 뿌리에서 `node generators/pptx/build.mjs [--out <폴더>] [--only <id>]`.
 //
 // 1. 검증을 마친 명세(visibleLessons())를 .cache/lessons.json 으로 내보낸다. 모양은 README.md 에 있다.
-//    화면에 찍히는 글(차시표 값, 낱말 풀이, 교사 메모, 출처 표시, 바닥글, 이름표)과 tokens.css 의 색, 글꼴 파일 경로를 모두 싣는다.
+//    화면에 찍히는 글(차시표 값, 낱말 풀이, 교사 메모, 출처 표시, 바닥글, 모든 장의 바닥글 줄·장 번호·단계 머리말, 이름표)과
+//    tokens.css 의 색, 글꼴 파일 경로를 모두 싣는다.
 // 2. SVG 그림은 Chromium 으로 폭 1600px PNG 로 바꿔 .cache/media/<id>/ 에 둔다 (python-pptx 는 SVG 를 넣지 못한다).
 // 3. Python(build_pptx.py)이 lessons.json 만 읽고 PPTX 를 만든다. 결과는 dist/files/<id>/slides.pptx.
 // 다시 만들지 않아도 되는 묶음은 .cache/files/<id>/slides.pptx 를 복사만 한다
@@ -12,14 +13,14 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
-  ROOT, answerText, cacheDir, creditList, creditShort, distDir, footerNotice, getMedia, getPassage, isPublic, mediaFile, pptxFile,
-  reviewedOn, sheetFooter, shownMedia, slideNotes, termMeaning, visibleLessons,
+  ROOT, answerText, cacheDir, creditList, creditShort, distDir, getMedia, getPassage, isPublic, mediaFile, pptxFile,
+  reviewedOn, sheetFooter, shownMedia, slideNotes, stageFooter, termMeaning, visibleLessons,
 } from '#lib/content.ts';
 import { SITE } from '#lib/site.ts';
 import { coverText } from '#src/components/slides/cover.ts';
-import { slideCounter } from '#src/components/slides/counter.ts';
+import { slideFrame } from '#src/components/slides/counter.ts';
 import {
-  CREDIT_COPY, NOTE_COPY, SLIDE_COPY, STAGE_FIT, STAGE_PICTURE, STAGE_SIDE, STAGE_STEPS, STAGE_TYPE, sideCandidates,
+  CREDIT_COPY, NOTE_COPY, SLIDE_COPY, STAGE_FIT, STAGE_PHASE, STAGE_PICTURE, STAGE_SIDE, STAGE_STEPS, STAGE_TYPE, sideCandidates,
 } from '#src/components/slides/copy.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -115,8 +116,17 @@ async function mediaEntry(lesson, ref) {
 }
 
 async function slideEntry(lesson, slide, no) {
+  const entry = await slideBody(lesson, slide, no);
+  // 메모란은 비워 두지 않는다. 메모가 없는 장은 웹 무대의 메모 창과 같은 한 줄을 적는다.
+  if (!entry.notes.length) entry.notes.push(NOTE_COPY.empty);
+  return entry;
+}
+
+async function slideBody(lesson, slide, no) {
   const notes = [...slideNotes(lesson, no)];
-  const base = { no, layout: slide.layout, notes, counter: slideCounter(lesson, no).text };
+  // 장 번호(표지에는 없다)와 단계 머리말(제 머리말이 없는 장만). 바닥글 줄은 묶음마다 하나라 lessonEntry 에 싣는다 (R55)
+  const frame = slideFrame(lesson, no);
+  const base = { no, layout: slide.layout, notes, counter: frame.counter ?? null, phase: frame.phase ?? null };
   const media = async (ref) => (ref ? await mediaEntry(lesson, ref) : undefined);
   switch (slide.layout) {
     case 'title': {
@@ -158,13 +168,18 @@ async function lessonEntry(lesson) {
   for (let i = 0; i < lesson.slides.length; i++) slides.push(await slideEntry(lesson, lesson.slides[i], i + 1));
   const c = coverText(lesson);
   const draft = !isPublic(lesson);
+  const items = creditList(shownMedia(lesson, 'slides')).map(({ text, sourceUrl, licenceUrl }) => ({ text, sourceUrl, licenceUrl }));
+  const line = stageFooter(lesson);
+  // 출처 장의 맨 아래 sheetFooter (만든 이 · 이용 조건 · AI 사용 표시 · 안내 페이지 주소). 초안의 sheetFooter 는 초안 표시뿐이라
+  // 같은 장의 바닥글 줄(stageFooter)의 끝과 글자까지 같으므로 두 번 찍지 않는다
+  const sheet = sheetFooter(lesson);
   return {
     id: lesson.id,
     title: lesson.title,
     pptx: path.join(CACHE, 'files', lesson.id, 'slides.pptx'),
-    cover: { meta: c.meta, notice: c.notice },
-    // 공개하지 않은 차시는 2번 장부터 장마다 왼쪽 아래에 초안 표시를 찍는다 (1번 장은 표지 아래에 있다)
-    draft: draft ? footerNotice(lesson) : null,
+    cover: { meta: c.meta },
+    // 모든 장(표지와 그림 출처 장까지)의 왼쪽 아래 바닥글 줄: 사이트 이름 | 학기·단원·차시 | AI 사용 표시나 초안 표시 (R55)
+    stageFooter: line,
     // 파일 정보(core.xml). 날짜는 빌드할 때마다 바뀌지 않게 정해 둔다: 공개된 차시는 승인한 날, 초안은 고정된 날.
     doc: {
       title: `${draft ? '[검수 전 초안] ' : ''}${lesson.title} 수업 화면`,
@@ -178,8 +193,10 @@ async function lessonEntry(lesson) {
       empty: CREDIT_COPY.empty,
       more: CREDIT_COPY.more,
       // 수업 중에 띄우는 장이라 그림 제목을 빼고, 같은 출처는 한 줄로 묶는다 (docs/CONTRACT.md 8절)
-      items: creditList(shownMedia(lesson, 'slides')).map(({ text, sourceUrl, licenceUrl }) => ({ text, sourceUrl, licenceUrl })),
-      footer: sheetFooter(lesson),
+      items,
+      footer: line.endsWith(sheet) ? null : sheet,
+      // 출처 장의 메모란
+      notes: [items.length ? CREDIT_COPY.notes : CREDIT_COPY.notesEmpty],
     },
   };
 }
@@ -195,8 +212,12 @@ function folderHash(dir) {
 async function main() {
   const lessons = visibleLessons().filter((l) => !only || l.id === only);
   if (only && lessons.length === 0) fail(`${only} 는 이번 빌드에 실리는 묶음이 아닙니다`);
-  const fonts = { name: 'Pretendard', regular: path.join(FONT_DIR, 'Pretendard-Regular.ttf'), bold: path.join(FONT_DIR, 'Pretendard-Bold.ttf') };
-  for (const f of [fonts.regular, fonts.bold]) if (!fs.existsSync(f)) fail(`글꼴 파일이 없습니다: ${f} (npm ci 로 pretendard 패키지를 깝니다)`);
+  // 본문은 Pretendard 보통·굵게, 장 번호는 Pretendard Medium (R55). Medium 은 글꼴 이름이 따로 있는 한 벌이다 ('Pretendard Medium')
+  const fonts = {
+    name: 'Pretendard', regular: path.join(FONT_DIR, 'Pretendard-Regular.ttf'), bold: path.join(FONT_DIR, 'Pretendard-Bold.ttf'),
+    mediumName: 'Pretendard Medium', medium: path.join(FONT_DIR, 'Pretendard-Medium.ttf'),
+  };
+  for (const f of [fonts.regular, fonts.bold, fonts.medium]) if (!fs.existsSync(f)) fail(`글꼴 파일이 없습니다: ${f} (npm ci 로 pretendard 패키지를 깝니다)`);
   const entries = [];
   try {
     for (const l of lessons) entries.push(await lessonEntry(l));
@@ -210,6 +231,8 @@ async function main() {
     type: STAGE_TYPE,
     fit: STAGE_FIT,
     picture: STAGE_PICTURE,
+    // 단계 머리말이 있는 장의 머리 (R55)
+    phase: STAGE_PHASE,
     // 글 곁에 그림 하나를 두는 장 (R12): 해 볼 [그림 칸 폭, 글 크기] 차례는 웹 무대와 같은 sideCandidates() 로 만든다
     side: {
       gap: STAGE_SIDE.gap,

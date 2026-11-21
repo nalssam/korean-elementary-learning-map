@@ -5,10 +5,11 @@ import { getPassage } from '#lib/content.ts';
 import type { SlideProps } from './types.ts';
 
 type Props = SlideProps<'passage'>;
-const { lesson, slide } = Astro.props;
+const { lesson, slide, phase } = Astro.props;
 const p = getPassage(lesson, slide.passage);
 ---
 <div class="sl-passage">
+  {phase && <p class="sl-phase">{phase}</p>}
   <h2 class="sl-title">{keepParticle(p.title)}</h2>
   <div class="sl-passage-text">{p.text.map((t) => <p>{keepParticle(t)}</p>)}</div>
   <p class="sl-source">{p.source}</p>

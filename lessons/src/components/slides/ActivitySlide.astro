@@ -5,11 +5,12 @@ import { SLIDE_COPY, STAGE_FIT } from './copy.ts';
 import type { SlideProps } from './types.ts';
 
 type Props = SlideProps<'activity'>;
-const { slide } = Astro.props;
+const { slide, phase } = Astro.props;
 const aside = slide.minutes !== undefined || slide.materials.length > 0;
 const fit = STAGE_FIT.activity;
 ---
 <div class:list={['sl-activity', aside && 'has-aside']} data-fit={fit.join(' ')} style={`--fit: ${fit.at(-1)}`}>
+  {phase && <p class="sl-phase">{phase}</p>}
   <h2 class="sl-title">{keepParticle(slide.title)}</h2>
   <div class="sl-activity-body">
     <ol class="sl-list sl-list-tight sl-fit">

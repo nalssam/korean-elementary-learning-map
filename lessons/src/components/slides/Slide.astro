@@ -1,7 +1,8 @@
 ---
 // 명세의 슬라이드 한 장 = 화면 한 장. layout 에 맞는 컴포넌트를 고르고, 교사 메모(slideNotes)를 장 안에 숨겨 둔다.
-// 공개하지 않은 차시는 장마다 왼쪽 아래에 초안 표시를 찍는다 (1번 장은 표지 아래에 이미 있다).
-import { answerText, footerNotice, isPublic, slideNotes } from '#lib/content.ts';
+// 모든 장의 왼쪽 아래에 바닥글 줄(stageFooter: 사이트 이름 | 학기·단원·차시 | AI 사용 표시나 초안 표시), 표지가 아닌 장의 오른쪽 아래에
+// 장 번호를 찍는다. 제 머리말이 없는 장은 제목 위에 흐름 단계의 머리말("01 도입")을 찍는다 (R55, counter.ts 의 slideFrame).
+import { answerText, slideNotes } from '#lib/content.ts';
 import type { Lesson, Slide } from '#schema/lesson.ts';
 import ActivitySlide from './ActivitySlide.astro';
 import ClosingSlide from './ClosingSlide.astro';
@@ -15,32 +16,33 @@ import StepsSlide from './StepsSlide.astro';
 import TermSlide from './TermSlide.astro';
 import TitleSlide from './TitleSlide.astro';
 import { NOTE_COPY, STAGE_COPY } from './copy.ts';
-import { slideCounter } from './counter.ts';
+import { slideCounter, slideFrame } from './counter.ts';
 
 interface Props { lesson: Lesson; slide: Slide; no: number; total: number }
 const { lesson, slide, no, total } = Astro.props;
 const notes = slideNotes(lesson, no);
 const quiz = slide.layout === 'quiz' ? lesson.quiz.items[slide.item - 1] : undefined;
 const count = slideCounter(lesson, no);
-const draft = !isPublic(lesson) && no !== 1;
+const frame = slideFrame(lesson, no);
+const phase = frame.phase;
 ---
-<section class="slide" id={`s${no}`} data-no={no} data-layout={slide.layout} data-quiz={quiz ? 'true' : undefined}
+<section class="slide" id={`s${no}`} data-no={no} data-layout={slide.layout} data-quiz={quiz ? 'true' : undefined} data-phase={phase ? 'true' : undefined}
   data-count={count.text} data-first={count.part.first}
   aria-roledescription="장" aria-label={STAGE_COPY.slideLabel(no, total)}>
   <div class="slide-in">
     {slide.layout === 'title' && <TitleSlide lesson={lesson} slide={slide} no={no} />}
     {slide.layout === 'question' && <QuestionSlide lesson={lesson} slide={slide} no={no} />}
-    {slide.layout === 'picture' && <PictureSlide lesson={lesson} slide={slide} no={no} />}
-    {slide.layout === 'points' && <PointsSlide lesson={lesson} slide={slide} no={no} />}
-    {slide.layout === 'compare' && <CompareSlide lesson={lesson} slide={slide} no={no} />}
-    {slide.layout === 'steps' && <StepsSlide lesson={lesson} slide={slide} no={no} />}
+    {slide.layout === 'picture' && <PictureSlide lesson={lesson} slide={slide} no={no} phase={phase} />}
+    {slide.layout === 'points' && <PointsSlide lesson={lesson} slide={slide} no={no} phase={phase} />}
+    {slide.layout === 'compare' && <CompareSlide lesson={lesson} slide={slide} no={no} phase={phase} />}
+    {slide.layout === 'steps' && <StepsSlide lesson={lesson} slide={slide} no={no} phase={phase} />}
     {slide.layout === 'term' && <TermSlide lesson={lesson} slide={slide} no={no} />}
-    {slide.layout === 'passage' && <PassageSlide lesson={lesson} slide={slide} no={no} />}
-    {slide.layout === 'activity' && <ActivitySlide lesson={lesson} slide={slide} no={no} />}
+    {slide.layout === 'passage' && <PassageSlide lesson={lesson} slide={slide} no={no} phase={phase} />}
+    {slide.layout === 'activity' && <ActivitySlide lesson={lesson} slide={slide} no={no} phase={phase} />}
     {slide.layout === 'quiz' && <QuizSlide lesson={lesson} slide={slide} no={no} />}
     {slide.layout === 'closing' && <ClosingSlide lesson={lesson} slide={slide} no={no} />}
-    {draft && <p class="sl-draft">{footerNotice(lesson)}</p>}
-    <p class="sl-counter" aria-hidden="true">{count.text}</p>
+    <p class="sl-foot">{frame.footer}</p>
+    {frame.counter && <p class="sl-counter" aria-hidden="true">{frame.counter}</p>}
   </div>
   <div class="slide-notes" hidden>
     {notes.length ? <ul>{notes.map((n) => <li>{n}</li>)}</ul> : <p>{NOTE_COPY.empty}</p>}

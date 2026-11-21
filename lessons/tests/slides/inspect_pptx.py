@@ -22,11 +22,14 @@ prs = Presentation(path)
 EMU_PT = 12700
 out = {'width': prs.slide_width, 'height': prs.slide_height, 'slides': []}
 for s in prs.slides:
-    texts, boxes, pics = [], [], []
+    texts, boxes, pics, fonts = [], [], [], []
     for sh in s.shapes:
         if sh.has_text_frame and sh.text_frame.text.strip():
             texts.append(sh.text_frame.text)
             boxes.append([sh.left / EMU_PT, sh.top / EMU_PT, (sh.left + sh.width) / EMU_PT, (sh.top + sh.height) / EMU_PT])
+            # 글상자의 첫 글 조각: [글꼴 이름, 크기 pt, 굵게]
+            r = next((r for p in sh.text_frame.paragraphs for r in p.runs), None)
+            fonts.append([r.font.name, r.font.size.pt if r.font.size else None, bool(r.font.bold)] if r is not None else None)
         if sh.shape_type == 13:  # 그림
             import io
             im = Image.open(io.BytesIO(sh.image.blob))
@@ -40,7 +43,7 @@ for s in prs.slides:
                 'line': line_of(sh),
             })
     notes = s.notes_slide.notes_text_frame.text if s.has_notes_slide else ''
-    out['slides'].append({'texts': texts, 'boxes': boxes, 'pictures': pics, 'notes': notes})
+    out['slides'].append({'texts': texts, 'boxes': boxes, 'fonts': fonts, 'pictures': pics, 'notes': notes})
 z = zipfile.ZipFile(path)
 pres = z.read('ppt/presentation.xml').decode()
 out['embedded'] = re.findall(r'<p:font typeface="([^"]+)"', pres)

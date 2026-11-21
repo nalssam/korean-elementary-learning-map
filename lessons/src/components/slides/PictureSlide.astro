@@ -5,9 +5,10 @@ import Media from '#src/components/Media.astro';
 import type { SlideProps } from './types.ts';
 
 type Props = SlideProps<'picture'>;
-const { lesson, slide } = Astro.props;
+const { lesson, slide, phase } = Astro.props;
 ---
 <div class="sl-picture">
+  {phase && <p class="sl-phase">{phase}</p>}
   <h2 class="sl-title">{keepParticle(slide.title)}</h2>
   <Media lesson={lesson} id={slide.media} caption={false} class="sl-media sl-media-big" />
   {slide.caption && <p class="sl-caption">{keepParticle(slide.caption)}</p>}
