@@ -34,11 +34,11 @@
 | 슬라이드 | `src/components/slides/`, 수업 화면 페이지, `generators/pptx/`, `tests/slides/` |
 | 활동 | `src/components/play/`, 확인 퀴즈·웹 활동 페이지, `tests/play/` |
 | 페이퍼크래프트 | `generators/papercraft/`, 페이퍼크래프트 페이지, `tests/papercraft/` |
-| 저장소 | `checks/`, `scripts/build.mjs`, `scripts/sign.mjs`, `scripts/factsheet.mjs`, `scripts/new.mjs`, `scripts/migrate/`, 미리보기 그림(`scripts/render-pdf.mjs` 의 미리보기 단계. 10절), git 뿌리의 `.github/`(0절), `.githooks/`, 기여 문서(17절), `tests/repo/` |
+| 저장소 | `checks/`, `scripts/build.mjs`, `scripts/sign.mjs`, `scripts/factsheet.mjs`, `scripts/new.mjs`, `scripts/migrate/`, 미리보기 그림(`scripts/thumbs.mjs`. `scripts/render-pdf.mjs` 가 부르는 미리보기 단계. 10절), git 뿌리의 `.github/`(0절), `.githooks/`, 기여 문서(17절), `tests/repo/` |
 
 **함께 쓰는 컴포넌트**는 `src/components/` 바로 아래(`Media.astro`, `Qr.astro`)와 `src/components/site/ui/`(머리말·민트 띠·상태 표·자료 그림·자료 카드. 6절)에 둡니다. 어느 담당의 페이지든 가져다 쓰고, 고칠 것이 있으면 계약 담당에게 알립니다. 부품의 CSS 는 무게가 0 인 `:where()` 로 적혀 있어 부르는 페이지가 class 하나로 여백과 격자를 정합니다.
 
-`scripts/render-pdf.mjs` 는 인쇄물 담당의 것이고, 그 안의 미리보기 그림 단계(10절)만 저장소 담당이 맡습니다. PDF 를 찍는 부분과 섞지 않고 따로 된 함수로 둡니다.
+`scripts/render-pdf.mjs` 는 인쇄물 담당의 것이고, 그것이 PDF 를 찍은 뒤 부르는 미리보기 그림 단계(`scripts/thumbs.mjs`. 10절)는 저장소 담당이 맡습니다. PDF 를 찍는 코드와 섞지 않으려고 파일을 나눴습니다.
 
 **계약 파일은 고치지 않습니다.** 형식이나 도우미가 모자라면 고치지 말고 보고서에 "무엇을 표현할 수 없었는지"를 적습니다. `package.json` 의 스크립트나 의존성이 더 필요할 때도 같습니다.
 
@@ -99,7 +99,7 @@ const lesson = loadLesson(Astro.props.id);
 - 페이지, 검색 색인, `/media/`, `/files/`, PPTX 에 들어가는 차시는 모두 `visibleLessons()`(`lessonPaths()` 가 이것을 씁니다)에서 얻습니다. `lessonIds()` 나 `loadLesson()` 을 돌려 목록을 만들지 않습니다.
 - 첫 화면의 학기 타일, 교과서 목차, 제작 현황에 붙는 "N/M 차시 공개"는 묶음이 아니라 차시를 셉니다 (두 차시 묶음은 2). M 은 차시표에 적힌 그 학기의 차시 수, N 은 그 가운데 `visibleLessons()` 의 공개된 묶음에 든 차시 수입니다. `semesterProgress(학기)`·`unitProgress(학기, 단원)` 이 `{ total, published, draft, planned }` 로 셉니다 (`draft` 는 미리 보기 빌드에서만 0 이 아닙니다). 손으로 세지 않습니다.
 - 자료를 늘어놓는 페이지(차시 자료실, 자료 유형별, 내 자료함, 첫 화면의 자료 유형 타일)는 `catalog()` 에서 자료를 얻습니다. 차례는 차시표 차례, 그 안에서 `KIND_ORDER`(수업 화면, 학습지, 확인 퀴즈, 웹 활동, 페이퍼크래프트, 카드, 컬러링 도안, 만들기 세트, 방탈출, 3D·가상 체험)입니다. 준비된 수를 셀 때도 이 목록을 셉니다.
-- 검색 색인: 차시 자료실은 그대로 넣습니다. 내 자료함(`/my/`)은 `<SiteLayout index={false}>` 로 뺍니다 (담은 자료는 브라우저마다 다릅니다). 자료 유형별의 카드 목록은 `data-pagefind-ignore` 로 감쌉니다 (같은 자료가 차시 자료실에서 이미 색인되어 찾기 결과가 두 번 나옵니다). ResourceCard 의 단추 줄과 QR 창은 이미 감싸져 있습니다.
+- 검색 색인: 차시 자료실은 그대로 넣습니다. 내 자료함(`/my/`)은 `<SiteLayout index={false}>` 로 뺍니다 (담은 자료는 브라우저마다 다릅니다). 자료 유형별의 카드 목록은 `data-pagefind-ignore` 로 감쌉니다 (같은 자료가 차시 자료실에서 이미 색인되어 찾기 결과가 두 번 나옵니다). 차시 자료실의 카드 격자도 감쌉니다 (카드의 글이 발췌를 채웁니다. 자료의 이름은 교사용 안내에 있습니다). ResourceCard 의 단추 줄과 QR 창은 이미 감싸져 있습니다.
 - 학기·단원 페이지는 `allBundles()` 로 차시표 전체를 그리고, `visibleLessons()` 에 있는 묶음에만 링크를 겁니다. 공개되지 않은 묶음은 차시 번호와 쪽수만 보여 줍니다. 공개된 묶음에는 명세의 `title` 과 `tagline` 을 보여 줍니다.
 - 차시표의 `focus` 는 사실 대조를 거치지 않은 계획 글이라 사이트에 찍지 않습니다 (쪽수·차시로 찾기의 결과도 같습니다. `checks/outputs.mjs` 가 봅니다). 사이트에 실리는 차시표의 글은 단원명과 학기 소개(`blurb`)뿐입니다. `blurb` 에는 사실을 말하는 문장을 적지 않고 무엇을 배우는 학기인지만 적습니다.
 
@@ -163,7 +163,7 @@ import { href } from '#src/lib/url.ts';
   semester: '5-2', unit: 1, lessonsLabel: '1차시', pagesLabel: '6~9쪽', course: '5학년 2학기 1단원 1차시',
   route: '/5-2/1/01/worksheet/',  // 여는 곳 (base 없음). 만들기 세트는 '/<id>/#making-kit'
   file: { route: '/files/5-2/1/01/worksheet.pdf', name: '5-2_1단원_1차시_학습지.pdf' }, // 수업 화면은 PPTX, 인쇄물은 PDF. 학생 페이지와 만들기 세트에는 없다
-  format: 'PDF · A4 2쪽',          // formatLine(). 'PPTX 22장', 'PDF · A4 가로 2쪽', '휴대폰·태블릿 · 5문항', '휴대폰·태블릿 · 분류하기', '수업 안 20분 · 재료 3가지'
+  format: 'PDF · A4 2쪽',          // formatLine(). '화면 22장 · PPTX', 'PDF · A4 가로 2쪽', '휴대폰·태블릿 · 5문항', '휴대폰·태블릿 · 분류하기', '수업 안 20분 · 재료 3가지'
   thumb: '/files/5-2/1/01/thumbs/worksheet.jpg', // 페이지가 있는 자료에만
   draft: true,                     // 검수 전 초안 (미리 보기 빌드에서만 나온다)
 }
@@ -242,7 +242,7 @@ import { href } from '#src/lib/url.ts';
 
 ### 사이트의 머리와 바닥글 (사이트, R42·R54)
 
-- 머리: 왼쪽에 표시 그림과 두 줄 이름표(`SITE.nameLead` 위에 `SITE.shortName`), 길잡이 `NAV`(교과서 자료는 학기 여덟 개를 펼치는 메뉴. 차시표가 없는 학기는 링크 없이 '준비 중'), 오른쪽에 `NAV_TOOLS` 의 찾기와 내 자료함(담은 수 `<span data-collect-count>`). 지금 페이지의 길잡이에 `aria-current="page"` 를 붙입니다 (`NavKey`).
+- 머리: 왼쪽에 표시 그림과 두 줄 이름표(`SITE.nameLead` 위에 `SITE.shortName`), 길잡이 `NAV`(교과서 자료는 학기 여덟 개를 펼치는 메뉴. 차시표가 없는 학기는 링크 없이 '차시표 준비 중'), 오른쪽에 `NAV_TOOLS` 의 찾기와 내 자료함(담은 수 `<span data-collect-count>`). 지금 페이지의 길잡이에 `aria-current="page"` 를 붙입니다 (`NavKey`).
 - 760px 아래: 이름표와 찾기·메뉴 두 단추만. 메뉴는 `<details>` 로 폭 전체의 판을 열고 같은 링크를 늘어놓습니다. 스크립트가 있으면 Esc 로 닫고 초점을 메뉴 단추(`<summary>`)로 돌려줍니다. 누르는 자리는 44px 이상입니다.
 - 바닥글: 첫 줄 `FOOT_LINKS`(소개 · 이용 조건 · 오류 제보 · 깃허브 저장소. 차시 자료실에서는 오류 제보에 `?id=<id>` 를 붙입니다), 둘째 줄 이용 조건 안내(`SITE.licence.name` 과 `SITE.licenceNote`. 14절), 셋째 줄 "만든 이 {SITE.author} · {SITE.name}", 맨 아래 작게 `footerNotice()`(Base.astro 의 `.site-notice`).
 - 모든 site 페이지가 `collect.ts` 의 `init()` 을 불러 머리의 담은 수를 맞춥니다 (아래 '함께 쓰는 화면 부품').
@@ -255,22 +255,24 @@ R53 의 모양을 한 자리에 모은 부품입니다. 색·크기는 tokens.cs
 |---|---|---|
 | `Kicker.astro` | `no?`, `as?`, `id?`, `class?` · 글은 slot | 섹션 제목 위의 청록 머리말 (700, 14px). `no` 를 주면 "02 전개"처럼 두 자리 번호가 앞에 붙는다. 차례가 실제로 있는 자리에만 준다. |
 | `Band.astro` | `class?` · 글은 slot | 민트 띠: 가운데, 굵게, 알약 모서리. 강조할 말은 `<strong>`(청록). 한 페이지에 하나까지. |
-| `StatusChip.astro` | `state`(published·draft·planned·new·fix·notice), `label?` | 상태 표. 말은 `LESSON_STATE_LABEL`·`UPDATE_LABEL`, `label` 로 바꿀 수 있다 ("초안 5차시"). 산호색은 `new` 에만. |
+| `StatusChip.astro` | `state`(published·draft·planned·new·fix·notice), `label?`, `quiet?` | 상태 표. 말은 `LESSON_STATE_LABEL`·`UPDATE_LABEL`, `label` 로 바꿀 수 있다 ("초안 5차시"). 산호색은 `new` 에만, 그것도 보이는 소식 가운데 가장 최근의 새 자료 하나에만 쓰고 나머지 `new` 에는 `quiet`(청록 테두리)를 준다. |
 | `TypeIcon.astro` | `kind`, `size?`(기본 20), `class?` | 자료 종류 열 가지의 선 그림 (24 칸, 선 1.6, `currentColor`, `aria-hidden`). 늘 자료 이름 곁에 둔다. |
 | `ResourceCard.astro` | `item`(`CatalogItem`), `withLesson?`, `level?`(2·3·4, 기본 3), `uid?` | 자료 카드 (R47). 아래 |
 
 ResourceCard:
 - 짜임: `<article class="rc" data-kind data-group data-key data-draft>` 안에 미리보기 틀(4:3, 종이색. 자료 그림 위에 `<img class="rc-thumb" loading="lazy">`. 그림이 실리지 않으면 `onerror` 가 그 `<img>` 를 지워 자료 그림이 보인다), 자료 종류와 담기 단추, 이름(`h{level}`), 차시 줄(`withLesson`), 한 줄 설명(초안이면 '초안' 표), 단추 줄(여는 단추 `OPEN_LABEL`, 파일이 있으면 내려받기 `download={file.name}`, 학생 페이지면 QR).
 - `data-group` 은 `KIND_GROUP` 의 값입니다. 차시 자료실의 거르기 탭은 이 값으로 카드를 숨깁니다 (스크립트가 없으면 모두 보입니다).
-- QR: 학생 페이지(확인 퀴즈, 웹 활동)에만 `<button popovertarget>` 과 `<div class="rc-pop" popover>`(QR, `absoluteUrl(route)` 주소 글자, 닫기). id 는 `qr-<key>` 이고, 같은 페이지에 같은 자료의 카드를 두 번 그리면 `uid` 로 가릅니다.
+- QR: 학생 페이지(확인 퀴즈, 웹 활동)에만 `<button popovertarget>` 과 `<div class="rc-pop" popover>`(자료 종류, 그 카드의 이름 `item.title`, QR, `absoluteUrl(route)` 주소 글자, 닫기). id 는 `qr-<key>` 이고, 같은 페이지에 같은 자료의 카드를 두 번 그리면 `uid` 로 가릅니다.
 - `withLesson` 은 여러 차시의 자료를 늘어놓는 자료 유형별·내 자료함에서 켭니다 ("5학년 2학기 1단원 1차시 · 이름" 링크).
 - 격자는 부르는 페이지가 정합니다 (`<ul>` 의 `<li>` 마다 카드 하나). 휴대폰(600px 아래)에서 카드는 미리보기를 왼쪽에 작게 두는 꼴로 바뀌므로 한 줄에 하나씩 놓습니다. 카드의 높이는 칸에 맞춰 늘어납니다 (`height: 100%`).
 - 화면 읽기 프로그램에는 단추마다 어느 자료인지가 붙어 읽힙니다 ("띄우기: 수업 화면 이 큰 돌, 누가 어떻게?").
+- 담기 단추의 보이는 말은 담기 전 '담기', 담은 뒤(`aria-pressed="true"`) '담음'입니다. 화면 읽기 프로그램에는 늘 "담기: <자료>"와 눌림 상태로 읽힙니다.
+- 한 줄 설명과 '초안' 표 사이에는 빈칸을 둡니다 ('PPTX초안'처럼 붙여 읽히지 않게). 차시 자료실의 카드 격자는 검색 색인에서 뺍니다 (`data-pagefind-ignore`. 찾기 결과의 발췌가 단추 글로 채워졌습니다). 자료의 이름은 교사용 안내에 있어 그대로 찾힙니다.
 
 내 자료함의 저장 (`src/components/site/collect.ts`, R51):
 - 열쇠 `STORAGE_KEY` = `nalssam-cloud:saved:v1`, 값은 `CatalogItem.key`("5-2/1/01#worksheet") 글의 JSON 배열(담은 차례). 다른 꼴의 값은 읽을 때 버립니다.
-- 내보내는 것: `storage()`(쓸 수 있는 localStorage 또는 undefined), `read()`, `has(key)`, `count()`, `toggle(key)`(바꾼 뒤 담겨 있는가. 저장하지 못하면 원래 상태), `remove(key)`, `subscribe(fn)`(이 페이지에서 바꾸거나 다른 탭에서 바꾸면 `fn(keys)`. 그만 들을 함수를 돌려준다), `refresh(root?)`, `init()`. 저장소를 만지는 곳은 모두 try/catch 안에 있고 오류를 밖으로 던지지 않습니다.
-- 페이지의 표시: `<button type="button" data-collect="<key>" aria-pressed="false" hidden>` 은 담기 단추이고(ResourceCard 가 그립니다), `[data-collect-count]` 요소에는 담은 수가 글과 `data-count` 로 들어갑니다 (0 일 때 숨기려면 `[data-count='0']` 으로). `init()` 은 저장소를 쓸 수 있을 때만 담기 단추의 `hidden` 을 풉니다. 여러 번 불러도 되고(누르기는 한 번만 듣습니다), 단추를 새로 그린 뒤에 다시 부르면 그 단추의 상태도 맞춥니다.
+- 내보내는 것: `storage()`(쓸 수 있는 localStorage 또는 undefined), `read()`, `has(key)`, `count()`, `toggle(key)`(바꾼 뒤 담겨 있는가. 저장하지 못하면 원래 상태), `remove(key)`, `subscribe(fn)`(이 페이지에서 바꾸거나 다른 탭에서 바꾸면 `fn(keys)`. 그만 들을 함수를 돌려준다), `refresh(root?)`, `init()`, 그리고 머리의 담은 수를 이번 빌드에 실린 자료로만 세는 `encodeKnown(keys, order)`·`decodeKnown(text, order)`·`shownCount(keys, known?)`. 저장소를 만지는 곳은 모두 try/catch 안에 있고 오류를 밖으로 던지지 않습니다.
+- 페이지의 표시: `<button type="button" data-collect="<key>" aria-pressed="false" hidden>` 은 담기 단추이고(ResourceCard 가 그립니다), `[data-collect-count]` 요소에는 담은 수가 글과 `data-count` 로 들어갑니다 (0 일 때 숨기려면 `[data-count='0']` 으로). 페이지에 `[data-collect-known]`(머리가 `encodeKnown(catalog() 의 key, KIND_ORDER)` 로 싣는다)이 있으면 담은 수는 그 목록에 있는 열쇠만 셉니다. 그래서 머리의 수와 `/my/` 에 보이는 카드의 수가 같습니다. `init()` 은 저장소를 쓸 수 있을 때만 담기 단추의 `hidden` 을 풉니다. 여러 번 불러도 되고(누르기는 한 번만 듣습니다), 단추를 새로 그린 뒤에 다시 부르면 그 단추의 상태도 맞춥니다.
 - 이 파일은 site 페이지에서만 싣습니다. 학생 페이지(9절)는 기기에 아무것도 남기지 않습니다.
 - `/my/` 는 `catalog()` 를 JSON 으로 싣고(`<script type="application/json">`), `read()` 로 담은 것을 골라 카드로 보여 줍니다. 목록에 없는 열쇠(공개 빌드에서 사라진 초안 등)는 보여 주지 않고 지우지도 않습니다. 빼기는 `remove(key)` 다음 다시 그리기입니다.
 
@@ -411,7 +413,7 @@ PDF 의 쪽수·쪽 크기·글은 `pdfjs-dist`(`pdfjs-dist/legacy/build/pdf.mjs
 - 바닥글 줄과 장 번호 (R55): 모든 장의 왼쪽 아래에 `stageFooter(lesson)`("nalssam의 초등사회콘텐츠 클라우드  |  5학년 2학기 1단원 1차시  |  " 다음에 `footerNotice(lesson)`)을 장 번호와 같은 크기로, 오른쪽 아래에 장 번호 "NN / 전체"(두 자리로 채운다: "05 / 22". 두 차시 묶음은 차시마다 세어 "3차시 01 / 04")를 찍습니다. 장 번호의 글은 `src/components/slides/counter.ts` 의 `slideCounter()` 가 화면과 PPTX 에 같이 줍니다. 표지에는 장 번호가 없습니다 (두 차시 묶음의 둘째 표지도). PPTX 의 장 번호는 Pretendard Medium 입니다.
 - 단계 머리말 (R55): 제 머리말이 없는 장(그림, 항목, 견주기, 단계, 읽기 자료, 활동)은 제목 위에 그 장을 쓰는 흐름 단계의 머리말을 찍습니다: `slidePhase(lesson, no).kicker`("01 도입", "02 전개"). 번호는 그 단계가 제 차시의 흐름에서 몇 번째인가이고(두 차시 묶음은 차시마다 1부터), 이름은 흐름의 `phase` 입니다. 청록 굵게, 1920 무대에서 28px 이상. 제 머리말이 있는 장(낱말, 퀴즈, 질문의 `kicker`, 마무리)과 표지는 제 것을 그대로 씁니다. `slidePhase()` 가 undefined 인 장(어느 단계의 `slides` 에도 들지 않는 장)은 머리말 없이 둡니다. PPTX 도 같습니다.
 - 읽기 자료 장(`passage`)에는 문단 4개, 모두 300자까지 들어옵니다 (형식이 막습니다). 이 길이까지는 본문 44px 로 한 장에 넘치지 않게 그립니다.
-- 본문 44px, 제목 72px. 그 밖의 글(그림 출처·장 번호는 빼고)도, 그림 안의 글까지 1920 × 1080 무대에서 28px 보다 작게 그리지 않습니다. 글자 크기는 `src/components/slides/copy.ts` 의 `STAGE_TYPE` 에 둡니다. 색은 tokens.css 의 것만 씁니다.
+- 본문 44px, 제목 72px. 그 밖의 글(그림 출처·장 번호·바닥글 줄은 빼고)도, 그림 안의 글까지 1920 × 1080 무대에서 28px 보다 작게 그리지 않습니다. 바닥글 줄(R55)은 장 번호와 같은 크기(24px)입니다. 글자 크기는 `src/components/slides/copy.ts` 의 `STAGE_TYPE` 에 둡니다. 색은 tokens.css 의 것만 씁니다.
 - 그림이 셋이나 넷인 단계 장(`steps`)은 제목 아래 자리를 모두 씁니다: 셋은 폭 전체에 한 줄로, 넷은 2 × 2 로 놓습니다. 2 × 2 의 칸마다 위에 머리 한 줄(단계 번호 표와 단계 글, 1920 무대에서 40px 이상)이 있고 그 아래가 그림 상자입니다. 머리는 들어가면 한 줄, 길어도 두 줄까지입니다. 네 칸의 단계 번호 표는 모두 가장 긴 표의 폭입니다. 그림은 머리 아래 남은 높이와 칸의 폭 안에 contain 으로 가운데 놓입니다. 그림 상자는 그려진 그림에 꼭 맞고(상자의 테두리는 그림의 것입니다) 1920 무대에서 폭 500px 이상이며, 칸의 폭 전체를 채우지 않아도 됩니다. 단계 글을 그림 옆에 두지 않습니다. 우리가 그리는 단계 그림은 이 상자에 맞게 가로로 넓게(2.6:1 남짓, viewBox 780 × 300) 그립니다. PPTX 도 같은 짜임입니다.
 - 글과 그림 한 장을 함께 보여 주는 장(그림이 있는 points·question 장과, 함께 보는 그림이 있는 compare 장)은 제목 아래를 두 단으로 나눕니다. term·activity 장에는 그림이 없습니다. 왼쪽이 글, 오른쪽이 그림입니다. 그림 단은 장 폭의 42% 이상이고 그림은 그 단에 들어가는 만큼 크게 그립니다. 글 덩어리와 그림은 세로 가운데를 맞추고, 글이 길면 위 끝을 맞춥니다. 글은 위에 있고 그림은 아래 구석에 떠 있는 꼴을 만들지 않습니다. 그림이 있는 장은 빈 자리가 장 넓이의 3분의 1 남짓을 넘지 않습니다. 이것을 재는 시험은 40% 까지 받고, 가로세로 비가 2:1 이나 1:2 보다 치우친 그림은 건너뛰어도 됩니다 (그런 그림은 단을 아무리 키워도 빈 자리가 남습니다). PPTX 도 같은 짜임입니다.
 - 그림이 없는 points·activity 장은 목록을 제목 아래 48px 내려 위에 맞춥니다 (세로 가운데에 두지 않습니다). 장을 넘겨도 본문이 같은 높이에서 시작합니다. 세로 가운데는 title·question·term·closing 장의 것입니다. PPTX 도 같습니다.
@@ -472,15 +474,15 @@ npm run build      # scripts/build.mjs (저장소). 아래를 차례로 돌리�
 npm run build:site # astro build 만 (1단계). 그림·PDF·PPTX 와 산출물 검사가 없으므로 배포에는 쓰지 않는다
 ```
 
-- **미리보기 그림 (R52).** 3단계의 `render-pdf.mjs` 가 PDF 와 같은 로컬 서버와 Chromium 으로 찍습니다. `visibleLessons()` 의 차시마다, 페이지가 있는 자료(`ASSET_ROUTE` 의 일곱: 수업 화면, 학습지, 확인 퀴즈, 페이퍼크래프트, 컬러링 도안, 카드, 웹 활동) 가운데 준비된 것 하나에 한 장, 자리는 `thumbFile(id, kind)` 입니다.
-  - 인쇄물(학습지, 카드, 컬러링 도안, 페이퍼크래프트): 인쇄 페이지 첫 쪽(`.sheet`)의 윗부분을 쪽 폭 그대로 4:3 으로, 480 × 360.
+- **미리보기 그림 (R52).** 3단계의 `render-pdf.mjs` 가 PDF 를 찍은 뒤 `scripts/thumbs.mjs` 를 불러, PDF 와 같은 로컬 서버와 Chromium 으로 찍습니다. `visibleLessons()` 의 차시마다, 페이지가 있는 자료(`ASSET_ROUTE` 의 일곱: 수업 화면, 학습지, 확인 퀴즈, 페이퍼크래프트, 컬러링 도안, 카드, 웹 활동) 가운데 준비된 것 하나에 한 장, 자리는 `thumbFile(id, kind)` 입니다.
+  - 인쇄물(학습지, 카드, 컬러링 도안, 페이퍼크래프트): 인쇄 페이지 첫 쪽(`.sheet`)의 윗부분을 쪽 폭 그대로 4:3 으로, 480 × 360. 가로 쪽은 쪽 전체가 4:3 보다 납작해서 쪽 전체를 480 × 339 로 찍습니다.
   - 수업 화면: 1번 장 전체를 1920 × 1080 무대에서, 480 × 270.
   - 확인 퀴즈, 웹 활동: 폭 360px 휴대폰 화면의 위쪽 480px 을, 270 × 360.
   - JPEG, 폭 480px 이하, 60KB 이하. 찍기 전에 `document.fonts.ready` 와 그림을 기다립니다. 인쇄물은 화면 모양(`emulateMedia` 없이)의 종이 미리보기를 찍되 화면에만 보이는 안내(`.no-print`)는 숨깁니다.
-  - 남의 그림은 가립니다: `img[data-licence]`(Media.astro 가 이용 조건이 original 이 아닌 그림에 붙입니다)를 `visibility: hidden` 으로 두고 찍습니다. 자리는 비어 남습니다. 줄인 그림에서는 곁의 출처 표시를 읽을 수 없고, 쪽의 윗부분만 찍으면 사진이 잘릴 수 있어서입니다 (5·6절).
-  - 캐시는 PDF 와 같습니다: 그 페이지의 HTML 과 부르는 파일들의 sha256 이 같으면 `.cache/files/<id>/thumbs/<kind>.jpg` 를 복사만 합니다. `--kind` 로 한 종류만 찍을 때는 그 종류의 미리보기만 다시 찍습니다.
+  - 남의 그림은 가립니다: `img[data-licence]`(Media.astro 가 이용 조건이 original 이 아닌 그림에 붙입니다)를 `visibility: hidden` 으로 두고, 그 자리에 '그림 자리'(종이색 `--paper` 바탕, 1px `--line` 테두리, 가운데 작은 그림 표시)를 얹고, 같은 그림의 출처 표시(`.media-credit`)도 가려 찍습니다 (`coverLicensed()`). 줄인 그림에서는 곁의 출처 표시를 읽을 수 없고, 쪽의 윗부분만 찍으면 사진이 잘릴 수 있어서입니다 (5·6절). 빈 상자 아래 출처 한 줄만 남기면 카드에서 그림이 깨진 것처럼 읽혀 그림 자리를 둡니다.
+  - 캐시는 PDF 와 같습니다: 그 페이지의 HTML 과 부르는 파일들의 sha256 이 같으면 `.cache/files/<id>/thumbs/<kind>.jpg` 를 복사만 합니다. `--kind` 로 한 종류만 찍을 때는 그 종류의 미리보기만 다시 찍습니다. `--kind` 는 PDF 가 없는 자료(`slides`, `quiz`, `web_activity`)도 받고, 그때는 미리보기만 찍습니다.
   - `astro dev` 와 1단계만 돌린 dist 에는 미리보기 그림이 없습니다. 자료 카드는 그때 자료 그림(TypeIcon)을 보여 줍니다.
-- **새 묶음 (R56).** `npm run new -- <id>` 는 `docs/template/lesson.yaml` 을 `content/<id>/lesson.yaml` 로 복사하고(본보기가 가리키는 `media/` 도 함께) `id` 를 그 묶음 id 로, `status` 를 `draft` 로 적습니다. 맨 위에 차시표의 값(학기, 단원 번호와 단원명, 차시 번호, 교과서 쪽수)을 주석 한 줄로 적습니다. 차시 번호와 쪽수는 차시표에만 있는 값이라 명세의 칸으로 적지 않습니다 (1절). 그 밖의 내용은 본보기 그대로이고 아무것도 지어내지 않습니다. 차시표에 없는 id, 이미 명세가 있는 묶음, `CONTENT_DIR` 밖으로 나가는 id 이면 아무것도 쓰지 않고 0 이 아닌 값으로 끝납니다. 마치면 할 일을 찍습니다: 명세 채우기, `npm run check`, `npm run factsheet -- <id>` 로 사실 대조, 검수 기록 넷(fact, originality, voice, print), 사실마다 두 확인자, `content/updates.yaml` 에 소식 한 줄, 날쌤 승인. `CONTENT_DIR` 을 따릅니다 (시험은 `.cache/tests/` 의 복사본에 만듭니다).
+- **새 묶음 (R56).** `npm run new -- <id>` 는 `docs/template/lesson.yaml` 을 `content/<id>/lesson.yaml` 로 복사하고(본보기가 가리키는 `media/` 도 함께) `id` 를 그 묶음 id 로, `status` 를 `draft` 로 적습니다. 맨 위에 차시표의 값(학기, 단원 번호와 단원명, 차시 번호, 교과서 쪽수)을 주석 한 줄로 적습니다. 차시 번호와 쪽수는 차시표에만 있는 값이라 명세의 칸으로 적지 않습니다 (1절). 그 밖의 내용은 본보기 그대로이고 아무것도 지어내지 않습니다. 차시표에 없는 id, 이미 명세가 있는 묶음, `CONTENT_DIR` 밖으로 나가는 id 이면 아무것도 쓰지 않고 0 이 아닌 값으로 끝납니다. 마치면 할 일을 찍습니다: 명세 채우기, `npm run check`, `npm run factsheet -- <id>` 로 사실 대조, 검수 기록 넷(fact, originality, voice, print), 사실마다 두 확인자, `content/updates.yaml` 에 소식 한 줄(공개할 때 그 소식의 `date` 를 공개한 날로 고친다), 날쌤 승인. `CONTENT_DIR` 을 따릅니다 (시험은 `.cache/tests/` 의 복사본에 만듭니다).
 - 스크립트는 모두 저장소 뿌리에서 `node <경로>` 로 따로 돌릴 수 있고, 실패하면 0 이 아닌 값으로 끝납니다.
 - 환경 변수: `SITE_URL`(배포 주소. 하위 경로 없이 `https://nalssam.github.io` 처럼), `SITE_BASE`(하위 경로), `SHOW_DRAFTS=1`(초안도 싣는 미리 보기), `CHROMIUM_PATH`, `PYTHON`, `CONTENT_DIR`(시험용 명세 폴더), `DIST_DIR`(빌드한 사이트의 자리. 아래). 빈 값으로 준 `SITE_URL`·`SITE_BASE`·`DIST_DIR` 은 주지 않은 것으로 봅니다.
 - **dist 의 자리.** 2~5단계의 스크립트(`sync-media`, `render-pdf`, `generators/pptx/build.mjs`, `checks/outputs.mjs`)는 dist 의 자리를 `distDir()`(`#lib/content.ts`)로만 얻습니다. 기본은 `dist/` 이고, `--out <폴더>` 인자나 환경 변수 `DIST_DIR` 로 바꿉니다 (둘 다 있으면 인자. 저장소 뿌리 기준). 네 스크립트가 같은 인자를 같은 뜻으로 받습니다. `scripts/build.mjs` 도 `--out` 을 받아 1단계(`astro build --outDir`)와 6단계(`pagefind --site`)까지 같은 폴더로 넘깁니다. 이 문서의 `dist/` 는 모두 이 폴더입니다.
@@ -490,7 +492,7 @@ npm run build:site # astro build 만 (1단계). 그림·PDF·PPTX 와 산출물 
 - 다시 만들지 않아도 되는 파일은 `.cache/files/` 에서 복사만 합니다. 입력은 손으로 적은 목록이 아니라 실제로 찍는 것에서 얻습니다 (목록은 빠뜨릴 수 있습니다. 단원 덱은 앞 묶음의 카드에, 바닥글은 `SITE_URL` 에 기댑니다).
   - `render-pdf.mjs` 는 인쇄 페이지마다 dist 의 그 HTML 파일, 그 HTML 이 부르는 사이트 안 파일(`_astro/` 의 CSS·글꼴·스크립트, `/media/…`), `scripts/render-pdf.mjs` 자신, `package-lock.json` 의 sha256 을 `.cache/files/<id>/<kind>.pdf.sha256` 에 적고, 같으면 `.cache/files/<id>/<kind>.pdf` 를 `dist/files/` 로 복사만 합니다.
   - `generators/pptx` 는 `.cache/lessons.json` 에서 그 묶음의 항목, 거기 적힌 그림 파일, `generators/pptx/` 폴더의 sha256 을 씁니다.
-  - `--only <id>` 로 한 묶음만 만들 수 있습니다. `render-pdf.mjs` 는 `--kind <worksheet·cards·coloring·papercraft>` 로 한 종류만, `--force` 로 캐시를 쓰지 않고 모두 다시 찍습니다.
+  - `--only <id>` 로 한 묶음만 만들 수 있습니다. `render-pdf.mjs` 는 `--kind <worksheet·cards·coloring·papercraft·slides·quiz·web_activity>` 로 한 종류만(PDF 가 없는 셋은 미리보기만), `--force` 로 캐시를 쓰지 않고 모두 다시 찍습니다.
 - `astro dev` 에서는 명세나 차시표(`.yaml`)를 더하거나 고치거나 지우면 주소 목록(`getStaticPaths()`)을 다시 만듭니다 (`astro.config.mjs`). 새 묶음과 방금 ready 로 바꾼 자료의 주소가 다시 켜지 않아도 열립니다.
 - 에이전트가 켠 `astro dev`(환경 변수 `AI_AGENT` 가 있을 때)는 곧바로 끝난 것처럼 돌아오고 서버는 배경에서 계속 돕니다 (Astro 7). 같은 폴더에서 다시 켜면 환경 변수(`CONTENT_DIR`, `SHOW_DRAFTS`, `SITE_BASE`)와 포트가 달라도 새로 켜지 않고 먼저 켠 서버를 그대로 씁니다. 다 쓰면 `npx astro dev stop` 으로 끕니다 (`npx astro dev status` 로 켜져 있는지 봅니다). 시험은 dev 서버를 띄우지 않고 `astro build --outDir .cache/tests/…` 로 만든 것을 봅니다 (`tests/contract/frame.test.ts` 처럼).
 - 초안이 저절로 열리는 것은 `astro dev` 명령뿐입니다. `astro build` 는 `SHOW_DRAFTS=1` 을 줄 때만 초안을 싣습니다 (`--mode dev` 같은 인자로는 열리지 않습니다).

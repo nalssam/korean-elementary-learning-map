@@ -123,6 +123,7 @@ function main() {
     `  5. 사실마다 서로 다른 두 확인자의 확인 기록을 남깁니다. 예: npm run sign -- ${id} check --all --by "별명"`,
     `  6. content/updates.yaml 에 새 자료 소식을 하나 적습니다 (kind: new, lessons: ["${id}"]). 차시가 공개되어야 공개 사이트에 보입니다.`,
     '  7. 날쌤이 읽고 승인한 뒤 공개합니다. 승인(owner)과 status: published 는 날쌤만 적습니다.',
+    '     공개할 때 6의 소식의 date 를 공개한 날로 고칩니다 (명세를 쓴 날로 두면 올린 날이 틀리게 보입니다).',
   ].join('\n'));
   return 0;
 }

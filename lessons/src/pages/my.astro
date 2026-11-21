@@ -8,7 +8,7 @@ import { absoluteUrl, catalog, lessonRoute } from '#lib/content.ts';
 import { KIND_ORDER } from '#lib/site.ts';
 import SiteLayout from '#src/layouts/SiteLayout.astro';
 import { href } from '#src/lib/url.ts';
-import CatHead from '#src/components/site/catalog/CatHead.astro';
+import PageHead from '#src/components/site/PageHead.astro';
 import type { MyItem } from '#src/components/site/catalog/my.ts';
 // 자료 카드의 CSS 는 ResourceCard.astro 에 있다. 이 페이지는 카드를 브라우저에서 그리므로 컴포넌트를 불러 CSS 만 싣는다.
 import ResourceCard from '#src/components/site/ui/ResourceCard.astro';
@@ -31,7 +31,7 @@ const items: MyItem[] = catalog().map((i) => ({
 const json = JSON.stringify(items).replaceAll('\x3c', '\\u003c').replaceAll('\u2028', '\\u2028').replaceAll('\u2029', '\\u2029');
 ---
 <SiteLayout title="내 자료함" description="담기를 누른 자료를 이 브라우저에 모아 둡니다." current="my" index={false}>
-  <CatHead kicker="모아 두기" title="내 자료함">자료 카드의 담기를 누르면 여기에 모입니다. 여러 차시의 자료를 한곳에 모아 두고 수업을 준비할 때 씁니다.</CatHead>
+  <PageHead kicker="이 브라우저에 담은 자료" title="내 자료함">자료 카드의 담기를 누르면 여기에 모입니다. 여러 차시의 자료를 한곳에 모아 두고 수업을 준비할 때 씁니다.</PageHead>
   <p class="my-note">
     <svg class="my-note-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="12" rx="1.5" /><path d="M8 20h8M12 17v3" /></svg>
     <span>담은 목록은 <strong>이 브라우저에만</strong> 남습니다. 다른 기기나 다른 브라우저에서는 보이지 않고, 브라우저의 방문 기록과 사이트 데이터를 지우면 함께 지워집니다.</span>

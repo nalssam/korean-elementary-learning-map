@@ -45,11 +45,11 @@ test('머리: 두 줄 이름표, 길잡이(NAV 차례), 찾기와 내 자료함,
   assert.deepEqual(labels, NAV.map((n) => n.label));
   for (const n of NAV) if ('route' in n) assert.ok(nav.includes(`href="${n.route}"`), n.label);
   assert.match(nav, /<details class="hd-drop" data-menu><summary class="hd-link">/);
-  // 학기 여덟 개: 차시표가 있는 학기만 링크. 나머지는 '준비 중'
+  // 학기 여덟 개: 차시표가 있는 학기만 링크. 나머지는 '차시표 준비 중' (첫 화면의 학기 타일과 같은 말)
   const sems = [...nav.matchAll(/class="hd-sem( is-off)?"[^>]*>(?:<span class="hd-sem-name">)([^<]+)<\/span><span class="hd-sem-state">([^<]+)/g)];
   assert.deepEqual(sems.map((m) => m[2]), ['3-1', '3-2', '4-1', '4-2', '5-1', '5-2', '6-1', '6-2'].map(c.semesterLabel));
   assert.deepEqual(sems.filter((m) => !m[1]).map((m) => m[2]), ['5학년 2학기']);
-  assert.ok(sems.filter((m) => m[1]).every((m) => m[3] === '준비 중'));
+  assert.ok(sems.filter((m) => m[1]).every((m) => m[3] === '차시표 준비 중'));
   assert.ok(nav.includes('<span class="hd-sem-state">0/6 차시 공개</span><span class="hd-sem-draft">초안 5차시</span>'));
   // 오른쪽 단추: 찾기는 첫 화면의 찾기 자리로, 내 자료함에는 담은 수(처음에는 0 이라 숨는다)
   assert.match(head, new RegExp(`<a class="hd-tool" href="${NAV_TOOLS.search.route}" data-find-link>`));
@@ -125,12 +125,15 @@ test('첫 화면: R43 의 차례와 세는 값 (미리 보기)', () => {
   assert.equal(news.length, ups.length);
   ups.forEach((u, i) => {
     assert.ok(text(news[i]).includes(u.title), u.title);
-    assert.ok(news[i].includes(`data-state="${u.kind}">${UPDATE_LABEL[u.kind]}<`), u.title);
+    assert.match(news[i], new RegExp(`data-state="${u.kind}"( data-tone="quiet")?>${UPDATE_LABEL[u.kind]}<`), u.title);
+    // 산호색 '새 자료'는 가장 최근의 새 자료 하나에만
+    if (u.kind === 'new') assert.equal(news[i].includes('data-tone="quiet"'), u !== ups.find((x) => x.kind === 'new'), u.title);
     assert.equal(news[i].includes('data-state="draft"'), u.draft, u.title);
   });
   // 제작 현황 요약: 여덟 학기를 더한 값, 초안은 미리 보기에서만
   const status = text(home.slice(at('id="status-title"'), at('id="ways-title"')));
-  assert.ok(status.includes('차시표에 오른 6차시') && status.includes('공개0차시') && status.includes('초안5차시') && status.includes('준비 중1차시'), status);
+  // 큰 숫자는 공개한 차시 (차시표에 오른 수가 '만든 차시'로 읽히지 않게)
+  assert.ok(status.includes('지금까지 공개한 차시') && status.includes('0 / 6차시 공개') && status.includes('공개0차시') && status.includes('초안5차시') && status.includes('준비 중1차시'), status);
   assert.ok(status.includes('학기 8개 가운데 1개 학기의 차시표가 있습니다.'));
   // 이렇게 만듭니다: 납작한 카드 넷, 민트 띠는 페이지에 하나
   assert.equal(home.match(/<li class="hm-way">/g)?.length, 4);
@@ -139,6 +142,12 @@ test('첫 화면: R43 의 차례와 세는 값 (미리 보기)', () => {
   for (const fact of ['두 확인자가 사실과 출처를 따로 대조합니다. 확인자는 AI 검증자일 수 있습니다.', '날쌤이 끝까지 읽고 승인해야 공개합니다.', '단원명, 차시 번호, 쪽수만 가져옵니다.', SITE.licence.name]) {
     assert.ok(ways.includes(fact), fact);
   }
+  // 공개한 차시가 없으면 머리글 아래에 그렇다고 한 줄 (시험용 명세는 모두 초안)
+  assert.ok(text(home).includes('아직 공개한 차시가 없습니다. 첫 차시를 검수하고 있고, 공개하면 업데이트에 알립니다.'));
+  // 낱말 찾기의 보기 낱말은 실린 첫 차시의 첫 새 낱말 (찾으면 나오는 낱말)
+  const term = withFixtures(() => c.visibleLessons()[0].terms.new[0].term);
+  assert.ok(home.includes(`placeholder="예: ${term}"`), term);
+  assert.ok(!/<site-search[^>]*data-none/.test(home));
   // 검색 색인에는 머리글만. 나머지 자리는 색인에서 뺀다
   assert.equal(home.match(/<section class="hm-sec"[^>]*data-pagefind-ignore/g)?.length, 3);
   assert.match(home, /<div class="hm-pair" data-pagefind-ignore>/);
@@ -159,7 +168,11 @@ test('첫 화면: 공개 빌드에서는 아무것도 실리지 않았다고 정
   assert.ok(!home.includes('data-state="draft"'));
   // 초안은 세지 않는다
   const status = text(home.slice(home.indexOf('id="status-title"'), home.indexOf('id="ways-title"')));
-  assert.ok(!status.includes('초안') && status.includes('준비 중6차시'), status);
+  assert.ok(!status.includes('초안') && status.includes('준비 중6차시') && status.includes('0 / 6차시 공개'), status);
+  // 실린 차시가 없다: 머리글 아래의 한 줄, 낱말 찾기는 보기 낱말 없이 '아직 공개한 차시가 없습니다'로 답한다
+  assert.ok(text(home).includes('아직 공개한 차시가 없습니다.'));
+  assert.match(home, /<site-search class="lookup lookup-search" hidden[^>]*\sdata-none/);
+  assert.ok(!/data-search-input[^>]*placeholder|placeholder="예:[^"]*"[^>]*data-search-input/.test(home));
   // 하위 경로에 놓여도 링크가 맞다
   assert.ok(home.includes('href="/sub/about/"') && home.includes('href="/sub/#find"') && home.includes('href="/sub/my/"'));
   assert.ok(home.includes(`<p class="site-notice">${SITE.siteNotice}</p>`));

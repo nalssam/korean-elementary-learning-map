@@ -1,6 +1,7 @@
 ---
 // 상태 표 (R53). 차시의 상태(공개·초안·준비 중)와 업데이트 소식의 갈래(새 자료·고침·알림).
 // 산호색은 '새 자료'에만 쓴다 (주의를 끄는 한 군데. 맞은 답에는 쓰지 않는다. docs/CONTRACT.md 14절).
+// 소식이 쌓이면 '새 자료' 표가 여럿 늘어서므로, 부르는 페이지는 가장 최근의 새 자료 하나만 산호색으로 두고 나머지에 quiet 를 준다 (청록 테두리).
 // 함께 쓰는 컴포넌트다 (계약. docs/CONTRACT.md 6절).
 import { LESSON_STATE_LABEL, UPDATE_LABEL } from '#lib/site.ts';
 
@@ -10,11 +11,13 @@ interface Props {
   /** 보여 줄 말을 바꿀 때만. 예: "초안 1차시" */
   label?: string;
   class?: string;
+  /** '새 자료'를 산호색 대신 조용한 청록 테두리로. 가장 최근의 새 자료가 아닌 소식에 준다. */
+  quiet?: boolean;
 }
-const { state, label, class: cls } = Astro.props;
+const { state, label, class: cls, quiet = false } = Astro.props;
 const text = label ?? (state in LESSON_STATE_LABEL ? LESSON_STATE_LABEL[state as keyof typeof LESSON_STATE_LABEL] : UPDATE_LABEL[state as keyof typeof UPDATE_LABEL]);
 ---
-<span class:list={['status-chip', cls]} data-state={state}>{text}</span>
+<span class:list={['status-chip', cls]} data-state={state} data-tone={quiet ? 'quiet' : undefined}>{text}</span>
 
 <style is:global>
   :where(.status-chip) {
@@ -26,6 +29,7 @@ const text = label ?? (state in LESSON_STATE_LABEL ? LESSON_STATE_LABEL[state as
   :where(.status-chip[data-state='draft']) { border-color: var(--line); background: var(--paper); color: var(--navy); }
   :where(.status-chip[data-state='planned']) { border-color: var(--line); border-style: dashed; color: var(--gray); }
   :where(.status-chip[data-state='new']) { border-color: var(--coral); background: var(--card); color: var(--coral); }
+  :where(.status-chip[data-state='new'][data-tone='quiet']) { border-color: var(--teal); color: var(--teal); }
   :where(.status-chip[data-state='fix']) { background: var(--teal-soft); color: var(--navy); }
   :where(.status-chip[data-state='notice']) { border-color: var(--line); background: var(--paper); color: var(--gray); }
 </style>

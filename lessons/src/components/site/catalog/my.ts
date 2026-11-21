@@ -130,7 +130,8 @@ export function card(item: MyItem, icons: HTMLTemplateElement): HTMLElement {
   const format = el('p', 'rc-format', item.format);
   if (item.draft) {
     const chip = icons.content.querySelector('.status-chip[data-state="draft"]');
-    if (chip) format.append(chip.cloneNode(true));
+    // 한 줄 설명과 초안 표 사이에 빈칸 (화면 읽기 프로그램과 검색이 '…PPTX초안'처럼 붙여 읽지 않게. ResourceCard 와 같다)
+    if (chip) format.append(' ', chip.cloneNode(true));
   }
   body.append(head, title, lesson, format);
 
@@ -166,7 +167,7 @@ export function card(item: MyItem, icons: HTMLTemplateElement): HTMLElement {
     close.setAttribute('popovertarget', id);
     close.setAttribute('popovertargetaction', 'hide');
     close.autofocus = true;
-    pop.append(el('p', 'rc-pop-title', label), el('p', 'rc-pop-sub', item.lessonTitle), url, close);
+    pop.append(el('p', 'rc-pop-title', label), el('p', 'rc-pop-sub', item.title), url, close);
     let made = false;
     const make = () => {
       if (made) return;

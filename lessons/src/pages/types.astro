@@ -5,7 +5,7 @@
 import { catalog, semesterLabel } from '#lib/content.ts';
 import { ASSET_LABEL, KIND_ORDER } from '#lib/site.ts';
 import SiteLayout from '#src/layouts/SiteLayout.astro';
-import CatHead from '#src/components/site/catalog/CatHead.astro';
+import PageHead from '#src/components/site/PageHead.astro';
 import ResourceCard from '#src/components/site/ui/ResourceCard.astro';
 import StatusChip from '#src/components/site/ui/StatusChip.astro';
 import TypeIcon from '#src/components/site/ui/TypeIcon.astro';
@@ -14,15 +14,17 @@ import '#src/components/site/catalog/catalog.css';
 const items = catalog();
 const groups = KIND_ORDER.map((kind) => ({ kind, label: ASSET_LABEL[kind], items: items.filter((i) => i.kind === kind) }));
 const filled = groups.filter((g) => g.items.length > 0);
+// 종류마다 자료가 둘 이하이면(차시가 몇 개 없는 동안) 종류를 칸으로 나란히 놓는다. 한 줄에 카드 하나만 두면 가로 세 칸 가운데 둘이 빈다.
+const compact = filled.length > 0 && filled.every((g) => g.items.length <= 2);
 // 학기 고르기에는 자료가 있는 학기만 (차시표 차례)
 const semesters = [...new Set(items.map((i) => i.semester))];
 ---
 <SiteLayout title="자료 유형별" description="실린 수업 자료를 수업 화면, 학습지, 확인 퀴즈처럼 종류별로 모아 봅니다." current="types">
-  <CatHead kicker="모아 보기" title="자료 유형별">
+  <PageHead kicker="모든 차시의 자료" title="자료 유형별">
     {items.length > 0
       ? <>지금 실린 자료 <span class="cat-num">{items.length}</span>개를 종류별로 모았습니다. 학습지만 모아 뽑거나 웹 활동만 찾을 때 씁니다.</>
       : <>아직 실린 자료가 없습니다. 차시가 공개되면 종류별로 여기에 모입니다.</>}
-  </CatHead>
+  </PageHead>
 
   {filled.length > 0 && (
     <div class="ty-tools" id="ty-tools" data-ty-tools hidden data-pagefind-ignore>
@@ -44,7 +46,7 @@ const semesters = [...new Set(items.map((i) => i.semester))];
   )}
 
   {/* 종류마다 한 칸: 왼쪽에 종류의 이름, 오른쪽에 카드. 준비된 것이 없는 종류는 이름과 '준비 중' 한 줄 (R48). */}
-  <div class="ty-groups">
+  <div class:list={['ty-groups', compact && 'is-compact']}>
     {groups.map((g) => (
       <section class:list={['ty-group', g.items.length === 0 && 'ty-group-empty']} id={g.kind} data-ty-group={g.kind} aria-labelledby={`ty-${g.kind}`}>
         <div class="ty-group-head">

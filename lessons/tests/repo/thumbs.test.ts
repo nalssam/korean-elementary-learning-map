@@ -10,7 +10,7 @@ import { ASSET_ROUTE } from '#lib/site.ts';
 import type { RoutedKind } from '#lib/site.ts';
 import { buildSite, FIXTURES, noChromium } from '../contract/helpers.ts';
 import { runNode, scratch } from './helpers.ts';
-import { THUMB_KINDS, THUMB_MAX, jpegSize, thumbJobs } from '../../scripts/thumbs.mjs';
+import { THUMB_KINDS, THUMB_MAX, coverLicensed, jpegSize, thumbJobs } from '../../scripts/thumbs.mjs';
 
 const skip = await noChromium();
 const OUT = path.join(scratch('thumbs'), 'site');
@@ -121,5 +121,35 @@ test('남의 그림(data-licence)은 가리고 찍는다: 가린 그림과 그�
     assert.notDeepEqual(shown, hidden, `${id} ${kind}: 그림을 가려도 같은 미리보기가 나옵니다`);
   } finally {
     fs.writeFileSync(page, html);
+  }
+});
+
+test('가린 남의 그림 자리에는 그림 자리 상자를 얹고, 그 그림의 출처 표시도 가린다 (coverLicensed)', { skip }, async () => {
+  const { chromium } = await import('playwright');
+  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
+  try {
+    const page = await browser.newPage({ viewport: { width: 800, height: 600 } });
+    // 그림 파일 없이 크기만 준 그림 둘: 남의 그림(data-licence)과 직접 그린 그림
+    await page.setContent(`<style>:root { --paper: #f3f0e8; --line: #e4dfd3; --gray: #586875; } body { margin: 40px; } img { display: block; }</style>
+      <figure class="media" id="theirs"><img data-licence="CC-BY-SA" width="300" height="200" alt="고인돌"><figcaption><span class="media-caption">고인돌</span> <span class="media-credit">사진: 누군가 · CC BY-SA 4.0</span></figcaption></figure>
+      <figure class="media" id="ours"><img width="120" height="80" alt="도해"><figcaption><span class="media-credit">날쌤 그림</span></figcaption></figure>`);
+    const n = await page.evaluate(coverLicensed, 10_000);
+    assert.equal(n, 1);
+    const r = await page.evaluate(() => {
+      const box = (el: Element) => { const b = el.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height)]; };
+      const theirs = document.querySelector('#theirs img')!;
+      const cover = document.querySelector('[data-thumb-cover]')!;
+      const vis = (s: string) => getComputedStyle(document.querySelector(s)!).visibility;
+      return {
+        same: JSON.stringify(box(theirs)) === JSON.stringify(box(cover)),
+        covers: document.querySelectorAll('[data-thumb-cover]').length,
+        bg: getComputedStyle(cover).backgroundColor, image: getComputedStyle(cover).backgroundImage.startsWith('url("data:image/svg+xml'),
+        img: vis('#theirs img'), credit: vis('#theirs .media-credit'), caption: vis('#theirs .media-caption'),
+        ours: vis('#ours img'), ourCredit: vis('#ours .media-credit'),
+      };
+    });
+    assert.deepEqual(r, { same: true, covers: 1, bg: 'rgb(243, 240, 232)', image: true, img: 'hidden', credit: 'hidden', caption: 'visible', ours: 'visible', ourCredit: 'visible' });
+  } finally {
+    await browser.close();
   }
 });

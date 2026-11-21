@@ -1,14 +1,15 @@
 ---
 // 사이트 머리 (R40, R42). 왼쪽에 이름표, 가운데 길잡이(NAV), 오른쪽에 찾기와 내 자료함(NAV_TOOLS).
 //   - 이름표: 표시 그림 옆에 두 줄. SITE.nameLead(청록, 작게) 위에 SITE.shortName(남색, 굵게).
-//   - '교과서 자료'는 페이지가 아니라 학기 여덟 개를 펼치는 판이다. 차시표가 없는 학기는 링크 없이 '준비 중'.
+//   - '교과서 자료'는 페이지가 아니라 학기 여덟 개를 펼치는 판이다. 차시표가 없는 학기는 링크 없이 '차시표 준비 중'.
 //   - 760px 아래에서는 이름표와 찾기·메뉴 두 단추만 둔다. 메뉴는 폭 전체를 쓰는 판이고 같은 링크를 늘어놓는다.
 // 펼치는 판은 둘 다 <details> 라서 스크립트 없이도 열리고 닫힌다. 스크립트는 Esc·바깥 누르기로 닫고 초점을 단추로 돌려주는 일만 덧붙인다.
 // 넓은 화면의 길잡이와 휴대폰의 메뉴는 같은 링크를 두 번 그린다. 한쪽은 늘 display:none 이라 화면 읽기 프로그램에는 한 번만 읽힌다.
-import { loadRegistry, semesterLabel, semesterProgress, showDrafts } from '#lib/content.ts';
-import { NAV, NAV_TOOLS, SITE } from '#lib/site.ts';
+import { catalog, loadRegistry, semesterLabel, semesterProgress, showDrafts } from '#lib/content.ts';
+import { KIND_ORDER, NAV, NAV_TOOLS, SITE } from '#lib/site.ts';
 import type { NavKey } from '#lib/site.ts';
 import { href } from '#src/lib/url.ts';
+import { encodeKnown } from './collect.ts';
 import { textbookLabel } from './data.ts';
 
 interface Props {
@@ -25,7 +26,8 @@ const semesters = loadRegistry().semesters.map((s) => {
   const to = p.total > 0 ? href(`/${s.id}/`) : undefined;
   const at: 'page' | 'true' | undefined = to && here === to ? 'page' : to && here.startsWith(to) ? 'true' : undefined;
   // 공개 빌드에서는 초안을 세지 않는다 (draft 가 늘 0 이다)
-  const state = p.total === 0 ? '준비 중' : `${p.published}/${p.total} 차시 공개`;
+  // 차시표가 없는 학기는 첫 화면의 학기 타일과 같은 말 (맨 '준비 중'은 아직 만들지 않은 차시의 상태다)
+  const state = p.total === 0 ? '차시표 준비 중' : `${p.published}/${p.total} 차시 공개`;
   return { id: s.id, label: semesterLabel(s.id), to, at, state, draft: preview ? p.draft : 0 };
 });
 const links = NAV.filter((n) => 'route' in n);
@@ -33,8 +35,10 @@ const links = NAV.filter((n) => 'route' in n);
 const routeOf: Partial<Record<NavKey, string>> = { home: '/', my: NAV_TOOLS.my.route, ...Object.fromEntries(links.map((n) => [n.key, n.route])) };
 const aria = (key: NavKey): 'page' | undefined => (current === key || (!current && routeOf[key] !== undefined && here === href(routeOf[key])) ? 'page' : undefined);
 const textbookHere = current === 'textbook' || semesters.some((s) => s.at) ? 'true' : undefined;
+// 담은 수는 이번 빌드에 실린 자료만 센다 (내 자료함에 보이는 수와 같게). 실린 자료의 열쇠를 짧게 적어 싣는다 (collect.ts 의 encodeKnown).
+const known = encodeKnown(catalog().map((i) => i.key), KIND_ORDER);
 ---
-<header class="hd">
+<header class="hd" data-collect-known={known}>
   <div class="wrap hd-bar">
     <a class="hd-lockup" href={href('/')} aria-current={aria('home')}>
       <svg class="hd-mark" viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" focusable="false">
@@ -162,12 +166,13 @@ const textbookHere = current === 'textbook' || semesters.some((s) => s.at) ? 'tr
 
   // 찾기: 첫 화면에는 찾기 칸(#find)이 있다. 그 페이지에서는 이동하지 않고 칸으로 초점을 옮긴다.
   // 다른 페이지에서는 링크 그대로 첫 화면의 #find 로 가고, 첫 화면이 열리면서 칸에 초점을 준다.
-  // 낱말 찾기 칸은 검색 색인을 불러온 뒤에야 보이므로(Search.astro), 보이면 그 칸, 아니면 쪽수·차시 칸이다.
+  // 초점은 쪽수·차시 칸으로 간다: 교과서를 펴 놓은 교사가 가장 먼저 넣는 것이 쪽수나 차시 번호다 (첫 화면의 설명 문장도 그렇게 안내한다).
+  // 낱말 찾기 칸은 Tab 한 번 뒤에 있다. 쪽수·차시 칸이 없는 빌드(차시표가 없다)에서만 낱말 칸이다 (검색 색인을 불러온 뒤에야 보인다. Search.astro).
   const findInput = (): HTMLInputElement | undefined => {
     const box = document.getElementById('find');
     if (!box) return undefined;
     const shown = [...box.querySelectorAll<HTMLInputElement>('input')].filter((i) => i.offsetParent !== null);
-    return shown.find((i) => i.type === 'search') ?? shown[0];
+    return shown.find((i) => i.hasAttribute('data-finder-input')) ?? shown[0];
   };
   for (const a of document.querySelectorAll<HTMLAnchorElement>('[data-find-link]')) {
     a.addEventListener('click', (e) => {
@@ -186,12 +191,15 @@ const textbookHere = current === 'textbook' || semesters.some((s) => s.at) ? 'tr
       findInput()?.focus({ preventScroll: true });
     };
     const search = document.querySelector('site-search');
-    if (search && search.hasAttribute('hidden')) {
-      // 검색 색인을 기다리되, 오래 걸리거나 색인이 없으면 쪽수·차시 칸으로
+    if (!findInput() && search && search.hasAttribute('hidden')) {
+      // 쪽수·차시 칸이 없으면 낱말 칸이 드러나기를 기다린다 (오래 걸리거나 색인이 없으면 그만둔다)
       const timer = setTimeout(focusFind, 1200);
       document.addEventListener('site-search-ready', () => { clearTimeout(timer); focusFind(); }, { once: true });
-    } else {
+    } else if (document.readyState === 'complete') {
       focusFind();
+    } else {
+      // 페이지를 다 싣기 전에 초점을 주면, 싣고 나서 #find 로 내려가는 브라우저의 동작이 초점을 다시 걷어 간다 (Chromium)
+      addEventListener('load', () => requestAnimationFrame(focusFind), { once: true });
     }
   }
 </script>

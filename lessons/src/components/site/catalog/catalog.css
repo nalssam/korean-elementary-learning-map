@@ -4,10 +4,7 @@
 
 /* ───────────── 같이 쓰는 것 ───────────── */
 
-/* 페이지 머리: 소개·이용 조건과 같은 크기 (Kicker, ExtraBold 제목, 한 줄 설명) */
-.cat-head { display: grid; gap: var(--s1); max-width: 46rem; padding-top: var(--s2); }
-.cat-title { margin: 0; font-size: var(--fs-2xl); font-weight: var(--fw-heading); line-height: 1.25; letter-spacing: -0.03em; }
-.cat-lead { margin-top: var(--s2); font-size: var(--fs-lg); line-height: 1.55; }
+/* 페이지 머리는 소개·이용 조건과 같은 PageHead.astro 를 쓴다 */
 .cat-num { font-variant-numeric: tabular-nums; }
 .cat-sec-title { margin: 0 0 var(--s4); font-size: var(--fs-xl); font-weight: var(--fw-heading); line-height: var(--lh-tight); letter-spacing: -0.02em; }
 
@@ -18,9 +15,6 @@
 /* 카드 단추의 글자색은 site.css 의 '자료 카드 격자' 규칙이 모든 사이트 페이지에서 맞춘다. */
 
 @media (max-width: 760px) {
-  .cat-head { padding-top: 0; }
-  .cat-title { font-size: calc(var(--fs-xl) * 1.08); }
-  .cat-lead { font-size: var(--fs-md); line-height: var(--lh); }
   .cat-sec-title { font-size: var(--fs-lg); }
 }
 @media (max-width: 599.98px) {
@@ -74,6 +68,15 @@
 .ty-group-empty .ty-group-icon { grid-row: auto; width: 2rem; height: 2rem; border-style: dashed; background: none; color: var(--gray); }
 .ty-group-empty .ty-group-icon .type-icon { width: 18px; height: 18px; }
 .ty-group-empty .ty-group-title { font-size: var(--fs-md); font-weight: 700; color: var(--gray); }
+
+/* 종류마다 자료가 한두 개뿐일 때(is-compact): 종류를 칸으로 나란히 놓는다 (넓은 화면에서 셋, 중간 둘, 휴대폰 하나).
+   자료가 셋 이상인 종류가 생기면 위의 책장 짜임으로 돌아간다. 준비 중인 종류는 그대로 한 줄씩 아래에 놓는다. */
+.ty-groups.is-compact { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr)); column-gap: var(--s5); }
+.ty-groups.is-compact .ty-group { grid-template-columns: minmax(0, 1fr); align-content: start; }
+.ty-groups.is-compact .ty-group-head { position: static; display: flex; align-items: center; gap: var(--s3); }
+.ty-groups.is-compact .ty-group-n { margin-left: auto; }
+.ty-groups.is-compact .ty-cards { grid-template-columns: minmax(0, 1fr); }
+.ty-groups.is-compact .ty-group-empty { grid-column: 1 / -1; grid-template-columns: 11.5rem minmax(0, 1fr); }
 
 @media (max-width: 899.98px) {
   .ty-group { grid-template-columns: minmax(0, 1fr); padding-top: var(--s4); }

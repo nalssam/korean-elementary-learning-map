@@ -6,11 +6,13 @@ import { courseLine, visibleUpdates } from '#lib/content.ts';
 import type { VisibleUpdate } from '#lib/content.ts';
 import SiteLayout from '#src/layouts/SiteLayout.astro';
 import { href } from '#src/lib/url.ts';
-import CatHead from '#src/components/site/catalog/CatHead.astro';
+import PageHead from '#src/components/site/PageHead.astro';
 import StatusChip from '#src/components/site/ui/StatusChip.astro';
 import '#src/components/site/catalog/catalog.css';
 
 const updates = visibleUpdates();
+// 산호색 '새 자료' 표는 가장 최근의 새 자료 하나에만 (R53 의 산호 한 방울). 나머지 새 자료는 조용한 표다.
+const newest = updates.find((u) => u.kind === 'new');
 const months: { key: string; label: string; items: VisibleUpdate[] }[] = [];
 for (const u of updates) {
   const [y, m] = u.date.split('-');
@@ -22,7 +24,7 @@ for (const u of updates) {
 const dateLabel = (d: string) => d.split('-').map(Number).join('. ') + '.';
 ---
 <SiteLayout title="업데이트" description="새로 올린 차시와 고친 곳을 날짜순으로 알립니다." current="updates">
-  <CatHead kicker="새 소식" title="업데이트">새로 올린 차시와 고친 곳을 적습니다. 최근 소식이 맨 위에 옵니다.</CatHead>
+  <PageHead kicker="새 소식" title="업데이트">새로 올린 차시와 고친 곳을 적습니다. 최근 소식이 맨 위에 옵니다.</PageHead>
 
   {months.length === 0 && <p class="up-empty">아직 올린 소식이 없습니다.</p>}
   {months.map((m) => (
@@ -33,7 +35,7 @@ const dateLabel = (d: string) => d.split('-').map(Number).join('. ') + '.';
           <li class="up-item" data-kind={u.kind}>
             <p class="up-meta">
               <time class="up-date" datetime={u.date}>{dateLabel(u.date)}</time>
-              <StatusChip state={u.kind} />
+              <StatusChip state={u.kind} quiet={u.kind === 'new' && u !== newest} />
               {u.draft && <StatusChip state="draft" />}
             </p>
             <div class="up-main">
@@ -44,7 +46,7 @@ const dateLabel = (d: string) => d.split('-').map(Number).join('. ') + '.';
                   {u.links.map((l) => (
                     <li>
                       <a class="up-link" href={href(l.route)}>
-                        <span class="up-link-course">{courseLine(l.id)}</span>
+                        <span class="up-link-course">{courseLine(l.id)}</span>{' '}
                         <span class="up-link-title">{l.title}</span>
                       </a>
                     </li>

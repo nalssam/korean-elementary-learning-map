@@ -2,7 +2,8 @@
 // 페이지에서 단추를 누르는 것은 tests/contract/ui.test.ts 가 Chromium 으로 본다.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CHANGE_EVENT, STORAGE_KEY, count, has, isKey, read, remove, storage, subscribe, toggle } from '#src/components/site/collect.ts';
+import { CHANGE_EVENT, STORAGE_KEY, count, decodeKnown, encodeKnown, has, isKey, read, remove, shownCount, storage, subscribe, toggle } from '#src/components/site/collect.ts';
+import { KIND_ORDER } from '#lib/site.ts';
 import type { Store } from '#src/components/site/collect.ts';
 
 /** 보통의 저장소 */
@@ -122,4 +123,21 @@ test('subscribe(): 이 페이지에서 바꾸거나 다른 탭에서 바꾸면 �
     if (saved.ls) Object.defineProperty(globalThis, 'localStorage', saved.ls);
     else delete (globalThis as { localStorage?: unknown }).localStorage;
   }
+});
+
+test('머리의 담은 수는 이번 빌드에 실린 자료만 센다: encodeKnown·decodeKnown·shownCount', () => {
+  const keys = ['5-2/1/01#slides', '5-2/1/01#worksheet', '5-2/1/01#making_kit', '5-2/1/02-03#quiz', '5-2/1/02-03#web_activity'];
+  const text = encodeKnown(keys, KIND_ORDER);
+  // 묶음마다 한 덩어리, 종류는 KIND_ORDER 의 자리 한 글자
+  assert.equal(text.split(' ').length, 2);
+  assert.ok(text.startsWith('5-2/1/01:'));
+  assert.deepEqual([...decodeKnown(text, KIND_ORDER)].sort(), [...keys].sort());
+  // 모르는 종류는 버린다. 빈 글은 빈 모음
+  assert.equal(encodeKnown(['5-2/1/01#nothing'], KIND_ORDER), '');
+  assert.equal(decodeKnown('', KIND_ORDER).size, 0);
+  // 담은 것 가운데 실리지 않은 것(다른 묶음, 사라진 자료)은 세지 않는다. 목록이 없으면 모두 센다
+  const saved = ['5-2/1/01#slides', '5-2/1/04#slides', '5-2/1/02-03#cards'];
+  assert.equal(shownCount(saved, decodeKnown(text, KIND_ORDER)), 1);
+  assert.equal(shownCount(saved), 3);
+  assert.equal(shownCount(saved, new Set()), 0);
 });

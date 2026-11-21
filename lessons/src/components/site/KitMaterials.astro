@@ -21,7 +21,9 @@ const groups = GROUP_ORDER.map((g) => ({ key: g, label: GROUP_LABEL[g], count: i
       {groups.map((g) => <button type="button" class="kit-tab" data-filter={g.key} aria-pressed="false">{g.label} <span class="kit-tab-n">{g.count}</span></button>)}
     </div>
   </div>
-  <ul class="book-cards kit-cards" data-filter-list>
+  {/* 카드의 글(자료 종류, 담기, 한 줄 설명)은 검색 색인에서 뺀다. 검색 결과의 발췌가 '담기: 웹 활동 …' 같은 단추 글로 채워졌다.
+       자료의 이름은 아래 교사용 안내에 그대로 있어 그대로 찾힌다. */}
+  <ul class="book-cards kit-cards" data-filter-list data-pagefind-ignore>
     {items.map((item, i) => <li class:list={[i === 0 && item.kind === 'slides' && 'book-cards-wide']}><ResourceCard item={item} /></li>)}
   </ul>
   <p class="visually-hidden" aria-live="polite" data-filter-status></p>

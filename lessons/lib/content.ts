@@ -1310,7 +1310,7 @@ export function slidePhase(lesson: Lesson, no: number): { index: number; label: 
 }
 
 /**
- * 자료 카드의 한 줄 설명 (R47). 예: "PPTX 22장", "PDF · A4 2쪽", "PDF · A4 가로 2쪽", "휴대폰·태블릿 · 5문항", "휴대폰·태블릿 · 분류하기".
+ * 자료 카드의 한 줄 설명 (R47). 예: "화면 22장 · PPTX", "PDF · A4 2쪽", "PDF · A4 가로 2쪽", "휴대폰·태블릿 · 5문항", "휴대폰·태블릿 · 분류하기".
  * 그 자료가 이 차시에서 준비되어 있지 않으면 undefined.
  */
 export function formatLine(lesson: Lesson, kind: AssetKind): string | undefined {
@@ -1319,7 +1319,8 @@ export function formatLine(lesson: Lesson, kind: AssetKind): string | undefined 
   if (job) return `PDF · A4 ${job.print.orientation === 'landscape' ? `${ORIENTATION_LABEL.landscape} ` : ''}${job.pages}쪽`;
   const a = lesson.assets;
   switch (kind) {
-    case 'slides': return `PPTX ${lesson.slides.length}장`;
+    // 수업 화면의 장 수. PPTX 에는 그림 출처 장이 하나 더 붙을 수 있어 파일의 장 수와 다를 수 있다. 여는 단추는 웹 화면이고 PPTX 는 내려받기다.
+    case 'slides': return `화면 ${lesson.slides.length}장 · PPTX`;
     case 'quiz': return `휴대폰·태블릿 · ${lesson.quiz.items.length}문항`;
     case 'web_activity': return a.web_activity.state === 'ready' ? `휴대폰·태블릿 · ${ACTIVITY_LABEL[a.web_activity.activity.kind]}` : undefined;
     case 'making_kit': {

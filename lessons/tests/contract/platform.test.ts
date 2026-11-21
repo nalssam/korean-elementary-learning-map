@@ -57,10 +57,10 @@ test('readyKinds·formatLine: 준비된 자료와 한 줄 설명', () => {
     const two = c.loadLesson('5-2/1/02-03');
     assert.deepEqual(c.readyKinds(one), ['slides', 'worksheet', 'quiz', 'web_activity', 'cards']);
     assert.deepEqual(c.readyKinds(two), ['slides', 'worksheet', 'quiz', 'web_activity', 'papercraft', 'cards', 'coloring', 'making_kit']);
-    assert.deepEqual(c.readyKinds(one).map((k) => c.formatLine(one, k)), ['PPTX 5장', 'PDF · A4 1쪽', '휴대폰·태블릿 · 3문항', '휴대폰·태블릿 · 분류하기', 'PDF · A4 2쪽']);
+    assert.deepEqual(c.readyKinds(one).map((k) => c.formatLine(one, k)), ['화면 5장 · PPTX', 'PDF · A4 1쪽', '휴대폰·태블릿 · 3문항', '휴대폰·태블릿 · 분류하기', 'PDF · A4 2쪽']);
     // 가로 학습지는 가로라고 밝힌다. 만들기 세트는 수업 밖 활동과 재료 수
     assert.deepEqual(c.readyKinds(two).map((k) => c.formatLine(two, k)), [
-      'PPTX 8장', 'PDF · A4 가로 2쪽', '휴대폰·태블릿 · 4문항', '휴대폰·태블릿 · 그림에 이름표 놓기', 'PDF · A4 3쪽', 'PDF · A4 2쪽', 'PDF · A4 1쪽', '수업 밖 활동 · 재료 2가지',
+      '화면 8장 · PPTX', 'PDF · A4 가로 2쪽', '휴대폰·태블릿 · 4문항', '휴대폰·태블릿 · 그림에 이름표 놓기', 'PDF · A4 3쪽', 'PDF · A4 2쪽', 'PDF · A4 1쪽', '수업 밖 활동 · 재료 2가지',
     ]);
     // 준비되지 않은 자료에는 설명이 없다
     assert.equal(c.formatLine(one, 'papercraft'), undefined);
@@ -88,7 +88,7 @@ test('catalog(): 실리는 차시의 준비된 자료 전부, 차시표 차례 �
     key: '5-2/1/01#slides', lessonId: '5-2/1/01', kind: 'slides', label: '수업 화면', title: '시험용 한 차시', lessonTitle: '시험용 한 차시',
     semester: '5-2', unit: 1, lessonsLabel: '1차시', pagesLabel: '6~9쪽', course: '5학년 2학기 1단원 1차시',
     route: '/5-2/1/01/slides/', file: { route: '/files/5-2/1/01/slides.pptx', name: '5-2_1단원_1차시_수업 화면.pptx' },
-    format: 'PPTX 5장', thumb: '/files/5-2/1/01/thumbs/slides.jpg', draft: true,
+    format: '화면 5장 · PPTX', thumb: '/files/5-2/1/01/thumbs/slides.jpg', draft: true,
   });
   // 자료의 이름은 명세에 적은 그 자료의 title, 없으면 차시의 title
   assert.equal(at('5-2/1/01#worksheet').title, '시험용 학습지');

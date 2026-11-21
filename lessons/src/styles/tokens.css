@@ -23,6 +23,7 @@
   --fs-lg: 1.25rem;     /* 20 */
   --fs-xl: 1.625rem;    /* 26 */
   --fs-2xl: 2.125rem;   /* 34 */
+  --fs-3xl: 2.625rem;   /* 42 첫 화면 머리글 */
   --fs-kicker: 0.875rem; /* 14 머리말 위의 작은 청록 글씨 (Kicker) */
   --fw-heading: 800;     /* 제목은 Pretendard ExtraBold */
   --lh: 1.65;

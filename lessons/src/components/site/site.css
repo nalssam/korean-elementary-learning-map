@@ -35,12 +35,10 @@ body[data-kind='site'] > main { flex: 1; padding-block: var(--s6) var(--s7); }
 
 /* ───────────── 글자 ───────────── */
 .page-title { font-size: var(--fs-2xl); font-weight: 800; letter-spacing: -0.02em; }
-.eyebrow { margin-bottom: var(--s2); font-size: var(--fs-sm); font-weight: 700; color: var(--teal); }
 .lead { max-width: var(--measure); margin-top: var(--s3); font-size: var(--fs-lg); line-height: 1.55; color: var(--navy); }
 .sec-title { margin-bottom: var(--s4); font-size: var(--fs-xl); font-weight: 800; letter-spacing: -0.01em; }
 .sec-note { max-width: var(--measure); margin: calc(-1 * var(--s2)) 0 var(--s4); font-size: var(--fs-sm); color: var(--gray); }
 .fine { font-size: var(--fs-xs); color: var(--gray); }
-.sec-note .chip { margin-left: var(--s1); }
 .facts-title { margin-bottom: var(--s2); font-size: var(--fs-sm); font-weight: 700; color: var(--gray); }
 .sec { margin-top: var(--s7); }
 
@@ -48,15 +46,11 @@ body[data-kind='site'] > main { flex: 1; padding-block: var(--s6) var(--s7); }
 .dots > li { position: relative; padding-left: var(--s4); }
 .dots > li::before { content: ''; position: absolute; left: 0; top: 0.72em; width: var(--s1); height: var(--s1); border-radius: 50%; background: var(--teal); }
 
-.chip { display: inline-flex; align-items: center; gap: var(--s1); padding: 1px var(--s2); border-radius: var(--radius); background: var(--teal-soft); font-size: var(--fs-xs); font-weight: 600; line-height: 1.5; color: var(--navy); white-space: nowrap; vertical-align: 0.1em; }
-.chip-plain { padding-block: 0; border: 1px solid var(--line); background: var(--paper); }
-
 /* ───────────── 버튼과 입력 칸 ───────────── */
 .btn { display: inline-flex; align-items: center; justify-content: center; min-height: var(--s7); padding: var(--s2) var(--s5); border: 1px solid var(--teal); border-radius: var(--radius-sm); background: var(--card); font: inherit; font-weight: 700; line-height: var(--lh-tight); color: var(--teal); text-align: center; text-decoration: none; cursor: pointer; }
 .btn:hover { background: var(--teal-soft); }
 .btn-primary { background: var(--teal); color: var(--card); }
 .btn-primary:hover { border-color: var(--navy); background: var(--navy); }
-.btn-big { width: 100%; min-height: var(--s8); border-radius: var(--radius); font-size: var(--fs-lg); }
 
 
 /* ───────────── 교과서 목차·단원·차시 자료실의 두 칸 짜임 (R44~R46) ─────────────
@@ -167,6 +161,7 @@ body[data-kind='site'] > main { flex: 1; padding-block: var(--s6) var(--s7); }
 /* 자료 그림 줄 (KindIcons.astro) */
 .book-kinds { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s2); color: var(--teal); }
 .book-kinds-icon { display: inline-flex; }
+.book-kinds-n { margin-left: var(--s1); font-size: var(--fs-xs); font-weight: 600; color: var(--gray); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .book-kinds-labelled { display: flex; gap: var(--s1) var(--s2); color: var(--navy); }
 .book-kinds-labelled li { display: inline-flex; align-items: center; gap: var(--s1); padding: 1px var(--s2); border-radius: var(--radius-pill); background: var(--paper); font-size: var(--fs-xs); font-weight: 600; line-height: 1.6; }
 .book-kinds-labelled .type-icon { color: var(--teal); }
@@ -207,11 +202,16 @@ body[data-kind='site'] > main { flex: 1; padding-block: var(--s6) var(--s7); }
 @media (min-width: 600px) {
   /* 미리보기는 왼쪽 절반, 오른쪽에는 이름과 단추를 위아래 가운데에 모은다 (남는 높이는 위아래 빈 줄이 나눠 가진다) */
   .book-cards-wide .rc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: 1fr auto auto 1fr; }
-  .book-cards-wide .rc-frame { grid-row: 1 / 5; border-bottom: 0; border-right: 1px solid var(--line); }
+  /* 수업 화면의 미리보기는 16:9 그림이라 틀도 16:9 로. 4:3 틀은 1024px 화면에서 카드를 키워 '띄우기'를 첫 화면 아래로 밀었다 */
+  .book-cards-wide .rc-frame { grid-row: 1 / 5; aspect-ratio: 16 / 9; border-bottom: 0; border-right: 1px solid var(--line); }
   .book-cards-wide .rc-body { grid-row: 2; padding: var(--s5) var(--s5) var(--s4); }
   .book-cards-wide .rc-title { font-size: var(--fs-xl); }
   .book-cards-wide .rc-actions { grid-row: 3; margin-top: 0; padding: 0 var(--s5) var(--s5); }
   .book-cards-wide .rc-open { min-height: var(--s7); font-size: var(--fs-md); }
+}
+/* 목차가 곁에 없는 중간 폭(태블릿)에서는 미리보기를 조금 좁혀 카드의 키를 줄이고 이름에 자리를 더 준다 */
+@media (min-width: 600px) and (max-width: 1099.98px) {
+  .book-cards-wide .rc { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
 }
 @media (max-width: 599.98px) {
   .book-cards { grid-template-columns: minmax(0, 1fr); gap: var(--s3); }
@@ -377,6 +377,8 @@ ol.sources { padding-left: 1.6em; list-style: decimal; }
 @media (max-width: 479px) {
   .kit-meta > li + li::before { display: none; }
   .kit-meta { column-gap: var(--s3); }
+  /* 좁은 휴대폰: 상태 표를 줄 맨 앞에 둔다. 맨 뒤에 두면 표 하나만 다음 줄로 떨어져 외따로 보였다 */
+  .kit-meta-state { order: -1; }
 }
 
 /* 인쇄: 차시 자료실은 수업 계획서 한 벌로 뽑힌다 (아래 '인쇄'의 공통 규칙과 함께). 목차·자료 카드·길잡이는 종이에서 쓸 데가 없어 뺀다. */
@@ -468,6 +470,10 @@ body[data-kind='site'] { --tap: calc(var(--s6) + var(--s3)); /* 44px */ }
   /* 단계(.step)는 길어서 통째로 넘기면 쪽 아래가 크게 빈다. 단계 안의 작은 덩어리만 나누지 않는다. */
   .mat, .fold > summary, .ask, .step-ask, .step-title, .step-do > li, .quiz-items > li, .sources > li, .period-head { break-inside: avoid; }
   .period-head, .fold > summary, .step-title, .sec-title { break-after: avoid; }
+  /* 단계의 본문은 종이에서 격자가 아니라 블록으로 쌓는다. 할 일 목록(.step-do)이 쪽 사이에서 갈리면 Chromium 이 뒤따르는 칸의 자리를 잘못 잡아
+     다음 쪽 첫머리에서 할 일과 '도움말'이 겹쳐 찍혔다. 간격은 화면의 gap 과 같다. */
+  .step-main { display: block; }
+  .step-main > * + * { margin-top: var(--s3); }
   /* 시간 띠는 아래 단계마다 적힌 분을 한 줄로 보여 주는 장식이라 종이에서는 뺀다 */
   .timebar { display: none; }
   .steps { border-top-width: 1px; }

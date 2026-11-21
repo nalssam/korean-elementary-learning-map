@@ -6,7 +6,9 @@
 // 값은 catalog() 의 한 줄(CatalogItem)에서만 얻는다. 명세를 따로 읽지 않는다.
 // 미리보기 그림이 실리지 않으면(astro dev, 1단계만 돌린 dist) <img> 를 지워 뒤의 자료 그림이 보이게 한다.
 // 담기 단추는 collect.ts 의 init() 이 저장소를 쓸 수 있을 때만 드러낸다 (스크립트가 돌지 않거나 저장소가 막혀 있으면 숨은 채로 둔다).
-// QR 은 popover 로 연다: 스크립트 없이 열리고, Esc·바깥 누르기로 닫히고, 닫히면 초점이 QR 단추로 돌아온다.
+// QR 은 popover 로 연다: 스크립트 없이 열리고, Esc·바깥 누르기로 닫히고, 닫히면 초점이 QR 단추로 돌아온다. 창의 둘째 줄은 이 카드의 이름이다
+// (교실 화면에 띄우는 창이라, 누른 카드와 같은 이름이어야 한다. 차시의 이름이 아니다).
+// 담기 단추의 보이는 말은 담기 전 '담기', 담은 뒤 '담음'이다. 화면 읽기 프로그램에는 늘 '담기: <자료>'와 눌림 상태(aria-pressed)로 읽힌다.
 // 함께 쓰는 컴포넌트다 (계약. docs/CONTRACT.md 6절). 카드의 뼈대를 바꿀 것이 있으면 계약 담당에게 알린다.
 import { absoluteUrl, lessonRoute } from '#lib/content.ts';
 import type { CatalogItem } from '#lib/content.ts';
@@ -46,14 +48,14 @@ const which = `${item.label} ${item.title}${withLesson ? ` (${item.course})` : '
     <div class="rc-head">
       <p class="rc-label"><TypeIcon kind={item.kind} size={16} />{item.label}</p>
       <button class="rc-collect" type="button" data-collect={item.key} aria-pressed="false" hidden>
-        <svg class="rc-mark" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M7 4.5h10a1 1 0 0 1 1 1v14l-6-4-6 4v-14a1 1 0 0 1 1-1z" /></svg>담기<span class="visually-hidden">: {which}</span>
+        <svg class="rc-mark" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M7 4.5h10a1 1 0 0 1 1 1v14l-6-4-6 4v-14a1 1 0 0 1 1-1z" /></svg><span class="rc-collect-off" aria-hidden="true">담기</span><span class="rc-collect-on" aria-hidden="true">담음</span><span class="visually-hidden">담기: {which}</span>
       </button>
     </div>
     <Heading class="rc-title">{item.title}</Heading>
     {withLesson && (
       <p class="rc-lesson"><a href={href(lessonRoute(item.lessonId))}>{item.course} · {item.lessonTitle}</a></p>
     )}
-    <p class="rc-format">{item.format}{item.draft && <StatusChip state="draft" />}</p>
+    <p class="rc-format">{item.format}{item.draft && <>{' '}<StatusChip state="draft" /></>}</p>
   </div>
   <div class="rc-actions" data-pagefind-ignore>
     <a class="rc-open" href={href(item.route)}>{OPEN_LABEL[item.kind]}<span class="visually-hidden">: {which}</span></a>
@@ -67,7 +69,7 @@ const which = `${item.label} ${item.title}${withLesson ? ` (${item.course})` : '
   {student && (
     <div class="rc-pop" id={qrId} popover data-pagefind-ignore>
       <p class="rc-pop-title">{item.label}</p>
-      <p class="rc-pop-sub">{item.lessonTitle}</p>
+      <p class="rc-pop-sub">{item.title}</p>
       <Qr url={qrUrl} label={`${item.label} QR 코드`} />
       <p class="rc-pop-url"><UrlText url={qrUrl} /></p>
       <button class="rc-btn rc-pop-close" type="button" popovertarget={qrId} popovertargetaction="hide" autofocus>닫기</button>
@@ -129,6 +131,9 @@ const which = `${item.label} ${item.title}${withLesson ? ` (${item.course})` : '
   :where(.rc-mark) { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
   :where(.rc-collect[aria-pressed='true']) { border-color: var(--teal); background: var(--teal); color: var(--card); }
   :where(.rc-collect[aria-pressed='true']) .rc-mark { fill: currentColor; }
+  :where(.rc-collect-on) { display: none; }
+  :where(.rc-collect[aria-pressed='true']) .rc-collect-on { display: inline; }
+  :where(.rc-collect[aria-pressed='true']) .rc-collect-off { display: none; }
 
   /* QR 창: 화면 가운데에 뜨는 작은 상자. 바탕을 살짝 가려 상자에 눈이 가게 한다 (그림자 대신). */
   :where(.rc-pop) { width: min(20rem, calc(100vw - 2 * var(--s4))); padding: var(--s5); border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); color: var(--navy); text-align: center; }

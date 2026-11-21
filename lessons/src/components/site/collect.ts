@@ -7,9 +7,11 @@
 // 페이지에서 쓰는 법:
 //   <button type="button" data-collect="5-2/1/01#worksheet" aria-pressed="false" hidden>담기</button>   담기 단추 (ResourceCard 가 그린다)
 //   <span data-collect-count></span>                                                                     담은 수 (머리의 내 자료함 단추)
+//   <header data-collect-known="5-2/1/01:012456">                                                       이번 빌드에 실린 자료 (encodeKnown)
 //   <script>import { init } from '…/collect.ts'; init();</script>
 // init() 은 여러 번 불러도 된다 (단추를 새로 그린 뒤에 다시 부르면 그 단추의 상태도 맞춘다).
 // 이 파일은 Node 에서도 읽힌다 (시험). window·document 는 함수 안에서만 만진다.
+import { KIND_ORDER } from '#lib/site.ts';
 
 /** localStorage 의 열쇠. 판(v1)을 바꾸면 옛 값은 읽지 않는다. */
 export const STORAGE_KEY = 'nalssam-cloud:saved:v1';
@@ -108,20 +110,69 @@ export function subscribe(fn: (keys: string[]) => void): () => void {
   return () => { target.removeEventListener(CHANGE_EVENT, own); target.removeEventListener('storage', other); };
 }
 
+/**
+ * 이번 빌드에 실린 자료의 열쇠를 짧게 적는다. 머리(SiteHeader)가 data-collect-known 에 싣고, 담은 수는 이 목록에 있는 것만 센다.
+ * 꼴: 묶음마다 "<묶음 id>:<자료 종류의 번호들>"을 빈칸으로 잇는다. 번호는 order(KIND_ORDER)에서의 자리를 36진수 한 글자로.
+ * 예: encodeKnown(['5-2/1/01#slides', '5-2/1/01#quiz'], KIND_ORDER) → "5-2/1/01:02". 차시가 수백 개여도 페이지마다 몇 KB 다.
+ */
+export function encodeKnown(keys: readonly string[], order: readonly string[]): string {
+  const byLesson = new Map<string, string>();
+  for (const key of keys) {
+    const [id, kind] = key.split('#');
+    const at = order.indexOf(kind);
+    if (!id || at < 0) continue;
+    byLesson.set(id, (byLesson.get(id) ?? '') + at.toString(36));
+  }
+  return [...byLesson].map(([id, kinds]) => `${id}:${kinds}`).join(' ');
+}
+
+/** encodeKnown() 의 글을 열쇠의 모음으로 되돌린다 */
+export function decodeKnown(text: string, order: readonly string[]): Set<string> {
+  const out = new Set<string>();
+  for (const part of text.split(' ')) {
+    const [id, kinds = ''] = part.split(':');
+    if (!id) continue;
+    for (const ch of kinds) {
+      const kind = order[Number.parseInt(ch, 36)];
+      if (kind) out.add(`${id}#${kind}`);
+    }
+  }
+  return out;
+}
+
+/**
+ * 머리에 보일 담은 수: 담은 열쇠 가운데 이번 빌드에 실린 것만 센다 (known 이 없으면 모두).
+ * 공개 빌드에서 사라진 초안처럼 실리지 않은 자료는 내 자료함에 보이지 않으므로 수에도 넣지 않는다 (지우지는 않는다).
+ */
+export function shownCount(keys: readonly string[], known?: ReadonlySet<string>): number {
+  return known ? keys.filter((k) => known.has(k)).length : keys.length;
+}
+
+// 머리의 data-collect-known 을 푼 것. 페이지마다 한 번만 푼다.
+let knownCache: { text: string; set: Set<string> } | undefined;
+function knownOnPage(): Set<string> | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const text = document.querySelector<HTMLElement>('[data-collect-known]')?.dataset.collectKnown;
+  if (text === undefined) return undefined;
+  if (knownCache?.text !== text) knownCache = { text, set: decodeKnown(text, KIND_ORDER) };
+  return knownCache.set;
+}
+
 // 같은 페이지에 이 파일이 두 번 실려도(카드와 머리가 따로 부를 때) 누르기를 한 번만 듣게 한다. 두 번 들으면 담고 곧바로 뺀다.
 const WIRED = Symbol.for('nalssam-cloud.collect');
 
-/** 페이지의 담기 단추와 담은 수를 지금 담긴 것에 맞춘다. */
+/** 페이지의 담기 단추와 담은 수를 지금 담긴 것에 맞춘다. 담은 수는 이번 빌드에 실린 자료만 센다 (shownCount). */
 export function refresh(root: ParentNode = document, store: Store | undefined = storage()): void {
   const keys = read(store);
+  const n = shownCount(keys, knownOnPage());
   for (const b of root.querySelectorAll<HTMLElement>('[data-collect]')) {
     // 저장소를 쓸 수 없으면 누를 수 없는 단추를 보여 주지 않는다
     b.hidden = !store;
     b.setAttribute('aria-pressed', String(keys.includes(b.dataset.collect ?? '')));
   }
   for (const c of root.querySelectorAll<HTMLElement>('[data-collect-count]')) {
-    c.textContent = String(keys.length);
-    c.dataset.count = String(keys.length);
+    c.textContent = String(n);
+    c.dataset.count = String(n);
   }
 }
 

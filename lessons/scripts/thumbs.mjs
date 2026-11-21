@@ -8,7 +8,8 @@
 //   수업 화면                                     1번 장 전체를 1920 × 1080 무대에서                 480 × 270
 //   확인 퀴즈·웹 활동                              폭 360px 휴대폰 화면의 위쪽 480px                  270 × 360
 // JPEG, 폭 480px·60KB 이하. 찍기 전에 남의 그림(img[data-licence])을 가린다: 줄인 그림에서는 곁의 출처 표시를 읽을 수 없고,
-// 쪽의 윗부분만 찍으면 사진이 잘릴 수 있다 (5·6절). 자리는 비어 남는다.
+// 쪽의 윗부분만 찍으면 사진이 잘릴 수 있다 (5·6절). 가린 자리에는 '그림 자리'(종이색 바탕, 1px 선, 가운데 작은 그림 표시)를 얹고
+// 그 그림의 출처 표시도 함께 가린다 (coverLicensed). 빈 상자와 출처 한 줄만 남으면 카드에서 그림이 깨진 것처럼 읽혔다.
 // 캐시는 PDF 와 같다: 찍는 HTML 과 그것이 부르는 파일, 이 스크립트, package-lock.json 의 sha256 이 같으면 <캐시>/files/<id>/thumbs/<kind>.jpg 를 복사만 한다.
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
@@ -73,10 +74,51 @@ function manifest(dist, job, inputs, hashFile) {
 }
 const manifestInputs = (text) => text.split('\n').slice(2).map((l) => l.split('  ')[1]).filter((p) => p && !p.startsWith('repo:'));
 
-// 찍기 전에 얹는 모양. 남의 그림은 자리만 남기고 가리고, 화면에만 보이는 안내(인쇄 안내 띠)와 수업 화면의 단추 줄은 숨긴다.
+// 찍기 전에 얹는 모양. 남의 그림은 자리만 남기고 가리고(그 위에 coverLicensed() 가 그림 자리를 얹는다),
+// 화면에만 보이는 안내(인쇄 안내 띠)와 수업 화면의 단추 줄은 숨긴다.
 const HIDE_CSS = `img[data-licence] { visibility: hidden !important; }
 .no-print, .hud { display: none !important; }
 *, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }`;
+
+/**
+ * 브라우저 안에서 돈다 (찍기 직전, 그림 상자를 다 잰 뒤). 남의 그림(img[data-licence])마다 그려진 자리에 '그림 자리'를 얹는다:
+ * 종이색(--paper) 바탕, 1px --line 테두리, 가운데에 작은 그림 표시(--gray 선). 그림은 가리고, 같은 figure 의 출처 표시(.media-credit)도 가린다.
+ * 상자는 문서 맨 위(<html>)에 절대 위치로 얹어 쪽의 짜임을 건드리지 않는다. 그림의 설명(.media-caption)은 그대로 둔다.
+ * bottom 은 찍는 자리의 아래 끝(문서 좌표)이다. 그림 표시는 상자 가운데가 아니라 상자에서 찍히는 부분의 가운데에 둔다
+ * (쪽을 다 채운 컬러링 그림처럼 상자가 찍는 자리보다 길면, 가운데에 두면 표시가 잘리거나 맨 아래에 붙는다).
+ * 돌려주는 값은 얹은 그림 자리의 수 (시험이 본다).
+ */
+export function coverLicensed(bottom = Infinity) {
+  const root = getComputedStyle(document.documentElement);
+  const token = (name, fallback) => root.getPropertyValue(name).trim() || fallback;
+  const paper = token('--paper', '#f3f0e8');
+  const line = token('--line', '#e4dfd3');
+  const gray = token('--gray', '#586875');
+  const glyph = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${gray}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">`
+    + '<rect x="3.5" y="5" width="17" height="14" rx="1.5"/><circle cx="9" cy="10" r="1.6"/><path d="m4.5 17.5 5-5 3.5 3.5 2.5-2.5 4 4"/></svg>';
+  const hide = (el) => el.style.setProperty('visibility', 'hidden', 'important');
+  let n = 0;
+  for (const img of document.querySelectorAll('img[data-licence]')) {
+    hide(img);
+    for (const credit of img.closest('figure')?.querySelectorAll('.media-credit') ?? []) hide(credit);
+    const r = img.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) continue;
+    const top = r.top + window.scrollY;
+    const seen = Math.max(0, Math.min(r.height, bottom - top));
+    const size = Math.round(Math.max(16, Math.min(48, 0.35 * Math.min(r.width, seen || r.height))));
+    const y = Math.max(0, Math.round((seen || r.height) / 2 - size / 2));
+    const box = document.createElement('div');
+    box.setAttribute('data-thumb-cover', '');
+    box.style.cssText = [
+      'position:absolute', `left:${r.left + window.scrollX}px`, `top:${top}px`, `width:${r.width}px`, `height:${r.height}px`,
+      'box-sizing:border-box', `border:1px solid ${line}`, `background:${paper} url("data:image/svg+xml,${encodeURIComponent(glyph)}") center ${y}px / ${size}px ${size}px no-repeat`,
+      'margin:0', 'padding:0', 'z-index:2147483647', 'pointer-events:none',
+    ].join(';');
+    document.documentElement.append(box);
+    n++;
+  }
+  return n;
+}
 
 /** 브라우저 안에서 돈다: 글꼴과 그림을 기다리고, 그림 상자를 다시 잰 뒤 두 번 그려지게 둔다 */
 async function settle() {
@@ -121,6 +163,8 @@ async function shoot(browser, url, job, origin, fileOf) {
       const [w, h] = shot.size.map((n) => (n - 0.01) / shot.scale);
       clip = { x: box.x, y: box.y, width: Math.min(box.width, w), height: Math.min(box.height, h) };
     }
+    // 남의 그림을 그림 자리로 덮는다. 찍는 자리의 아래 끝을 주어 그림 표시가 찍히는 부분의 가운데에 오게 한다.
+    await page.evaluate(coverLicensed, clip ? clip.y + clip.height : shot.viewport.height);
     for (const quality of QUALITY) {
       const jpg = await page.screenshot({ type: 'jpeg', quality, clip, fullPage: false, animations: 'disabled', caret: 'hide' });
       if (jpg.length <= THUMB_MAX.bytes) return { jpg, problems, loaded: [...loaded] };

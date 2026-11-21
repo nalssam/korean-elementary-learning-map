@@ -63,6 +63,10 @@ test('자료 유형별: 실린 자료마다 카드 한 장, KIND_ORDER 차례의
       assert.doesNotMatch(section, /class="rc"/, kind);
     }
   }
+  // 종류마다 자료가 둘 이하이면 종류를 칸으로 나란히 놓는다 (is-compact). 셋 이상인 종류가 있으면 책장 짜임
+  const small = KIND_ORDER.every((k) => items.filter((i) => i.kind === k).length <= 2);
+  assert.equal(/<div class="ty-groups is-compact">/.test(html), small);
+  assert.match(read(REAL, 'types'), /<div class="ty-groups is-compact">/);
   // 거르기 줄은 스크립트가 드러낸다. 준비된 종류만 단추가 있다.
   assert.match(html, /<div class="ty-tools" id="ty-tools" data-ty-tools hidden data-pagefind-ignore>/);
   assert.equal(count(html, /class="ty-chip"/), 1 + new Set(items.map((i) => i.kind)).size);
@@ -76,8 +80,13 @@ test('업데이트: 보여 줄 소식만 날짜가 늦은 것부터, 초안을 �
   // 명세가 없는 묶음을 가리키는 소식은 나오지 않는다
   assert.ok(!html.includes('명세가 아직 없는 묶음의 소식'));
   assert.equal(count(html, /<span class="status-chip" data-state="draft">초안<\/span>/), updates.filter((u) => u.draft).length);
-  assert.equal(count(html, /<span class="status-chip" data-state="new">새 자료<\/span>/), updates.filter((u) => u.kind === 'new').length);
-  assert.match(html, /<a class="up-link" href="\/5-2\/1\/01\/"><span class="up-link-course">5학년 2학기 1단원 1차시<\/span><span class="up-link-title">시험용 한 차시<\/span><\/a>/);
+  assert.equal(count(html, /<span class="status-chip" data-state="new"( data-tone="quiet")?>새 자료<\/span>/), updates.filter((u) => u.kind === 'new').length);
+  // 산호색 '새 자료' 표는 가장 최근의 새 자료 하나에만. 나머지는 조용한 표 (R53)
+  assert.equal(count(html, /<span class="status-chip" data-state="new">새 자료<\/span>/), updates.some((u) => u.kind === 'new') ? 1 : 0);
+  const firstNew = html.indexOf('data-state="new"');
+  assert.ok(firstNew < 0 || !html.slice(firstNew, firstNew + 40).includes('quiet'), '가장 최근의 새 자료가 산호색이 아닙니다');
+  // 학기·단원·차시와 차시 이름 사이에 빈칸 (검색 발췌와 화면 읽기 프로그램이 '1차시시험용'처럼 붙여 읽지 않게)
+  assert.match(html, /<a class="up-link" href="\/5-2\/1\/01\/"><span class="up-link-course">5학년 2학기 1단원 1차시<\/span> <span class="up-link-title">시험용 한 차시<\/span><\/a>/);
   // 달마다 묶는다
   assert.deepEqual([...html.matchAll(/<h2 class="up-month-title"[^>]*>([^<]+)</g)].map((m) => m[1]), ['2026년 11월', '2026년 10월']);
 });

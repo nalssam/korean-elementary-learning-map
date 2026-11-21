@@ -154,6 +154,10 @@ test('차시 자료실(실제 5-2/1/01): 전에 있던 링크가 모두 있다',
     ];
     for (const href of want) assert.ok(html.includes(`href="${href}"`), `${href} 로 가는 링크가 없습니다`);
     assert.ok(html.includes(`download="${esc(c.pptxFile(lesson).download)}"`));
+    // 카드 격자는 검색 색인에서 뺀다 (발췌가 '담기: …' 같은 단추 글로 채워졌다). 자료의 이름은 아래 교사용 안내에 있다
+    assert.match(html, /<ul class="book-cards kit-cards" data-filter-list data-pagefind-ignore>/);
+    // 한 줄 설명과 초안 표 사이에 빈칸 (화면 읽기 프로그램이 'PPTX초안'처럼 붙여 읽지 않게)
+    assert.match(html, /<p class="rc-format">화면 \d+장 · PPTX <span class="status-chip" data-state="draft">초안<\/span><\/p>/);
     // QR 은 학생 페이지의 자료 카드가 여는 작은 창에 있다
     assert.match(html, /<button class="rc-btn rc-qr" type="button" popovertarget="qr-5-2-1-01-quiz">/);
     // 수업 화면의 '그림 출처' 링크가 여는 자리
@@ -372,5 +376,40 @@ test('교사용 안내의 길잡이: 접힌 상자를 가리키면 펴 주고, �
     assert.ok(Math.abs(boxes[0].left - list.left) < 1 && Math.abs(boxes[0].right - list.right) < 1, '수업 화면 카드가 한 줄을 다 쓰지 않습니다');
     assert.ok(boxes.slice(1).every((b) => b.top > boxes[0].top));
     await wide.close();
+  });
+});
+
+test('차시 자료실을 인쇄하면 단계의 본문은 블록으로 쌓인다 (쪽 사이에서 할 일과 도움말이 겹치지 않게)', { skip }, async () => {
+  await withBrowser(real, async (browser, origin) => {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await page.goto(origin + '/5-2/1/01/');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.step-main')!).display), 'grid');
+    await page.emulateMedia({ media: 'print' });
+    const steps = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('.step-main')].map((m) => {
+      // 본문의 칸들이 위에서 아래로 겹치지 않고 차례로 놓인다
+      const boxes = [...m.children].map((c) => c.getBoundingClientRect()).filter((r) => r.height > 0);
+      return { display: getComputedStyle(m).display, overlap: boxes.some((r, i) => i > 0 && r.top < boxes[i - 1].bottom - 0.5) };
+    }));
+    assert.ok(steps.length > 0);
+    for (const s of steps) assert.deepEqual(s, { display: 'block', overlap: false });
+    await page.close();
+  });
+});
+
+test('차시 자료실의 수업 화면 카드: 미리보기 틀은 16:9, 1280 × 800 첫 화면에 띄우기가 보인다', { skip }, async () => {
+  await withBrowser(real, async (browser, origin) => {
+    for (const [width, height] of [[1280, 800], [1024, 768]]) {
+      const page = await browser.newPage({ viewport: { width, height } });
+      await page.goto(origin + '/5-2/1/01/');
+      const m = await page.evaluate(() => {
+        const f = document.querySelector('.book-cards-wide .rc-frame')!.getBoundingClientRect();
+        const b = document.querySelector('.book-cards-wide .rc-open')!.getBoundingClientRect();
+        return { ratio: f.width / f.height, top: b.top, bottom: b.bottom };
+      });
+      assert.ok(Math.abs(m.ratio - 16 / 9) < 0.02, `${width}px 틀의 비율 ${m.ratio}`);
+      // 1280: 단추 전체가, 1024: 단추의 윗부분이 첫 화면 안에 있다
+      assert.ok(width === 1280 ? m.bottom <= height : m.top < height, `${width}px 띄우기 ${m.top}~${m.bottom}`);
+      await page.close();
+    }
   });
 });

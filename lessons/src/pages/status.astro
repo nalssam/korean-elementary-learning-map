@@ -8,7 +8,7 @@ import { LESSON_STATE_LABEL } from '#lib/site.ts';
 import SiteLayout from '#src/layouts/SiteLayout.astro';
 import { href } from '#src/lib/url.ts';
 import { textbookLabel } from '#src/components/site/data.ts';
-import CatHead from '#src/components/site/catalog/CatHead.astro';
+import PageHead from '#src/components/site/PageHead.astro';
 import Kicker from '#src/components/site/ui/Kicker.astro';
 import '#src/components/site/catalog/catalog.css';
 
@@ -37,9 +37,9 @@ function chipsOf(semesterId: string, unitNo: number) {
 }
 ---
 <SiteLayout title="제작 현황" description="교과서 차시표에 오른 차시 가운데 몇 차시를 공개했는지 학기와 단원마다 보여 줍니다." current="status">
-  <CatHead kicker={`${textbookLabel()} 차시표 기준`} title="제작 현황">
-    교과서 차시표에 오른 <span class="cat-num">{sum.total}</span>차시 가운데 몇 차시를 공개했는지 학기와 단원마다 보여 줍니다.
-  </CatHead>
+  <PageHead kicker="교과서 차시표" title="제작 현황">
+    {textbookLabel()} 차시표에 오른 <span class="cat-num">{sum.total}</span>차시 가운데 몇 차시를 공개했는지 학기와 단원마다 보여 줍니다.
+  </PageHead>
   <p class="st-note">새 차시가 올라오면 <a href={href('/updates/')}>업데이트</a>에 알립니다. 언제 올라올지는 미리 적지 않습니다.</p>
 
   <section class="st-sec" aria-labelledby="st-all">

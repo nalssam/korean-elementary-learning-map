@@ -50,7 +50,7 @@ test('ResourceCard: 자료마다 한 장, 담기 단추는 숨은 채로 그려�
   const kit = html.slice(html.indexOf('data-key="5-2/1/02-03#making_kit"'));
   assert.ok(!kit.slice(0, kit.indexOf('</article>')).includes('rc-thumb'));
   // 초안 표
-  seen(/<p class="rc-format">PPTX 5장<span class="status-chip" data-state="draft">초안<\/span><\/p>/);
+  seen(/<p class="rc-format">화면 5장 · PPTX <span class="status-chip" data-state="draft">초안<\/span><\/p>/);
   // 여러 차시를 늘어놓을 때는 학기·단원·차시와 차시 이름이 붙는다
   seen(/<p class="rc-lesson"><a href="\/5-2\/1\/01\/">5학년 2학기 1단원 1차시 · 시험용 한 차시<\/a><\/p>/);
   seen(/<h4 class="rc-title">시험용 학습지<\/h4>/);

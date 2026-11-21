@@ -2,6 +2,7 @@
 // 한 차시에서 준비된 자료의 작은 그림 (R44·R45). 차례는 readyKinds() 의 차례(KIND_ORDER)다.
 // labels 를 켜면 그림 곁에 자료 이름을 적는다 (단원 페이지의 카드). 끄면 그림만 두고(교과서 목차의 표),
 // 마우스를 올리면 이름이 뜨고(title) 화면 읽기 프로그램에는 이름을 이어 읽힌다. 그림만으로 뜻을 전하지 않는다.
+// 그림 뒤에는 '6가지'처럼 가짓수를 글로 적는다 (손가락으로 쓰는 화면에는 title 이 뜨지 않는다. 이름은 단원 페이지와 차시 자료실에 있다).
 import { readyKinds } from '#lib/content.ts';
 import { ASSET_LABEL } from '#lib/site.ts';
 import type { Lesson } from '#schema/lesson.ts';
@@ -23,5 +24,6 @@ const kinds = readyKinds(lesson);
   <span class:list={['book-kinds', cls]}>
     <span class="visually-hidden">자료: {kinds.map((k) => ASSET_LABEL[k]).join(', ')}</span>
     {kinds.map((k) => <span class="book-kinds-icon" data-kind={k} title={ASSET_LABEL[k]}><TypeIcon kind={k} size={18} /></span>)}
+    <span class="book-kinds-n" aria-hidden="true">{kinds.length}가지</span>
   </span>
 )}
