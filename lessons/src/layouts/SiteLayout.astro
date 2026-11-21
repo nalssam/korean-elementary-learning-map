@@ -1,58 +1,42 @@
 ---
-// 사이트 화면(첫 화면·학기·단원·차시 안내·소개·이용 조건·오류 제보)의 틀.
-// Base.astro 를 감싸고 머리(사이트 이름, 안내 링크), 초안 표시 띠, 본문, 바닥글을 놓는다.
-// 검색 색인에는 <main data-pagefind-body> 안의 글만 들어간다 (docs/CONTRACT.md 6절). index={false} 인 페이지(404)는 그 표시를 붙이지 않는다.
+// 사이트 화면(첫 화면·교과서 목차·단원·차시 자료실·자료 유형별·업데이트·제작 현황·내 자료함·소개·이용 조건·오류 제보·404)의 틀.
+// Base.astro 를 감싸고 머리(SiteHeader), 초안 표시 띠, 현재 위치, 본문, 바닥글(SiteFooter)을 놓는다.
+// 맨 아래의 작은 줄(footerNotice())은 Base.astro 가 찍고, 여기에서는 바닥글과 같은 바탕을 칠해 바닥글의 마지막 줄로 보이게 한다 (R54).
+// 검색 색인에는 <main data-pagefind-body> 안의 글만 들어간다 (docs/CONTRACT.md 6절). index={false} 인 페이지(404, 내 자료함)는 그 표시를 붙이지 않는다.
 import Base from './Base.astro';
 import '../components/site/site.css';
 import { footerNotice } from '#lib/content.ts';
 import { SITE } from '#lib/site.ts';
+import type { NavKey } from '#lib/site.ts';
 import type { Lesson } from '#schema/lesson.ts';
-import { href } from '#src/lib/url.ts';
+import SiteFooter from '#src/components/site/SiteFooter.astro';
+import SiteHeader from '#src/components/site/SiteHeader.astro';
 
 /** 현재 위치의 한 칸. rest 는 좁은 화면(480px 아래)에서 감추는 뒷부분이다. 예: label '1단원', rest '유적과 유물로 살펴본 옛사람들의 생활' */
 interface Crumb { label: string; rest?: string; href?: string }
 interface Props {
-  /** <title> 앞부분 */
+  /** <title> 앞부분. 뒤에 사이트 이름(SITE.name)이 붙는다. */
   title: string;
   description?: string;
-  /** 차시 안내 페이지이면 그 차시. 초안 표시와 오류 제보 링크에 쓴다. */
+  /** 차시 자료실이면 그 차시. 초안 표시와 오류 제보 링크에 쓴다. */
   lesson?: Lesson;
   /** 현재 위치 (처음 › 학기 › 단원). 마지막 것은 지금 페이지라 링크를 걸지 않는다. */
   crumbs?: Crumb[];
-  /** 안내 링크 가운데 지금 페이지 */
-  current?: 'about' | 'licence' | 'report';
-  /** false 이면 검색 색인에 넣지 않는다 (404 처럼 찾아 들어올 까닭이 없는 페이지) */
+  /** 머리의 길잡이 가운데 지금 페이지 (aria-current). 교과서 목차·단원·차시 자료실은 'textbook'. */
+  current?: NavKey;
+  /** false 이면 검색 색인에 넣지 않는다 (404 처럼 찾아 들어올 까닭이 없거나, 내 자료함처럼 브라우저마다 다른 페이지) */
   index?: boolean;
 }
 const { title, description, lesson, crumbs = [], current, index = true } = Astro.props;
 
-// 맨 아래 문구는 Base.astro 가 찍는다. 검수를 마치지 않은 글이 보이는 페이지(초안, 초안이 섞인 미리 보기)는 맨 위에도 같은 문구를 띠로 보여 준다.
+// 검수를 마치지 않은 글이 보이는 페이지(초안, 초안이 섞인 미리 보기)는 맨 위에도 같은 문구를 띠로 보여 준다.
 const notice = footerNotice(lesson);
 const flagged = notice === SITE.draftNotice || notice === SITE.previewNotice;
-const links = [
-  { key: 'about', label: '소개', to: href('/about/') },
-  { key: 'licence', label: '이용 조건', to: href('/licence/') },
-  // 차시 안내 페이지에서 누르면 제보 페이지가 어느 차시인지 안다. 붙이는 것은 차시 id 뿐이다.
-  { key: 'report', label: '오류 제보', to: href('/report/') + (lesson ? `?id=${lesson.id}` : '') },
-] as const;
 ---
 <Base title={title} description={description} kind="site" lesson={lesson}>
   <slot name="head" slot="head" />
   <a class="skip" href="#main">본문으로 건너뛰기</a>
-  <header class="site-head">
-    <div class="wrap">
-      <a class="site-name" href={href('/')}>
-        <svg class="site-mark" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
-          <rect x="6.5" y="3.5" width="11" height="17" rx="3" transform="rotate(32 12 12)" />
-          <path d="M8.6 14.9l6.8 4.2" />
-        </svg>
-        {SITE.name}
-      </a>
-      <nav class="site-nav" aria-label="사이트 안내">
-        {links.map((l) => <a href={l.to} aria-current={current === l.key ? 'page' : undefined}>{l.label}</a>)}
-      </nav>
-    </div>
-  </header>
+  <SiteHeader current={current} />
   {flagged && (
     <p class="site-flag"><span class="wrap"><span class="site-flag-dot" aria-hidden="true"></span>{notice}</span></p>
   )}
@@ -71,22 +55,19 @@ const links = [
       <slot />
     </div>
   </main>
-  <footer class="site-foot">
-    <div class="wrap">
-      <p>글과 직접 만든 그림은 <a href={href('/licence/')}>{SITE.licence.name}</a> 조건으로 쓸 수 있습니다. {SITE.licenceNote}</p>
-      <p class="site-foot-links">
-        <span>만든 이 {SITE.author}</span>
-        {links.map((l) => <a href={l.to}>{l.label}</a>)}
-        <a href={SITE.repo}>깃허브 저장소</a>
-      </p>
-    </div>
-  </footer>
+  <SiteFooter lesson={lesson} current={current} />
+  <script>
+    // 내 자료함: 머리의 담은 수와 페이지의 담기 단추를 이 브라우저에 담긴 것에 맞춘다 (R51). 여러 번 불러도 된다.
+    import { init } from '#src/components/site/collect.ts';
+    init();
+  </script>
   <script>
     // 인쇄할 때는 접힌 상자를 모두 편다 (교사용 자료까지 수업 계획서 한 벌로 뽑힌다). 인쇄가 끝나면 접혀 있던 것만 다시 접는다.
+    // 머리의 펼치는 판(data-menu)은 인쇄하지 않으므로 건드리지 않는다.
     // 주소 뒤의 #corrections 처럼 접힌 상자를 가리키고 들어오면 그 상자를 펴 준다.
     const closed = new Set<HTMLDetailsElement>();
     addEventListener('beforeprint', () => {
-      for (const d of document.querySelectorAll<HTMLDetailsElement>('details:not([open])')) { closed.add(d); d.open = true; }
+      for (const d of document.querySelectorAll<HTMLDetailsElement>('main details:not([open])')) { closed.add(d); d.open = true; }
     });
     addEventListener('afterprint', () => {
       for (const d of closed) d.open = false;
@@ -100,3 +81,18 @@ const links = [
     openTarget();
   </script>
 </Base>
+
+<style is:global>
+  /* 바닥글의 마지막 줄: Base.astro 가 바닥글 뒤에 찍는 footerNotice(). 바닥글과 같은 종이색 바탕을 폭 전체에 칠하고
+     글은 본문 폭(.wrap)의 왼쪽 끝에 맞춘다. 날쌤이 맨 아래에 작게 두기를 바란 줄이다 (R54). */
+  /* site.css 의 같은 줄 규칙과 무게가 같으면 싣는 차례에 따라 갈리므로 html·p 를 붙여 무게를 높인다 */
+  html body[data-kind='site'] > p.site-notice {
+    width: 100%; max-width: none; margin: 0;
+    padding: var(--s3) max(var(--s4), calc((100% - var(--content)) / 2 + var(--s4))) var(--s6);
+    background: var(--paper); font-size: var(--fs-xs); color: var(--gray);
+  }
+  @media print {
+    /* site.css 의 같은 줄 규칙과 무게가 같으면 싣는 차례에 따라 갈리므로 html·p 를 붙여 무게를 높인다 */
+  html body[data-kind='site'] > p.site-notice { padding: var(--s2) 0 0; background: none; }
+  }
+</style>

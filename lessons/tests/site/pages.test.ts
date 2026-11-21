@@ -37,20 +37,7 @@ test('미리 보기: 사이트 화면이 모두 만들어진다', () => {
   assert.equal(read(drafts, 'published.json'), '[]');
 });
 
-test('첫 화면: 학기 타일 여덟 개, 찾기, 검색 상자', () => {
-  const home = read(drafts, 'index.html');
-  assert.equal(home.match(/class="tile[ "]/g)?.length, 8);
-  // 차시표가 없는 일곱 학기는 링크 없이 '준비 중'
-  assert.equal(home.match(/class="tile tile-off"/g)?.length, 7);
-  assert.ok(!/href="\/(3|4|6)-[12]\/"/.test(home) && !home.includes('href="/5-1/"'));
-  assert.match(home, /<a class="tile" href="\/5-2\/">/);
-  // 차시를 센다 (묶음이 아니라). 차시표의 5-2 는 1 + 2 + 1 + 1 + 1 = 6차시
-  assert.ok(home.includes('0/6 차시 공개'));
-  assert.match(home, /<lesson-finder /);
-  assert.match(home, /<site-search class="search" hidden(="true")?>/);
-  // 검색 색인은 차시 안내 페이지의 글이라 첫 화면은 색인에서 뺀다
-  assert.match(home, /<div class="find" data-pagefind-ignore>/);
-});
+// 첫 화면·머리·바닥글은 tests/site/shell.test.ts 가 본다.
 
 test('차시표의 focus 는 어느 화면에도 실리지 않는다', () => {
   for (const p of htmlFiles(drafts)) {
@@ -152,7 +139,7 @@ test('이용 조건·소개·오류 제보', () => {
   assert.ok(licence.includes(`href="${SITE.repo}/blob/main/lessons/LICENSE"`));
   const about = read(drafts, 'about/index.html');
   assert.ok(about.includes(SITE.author));
-  assert.ok(about.includes('사실마다 두 확인자가 출처와 맞는지 따로 봅니다. 확인자는 AI일 수도 있고'));
+  assert.ok(about.includes('사실마다 두 확인자가 출처와 맞는지 따로 봅니다. 확인자는 AI일 수도 있습니다.'));
   assert.ok(about.includes('시험용 출판사와 관계없이 만든 것이며, 시험용 출판사나 교과서 집필진이 만들거나 보증한 자료가 아닙니다.'));
   const report = read(drafts, 'report/index.html');
   // 양식을 넣지 않는다. 깃허브 이슈 양식으로 가는 링크만 (제보 양식 주소는 비어 있으면 뺀다)

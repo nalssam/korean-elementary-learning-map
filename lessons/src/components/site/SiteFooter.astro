@@ -1,0 +1,60 @@
+---
+// 사이트 바닥글 (R54). 이 차례로 세 줄을 놓는다.
+//   1. FOOT_LINKS: 소개 · 이용 조건 · 오류 제보 · 깃허브 저장소 (차시 자료실에서는 오류 제보에 ?id=<id> 를 붙인다)
+//   2. 이용 조건 안내: SITE.licence.name 과 SITE.licenceNote
+//   3. 만든 이 {SITE.author} · {SITE.name}
+// 맨 아래의 작은 줄(footerNotice())은 Base.astro 가 바닥글 바로 뒤에 <p class="site-notice"> 로 찍는다. 여기에서 다시 찍지 않는다.
+// 그 줄이 바닥글의 마지막 줄로 보이도록 SiteLayout.astro 가 같은 바탕을 칠한다.
+import { FOOT_LINKS, SITE } from '#lib/site.ts';
+import type { NavKey } from '#lib/site.ts';
+import type { Lesson } from '#schema/lesson.ts';
+import { href } from '#src/lib/url.ts';
+
+interface Props {
+  /** 차시 자료실이면 그 차시. 오류 제보 링크에 차시 id 를 붙인다 (붙이는 것은 id 뿐이다). */
+  lesson?: Lesson;
+  current?: NavKey;
+}
+const { lesson, current } = Astro.props;
+const to = (l: (typeof FOOT_LINKS)[number]) =>
+  'url' in l ? l.url : href(l.route) + (l.key === 'report' && lesson ? `?id=${lesson.id}` : '');
+---
+<footer class="ft">
+  <div class="wrap ft-in">
+    <nav aria-label="사이트 정보">
+      <ul class="ft-links">
+        {FOOT_LINKS.map((l) => <li><a href={to(l)} aria-current={current === l.key ? 'page' : undefined}>{l.label}</a></li>)}
+      </ul>
+    </nav>
+    <p class="ft-licence">글과 직접 만든 그림은 <a href={href('/licence/')}>{SITE.licence.name}</a> 조건으로 쓸 수 있습니다. {SITE.licenceNote}</p>
+    <p class="ft-author">만든 이 {SITE.author} · {SITE.name}</p>
+  </div>
+</footer>
+
+<style>
+  .ft { border-top: 1px solid var(--line); background: var(--paper); font-size: var(--fs-sm); color: var(--gray); }
+  .ft-in { display: grid; gap: var(--s2); padding-block: var(--s5) 0; }
+  .ft-links { display: flex; flex-wrap: wrap; align-items: center; }
+  .ft-links li { display: inline-flex; align-items: center; }
+  /* 링크 사이의 가운뎃점. 줄이 바뀌어도 새 줄이 점으로 시작하지 않게 앞 링크 뒤에 붙인다. */
+  .ft-links li:not(:last-child)::after { content: '·'; margin: 0 var(--s2); color: var(--gray); }
+  .ft-links a { font-weight: 700; color: var(--navy); text-decoration: none; }
+  .ft-links a:hover, .ft-links a[aria-current] { color: var(--teal); text-decoration: underline; text-underline-offset: 0.25em; }
+  .ft-licence { max-width: 48rem; }
+  .ft-licence a { color: var(--teal); white-space: nowrap; }
+  .ft-author { font-weight: 600; color: var(--navy); }
+
+  /* 휴대폰에서 누르는 자리는 44px 이상 */
+  @media (max-width: 760px), (pointer: coarse) {
+    /* 짧은 링크('소개')도 폭이 44px 이 넘게 좌우를 넓히고, 늘어난 만큼 목록을 왼쪽으로 당겨 글의 왼쪽 끝을 맞춘다 */
+    .ft-links { margin-left: calc(-1 * var(--s3)); }
+    .ft-links a { display: inline-flex; align-items: center; min-height: var(--tap); padding-inline: var(--s3); }
+    .ft-links li:not(:last-child)::after { margin: 0; }
+    .ft-licence a { padding-block: calc((var(--tap) - 1em) / 2); }
+    .ft-in { gap: var(--s1); }
+  }
+  @media print {
+    .ft { background: none; }
+    .ft-links { display: none; }
+  }
+</style>
