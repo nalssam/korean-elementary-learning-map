@@ -3,7 +3,8 @@
 //
 //   node scripts/render-pdf.mjs                    visibleLessons() 의 printJobs() 전부 → dist/files/<id>/<kind>.pdf
 //   node scripts/render-pdf.mjs --only 5-2/1/01    한 묶음만
-//   node scripts/render-pdf.mjs --kind worksheet   한 종류만 (worksheet · cards · coloring · papercraft)
+//   node scripts/render-pdf.mjs --kind worksheet   한 종류만 (worksheet · cards · coloring · papercraft). 미리보기 그림도 그 종류만
+//   node scripts/render-pdf.mjs --kind slides      미리보기 그림만 (slides · quiz · web_activity 는 PDF 가 없다)
 //   node scripts/render-pdf.mjs --force            캐시를 쓰지 않고 모두 다시 찍는다
 //   node scripts/render-pdf.mjs --out <폴더>        dist 가 아닌 곳에 빌드한 사이트 (캐시는 <폴더>.cache/)
 //
@@ -15,11 +16,13 @@
 //     0 이 아닌 값으로 끝난다 (PDF 를 남기지 않는다).
 //  3. 입력이 그대로인 인쇄물은 찍지 않고 캐시에서 복사한다.
 //     입력은 찍는 HTML, 그 HTML 이 부르는 사이트 안 파일(CSS·글꼴·스크립트·그림), 이 스크립트, package-lock.json 이다.
+//  4. 자료 카드의 미리보기 그림을 찍는다 (R52). 저장소 담당의 scripts/thumbs.mjs 가 같은 서버와 Chromium 으로 찍는다 (10절).
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { ROOT, cacheDir, distDir, isPublic, printJobs, visibleLessons } from '#lib/content.ts';
+import { THUMB_KINDS, renderThumbs, thumbJobs } from './thumbs.mjs';
 
 const A4 = { portrait: [210, 297], landscape: [297, 210] };
 const ORIENTATION = { portrait: '세로', landscape: '가로' };
@@ -43,7 +46,9 @@ function readArgs(argv) {
     return v;
   };
   const kind = value('--kind', 'worksheet');
-  if (kind && !KINDS.includes(kind)) throw new Stop(`--kind 에는 ${KINDS.join(' · ')} 가운데 하나를 적습니다 (지금: ${kind})`);
+  // 미리보기 그림만 있는 종류(수업 화면, 확인 퀴즈, 웹 활동)도 받는다 (그때는 PDF 를 찍지 않는다)
+  const known = [...KINDS, ...THUMB_KINDS.filter((k) => !KINDS.includes(k))];
+  if (kind && !known.includes(kind)) throw new Stop(`--kind 에는 ${known.join(' · ')} 가운데 하나를 적습니다 (지금: ${kind})`);
   return { only: value('--only', '5-2/1/01'), kind, force: argv.includes('--force') };
 }
 
@@ -346,15 +351,24 @@ async function main() {
     if (lessons.length === 0) throw new Stop(`--only ${args.only}: 이번 빌드에 실리는 차시가 아닙니다. 묶음 id 를 "5-2/1/01"처럼 적었는지, 초안이면 SHOW_DRAFTS=1 을 주었는지 봅니다.`);
   }
   const jobs = lessons.flatMap((lesson) => printJobs(lesson).filter((j) => !args.kind || j.kind === args.kind).map((job) => ({ lesson, job })));
-  if (jobs.length === 0) { console.log('찍을 인쇄물이 없습니다.'); return; }
+  const shots = thumbJobs(lessons, args.kind);
+  if (jobs.length === 0 && shots.length === 0) { console.log('찍을 인쇄물이 없습니다.'); return; }
   if (!fs.existsSync(dist)) throw new Stop(`빌드한 사이트가 없습니다 (${shown(dist)}). astro build 를 먼저 돌립니다 (npm run build 는 차례대로 돌립니다).`);
-  console.log(`인쇄물 ${jobs.length}개를 PDF 로 만듭니다 → ${shown(path.join(dist, 'files'))}`);
+  if (jobs.length) console.log(`인쇄물 ${jobs.length}개를 PDF 로 만듭니다 → ${shown(path.join(dist, 'files'))}`);
 
   let site;
   let browser;
   const failures = [];
   let made = 0;
   let copied = 0;
+  const launch = async () => {
+    const { chromium } = await import('playwright');
+    try {
+      return await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
+    } catch (e) {
+      throw new Stop(`Chromium 을 띄울 수 없습니다. npx playwright install chromium 으로 깔거나 CHROMIUM_PATH 로 가리킵니다.\n  ${String(e.message).split('\n')[0]}`);
+    }
+  };
   try {
     for (const { lesson, job } of jobs) {
       const name = `${lesson.id} ${job.label}`;
@@ -381,14 +395,7 @@ async function main() {
         continue;
       }
       site ??= await serve(dist);
-      if (!browser) {
-        const { chromium } = await import('playwright');
-        try {
-          browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
-        } catch (e) {
-          throw new Stop(`Chromium 을 띄울 수 없습니다. npx playwright install chromium 으로 깔거나 CHROMIUM_PATH 로 가리킵니다.\n  ${String(e.message).split('\n')[0]}`);
-        }
-      }
+      browser ??= await launch();
       const { pdf, problems, warnings, loaded } = await render(browser, site, dist, lesson, job);
       for (const w of warnings) console.log(`  ! ${name} ${w.page}쪽: ${w.text}`);
       if (problems.length || !pdf) { fail(problems); continue; }
@@ -397,6 +404,20 @@ async function main() {
       made++;
       console.log(`  ✓ ${name} ${job.pages}쪽`);
     }
+    if (jobs.length) console.log(`모두 ${jobs.length}개: 새로 찍은 것 ${made}개, 그대로 쓴 것 ${copied}개.`);
+
+    // 미리보기 그림 (저장소 담당. scripts/thumbs.mjs). PDF 를 찍는 코드와 섞지 않고, 서버와 Chromium 만 함께 쓴다.
+    const toRel = (file) => path.relative(dist, file).split(path.sep).join('/');
+    failures.push(...await renderThumbs(shots, {
+      dist, cache, force: args.force,
+      // --kind·--only 없이 돌 때만 목록에 없는 지난 미리보기를 지운다
+      prune: !args.kind && !args.only, lessonIds: lessons.map((l) => l.id),
+      open: async () => { site ??= await serve(dist); browser ??= await launch(); return { origin: site.origin, browser }; },
+      url: (route) => site.origin + (BASE === '/' ? '' : BASE) + route,
+      fileOf: (pathname) => { const f = fileOf(dist, pathname); return f && toRel(f); },
+      siteInputs: (route, extra) => siteInputs(dist, route, extra),
+      hashFile,
+    }));
   } finally {
     await browser?.close();
     await site?.close();
@@ -404,15 +425,13 @@ async function main() {
 
   if (failures.length) {
     const lines = ['', '인쇄물에 고칠 곳이 있어 멈춥니다.'];
-    for (const { lesson, job, problems } of failures) {
-      lines.push('', `${lesson.id} 「${lesson.title}」 ${job.label} (${job.route})`);
+    for (const { lesson, job, label, route, problems } of failures) {
+      lines.push('', `${lesson.id} 「${lesson.title}」 ${job?.label ?? label} (${job?.route ?? route})`);
       for (const p of problems) lines.push(`  - ${p.page ? `${p.page}쪽: ` : ''}${p.text}`);
     }
     console.error(lines.join('\n'));
     process.exitCode = 1;
-    return;
   }
-  console.log(`모두 ${jobs.length}개: 새로 찍은 것 ${made}개, 그대로 쓴 것 ${copied}개.`);
 }
 
 try {

@@ -1,0 +1,120 @@
+---
+// 제작 현황 (/status/, R50). 학기마다 차시 수, 공개, 초안(미리 보기 빌드에서만), 준비 중을 차시로 세고(semesterProgress()),
+// 차시표가 있는 학기는 단원마다 묶음을 표(작은 칩)로 늘어놓는다. 날짜와 약속은 적지 않는다.
+// 차시표의 focus 는 찍지 않는다 (사실 대조를 거치지 않은 계획 글. docs/CONTRACT.md 3절). 실린 묶음만 명세의 title 을 보여 준다.
+import { allBundles, isPublic, lessonRoute, lessonsLabel, loadRegistry, pagesLabel, semesterLabel, semesterProgress, showDrafts, unitProgress, visibleLessons } from '#lib/content.ts';
+import type { Progress } from '#lib/content.ts';
+import { LESSON_STATE_LABEL } from '#lib/site.ts';
+import SiteLayout from '#src/layouts/SiteLayout.astro';
+import { href } from '#src/lib/url.ts';
+import { textbookLabel } from '#src/components/site/data.ts';
+import CatHead from '#src/components/site/catalog/CatHead.astro';
+import Kicker from '#src/components/site/ui/Kicker.astro';
+import '#src/components/site/catalog/catalog.css';
+
+const preview = showDrafts();
+const registry = loadRegistry();
+const visible = new Map(visibleLessons().map((l) => [l.id, l]));
+const bundles = allBundles();
+
+const semesters = registry.semesters.map((s) => ({ id: s.id, label: semesterLabel(s.id), units: s.units, progress: semesterProgress(s.id) }));
+const tabled = semesters.filter((s) => s.units.length > 0);
+// 표의 줄과 칸: 학년(3~6)과 학기(1·2). 학기 id 는 "5-2" 꼴이다.
+const GRADES = [...new Set(semesters.map((s) => s.id.split('-')[0]))];
+const TERMS = [...new Set(semesters.map((s) => s.id.split('-')[1]))];
+const sum = semesters.reduce((a, s) => ({ total: a.total + s.progress.total, published: a.published + s.progress.published, draft: a.draft + s.progress.draft, planned: a.planned + s.progress.planned }), { total: 0, published: 0, draft: 0, planned: 0 });
+
+/** 막대의 폭 (%). 공개 다음에 초안을 잇는다. 초안은 미리 보기 빌드에서만 있다. */
+const share = (n: number, p: Progress) => (p.total ? `${((n / p.total) * 100).toFixed(2)}%` : '0%');
+
+/** 묶음 칩: 공개·초안은 차시 자료실로 가는 링크, 준비 중은 글자만 */
+function chipsOf(semesterId: string, unitNo: number) {
+  return bundles.filter((b) => b.semester.id === semesterId && b.unit.no === unitNo).map((b) => {
+    const lesson = visible.get(b.id);
+    const state = lesson ? (isPublic(lesson) ? 'published' : 'draft') : 'planned';
+    return { id: b.id, no: lessonsLabel(b.lessons), pages: pagesLabel(b.pages), state, title: lesson?.title, route: lesson ? lessonRoute(b.id) : undefined };
+  });
+}
+---
+<SiteLayout title="제작 현황" description="교과서 차시표에 오른 차시 가운데 몇 차시를 공개했는지 학기와 단원마다 보여 줍니다." current="status">
+  <CatHead kicker={`${textbookLabel()} 차시표 기준`} title="제작 현황">
+    교과서 차시표에 오른 <span class="cat-num">{sum.total}</span>차시 가운데 몇 차시를 공개했는지 학기와 단원마다 보여 줍니다.
+  </CatHead>
+  <p class="st-note">새 차시가 올라오면 <a href={href('/updates/')}>업데이트</a>에 알립니다. 언제 올라올지는 미리 적지 않습니다.</p>
+
+  <section class="st-sec" aria-labelledby="st-all">
+    <Kicker>3~6학년</Kicker>
+    <h2 class="cat-sec-title" id="st-all">학년·학기별 차시</h2>
+    <dl class="st-keys" aria-label="막대의 색">
+      <div><dt><span class="st-key st-key-pub" aria-hidden="true"></span>{LESSON_STATE_LABEL.published}</dt><dd>{sum.published}차시</dd></div>
+      {preview && <div><dt><span class="st-key st-key-draft" aria-hidden="true"></span>{LESSON_STATE_LABEL.draft}</dt><dd>{sum.draft}차시</dd></div>}
+      <div><dt><span class="st-key" aria-hidden="true"></span>{LESSON_STATE_LABEL.planned}</dt><dd>{sum.planned}차시</dd></div>
+    </dl>
+    {/* 학년과 학기의 표 (첫 화면의 학기 타일과 같은 짜임). 칸마다 공개한 차시 수와 막대, 그 학기의 교과서 목차로 가는 링크 */}
+    <table class="st-grid">
+      <caption class="visually-hidden">학년·학기마다 공개한 차시</caption>
+      <thead>
+        <tr><th scope="col"><span class="visually-hidden">학년</span></th>{TERMS.map((t) => <th scope="col">{t}학기</th>)}</tr>
+      </thead>
+      <tbody>
+        {GRADES.map((g) => (
+          <tr>
+            <th scope="row">{g}학년</th>
+            {TERMS.map((t) => {
+              const s = semesters.find((x) => x.id === `${g}-${t}`);
+              if (!s || s.units.length === 0) return <td class="st-cell st-cell-off"><span class="st-off">교과서 차시표 준비 중</span></td>;
+              const p = s.progress;
+              return (
+                <td class="st-cell">
+                  <a class="st-cell-in" href={href(`/${s.id}/`)}>
+                    <span class="visually-hidden">{s.label} 교과서 목차: </span>
+                    <span class="st-count"><b>{p.published}</b> <span>/ {p.total}차시</span> <span>공개</span></span>
+                    <span class="st-bar" aria-hidden="true">
+                      {p.published > 0 && <span class="st-bar-pub" style={`width:${share(p.published, p)}`}></span>}
+                      {preview && p.draft > 0 && <span class="st-bar-draft" style={`width:${share(p.draft, p)}`}></span>}
+                    </span>
+                    <span class="st-rest">{preview && <><span>{LESSON_STATE_LABEL.draft} {p.draft}</span> · </>}<span>{LESSON_STATE_LABEL.planned} {p.planned}</span></span>
+                  </a>
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+
+  {tabled.map((s) => (
+    <section class="st-sec" aria-labelledby={`st-${s.id}`}>
+      <Kicker>단원별 묶음</Kicker>
+      <h2 class="cat-sec-title" id={`st-${s.id}`}>{s.label}</h2>
+      <ul class="st-legend" aria-hidden="true">
+        <li><span class="st-b st-b-sample" data-state="published"></span>{LESSON_STATE_LABEL.published}</li>
+        {preview && <li><span class="st-b st-b-sample" data-state="draft"></span>{LESSON_STATE_LABEL.draft}</li>}
+        <li><span class="st-b st-b-sample" data-state="planned"></span>{LESSON_STATE_LABEL.planned}</li>
+      </ul>
+      <ol class="st-units">
+        {s.units.map((u) => {
+          const p = unitProgress(s.id, u.no);
+          return (
+            <li class="st-unit">
+              <div class="st-unit-head">
+                <p class="st-unit-name"><a href={href(`/${s.id}/${u.no}/`)}><span class="st-unit-no">{u.no}단원</span> {u.title}</a></p>
+                <p class="st-unit-nums">{p.total}차시 · {LESSON_STATE_LABEL.published} {p.published}{preview && ` · ${LESSON_STATE_LABEL.draft} ${p.draft}`}</p>
+              </div>
+              <ul class="st-chips">
+                {chipsOf(s.id, u.no).map((b) => (
+                  <li>
+                    {b.route
+                      ? <a class="st-b" data-state={b.state} href={href(b.route)} title={`${b.pages} · ${b.title}`}>{b.no}<span class="visually-hidden"> {b.pages} {b.title} ({LESSON_STATE_LABEL[b.state as 'published' | 'draft']})</span></a>
+                      : <span class="st-b" data-state="planned" title={`${b.pages} · ${LESSON_STATE_LABEL.planned}`}>{b.no}<span class="visually-hidden"> {b.pages} ({LESSON_STATE_LABEL.planned})</span></span>}
+                  </li>
+                ))}
+              </ul>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  ))}
+</SiteLayout>

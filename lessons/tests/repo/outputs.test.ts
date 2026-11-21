@@ -7,9 +7,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import * as c from '#lib/content.ts';
 import { SITE } from '#lib/site.ts';
+import type { RoutedKind } from '#lib/site.ts';
 import { buildSite, FIXTURES, noChromium } from '../contract/helpers.ts';
 import { pngHeader, pptxWith, runNode, scratch } from './helpers.ts';
 import { cssLoads, externalLoads } from '../../checks/outputs.mjs';
+import { THUMB_KINDS } from '../../scripts/thumbs.mjs';
 import { imageSize, readPptx } from '../../checks/files.mjs';
 
 const skip = await noChromium();
@@ -42,9 +44,22 @@ test('PPTX 를 읽어 장 수, 글, 그림의 표시 크기와 자르기 값을 
   assert.deepEqual(imageSize(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190 249"></svg>'), 'a.svg'), { w: 190, h: 249 });
 });
 
-/** printJobs() 의 쪽수와 방향대로 PDF 를 찍고(바닥글은 sheetFooter()), 수업 화면 장 수에 그림 출처 한 장을 더한 PPTX 를 만든다 */
+/** 크기만 맞춘 미리보기 그림 (JPEG). 빌드에서는 scripts/thumbs.mjs 가 찍는다. */
+async function jpeg(page: import('playwright').Page, width: number, height: number): Promise<Buffer> {
+  await page.setViewportSize({ width, height });
+  await page.setContent('<body style="margin:0;background:#f3f0e8">미리보기</body>');
+  return page.screenshot({ type: 'jpeg', quality: 70 });
+}
+
+/** printJobs() 의 쪽수와 방향대로 PDF 를 찍고(바닥글은 sheetFooter()), 수업 화면 장 수에 그림 출처 한 장을 더한 PPTX 와 미리보기 그림을 만든다 */
 async function fillFiles(out: string, page: import('playwright').Page) {
+  const thumb = await jpeg(page, 480, 360);
   for (const lesson of c.visibleLessons()) {
+    for (const kind of THUMB_KINDS.filter((k) => (c.readyKinds(lesson) as string[]).includes(k)) as RoutedKind[]) {
+      const file = c.thumbFile(lesson.id, kind, ['--out', out]);
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, thumb);
+    }
     for (const job of c.printJobs(lesson)) {
       const sheets = Array.from({ length: job.pages }, (_, i) => `<section style="height:100vh;break-after:page">${job.label} ${i + 1}쪽<footer>${c.sheetFooter(lesson)}</footer></section>`).join('');
       await page.setContent(`<style>@page{size:A4 ${job.print.orientation};margin:0}body{margin:0}</style>${sheets}`);
@@ -95,6 +110,14 @@ test('미리 보기 빌드: 멀쩡한 산출물은 통과하고, 틀린 쪽수·
     const two = c.loadLesson('5-2/1/02-03');
     const twoPics = c.shownMedia(two, 'slides').map(() => ({ cx: 1600, cy: 900, image: pngHeader(1600, 900) }));
     fs.writeFileSync(path.join(OUT, c.pptxFile(two).file), pptxWith(twoPics, c.footerNotice(two), two.slides.length, 0));
+    // 미리보기 그림: 빠진 것, PNG, 너무 넓은 것, 너무 무거운 것, 준비되지 않은 자료의 것
+    const thumbs = path.join(OUT, 'files', '5-2', '1', '01', 'thumbs');
+    fs.rmSync(path.join(thumbs, 'quiz.jpg'));
+    fs.writeFileSync(path.join(thumbs, 'cards.jpg'), pngHeader(480, 360));
+    fs.writeFileSync(path.join(thumbs, 'worksheet.jpg'), await jpeg(page, 600, 450));
+    fs.writeFileSync(path.join(thumbs, 'slides.jpg'), Buffer.concat([await jpeg(page, 480, 270), Buffer.alloc(61 * 1024)]));
+    // 시험용 한 차시의 컬러링 도안은 skip 이다
+    fs.writeFileSync(path.join(thumbs, 'coloring.jpg'), await jpeg(page, 480, 360));
     r = outputs();
     assert.equal(r.code, 1);
     const lines = r.out.split('\n');
@@ -109,6 +132,11 @@ test('미리 보기 빌드: 멀쩡한 산출물은 통과하고, 틀린 쪽수·
     has(/files\/5-2\/1\/01\/slides\.pptx: 초안의 PPTX 에 "AI 도구로 초안을 만들고 교사가 검수한 자료입니다\." 가 있습니다/);
     has(/files\/5-2\/1\/04\/slides\.pptx: PPTX 가 없습니다 \(빌드 4단계 generators\/pptx\/build\.mjs 가 만듭니다\)/);
     has(new RegExp(`files/5-2/1/02-03/slides\\.pptx: ${two.slides.length}장입니다\\. 명세의 수업 화면 ${two.slides.length}장 뒤에 그림 출처 장이 있어야 합니다`));
+    has(/files\/5-2\/1\/01\/thumbs\/quiz\.jpg: 확인 퀴즈의 미리보기 그림이 없습니다 \(빌드 3단계 scripts\/render-pdf\.mjs 가 찍습니다\)/);
+    has(/files\/5-2\/1\/01\/thumbs\/cards\.jpg: 미리보기 그림이 JPEG 이 아닙니다/);
+    has(/files\/5-2\/1\/01\/thumbs\/worksheet\.jpg: 미리보기 그림의 폭이 600px 입니다 \(480px 까지\)/);
+    has(/files\/5-2\/1\/01\/thumbs\/slides\.jpg: 미리보기 그림이 \d+KB 입니다 \(60KB 까지\)/);
+    has(/files\/5-2\/1\/01\/thumbs\/coloring\.jpg: 준비되지 않은 자료\(컬러링 도안\)의 미리보기 그림입니다/);
 
     // ── 같은 dist 를 공개 빌드로 보면: 초안의 페이지·그림·파일과 localhost 주소가 걸린다 ──
     r = runNode('checks/outputs.mjs', ['--out', OUT], { CONTENT_DIR: FIXTURES, SITE_URL: 'https://example.org' });
@@ -117,6 +145,8 @@ test('미리 보기 빌드: 멀쩡한 산출물은 통과하고, 틀린 쪽수·
     assert.match(r.out, /5-2\/1\/01: 이번 빌드에 실리지 않는 묶음의 페이지입니다 \(공개 빌드에 초안이 섞였거나 visibleLessons\(\) 에 없습니다\)/);
     assert.match(r.out, /media\/5-2\/1\/01: 이번 빌드에 실리지 않는 묶음의 그림입니다/);
     assert.match(r.out, /files\/5-2\/1\/01: 이번 빌드에 실리지 않는 묶음의 파일입니다/);
+    // 초안의 미리보기 그림은 공개 빌드에 실리지 않는다 (R52)
+    assert.match(r.out, /files\/5-2\/1\/01\/thumbs\/web_activity\.jpg: 이번 빌드에 실리지 않는 묶음의 미리보기 그림입니다/);
     assert.match(r.out, /index\.html: 공개 빌드에 초안의 페이지가 들어 있습니다 \(data-draft\)/);
     assert.match(r.out, /index\.html: localhost·127\.0\.0\.1 주소가 있습니다/);
   } finally {

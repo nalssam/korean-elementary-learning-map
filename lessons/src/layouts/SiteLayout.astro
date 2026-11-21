@@ -6,6 +6,7 @@ import Base from './Base.astro';
 import '../components/site/site.css';
 import { footerNotice } from '#lib/content.ts';
 import { SITE } from '#lib/site.ts';
+import type { NavKey } from '#lib/site.ts';
 import type { Lesson } from '#schema/lesson.ts';
 import { href } from '#src/lib/url.ts';
 
@@ -19,8 +20,8 @@ interface Props {
   lesson?: Lesson;
   /** 현재 위치 (처음 › 학기 › 단원). 마지막 것은 지금 페이지라 링크를 걸지 않는다. */
   crumbs?: Crumb[];
-  /** 안내 링크 가운데 지금 페이지 */
-  current?: 'about' | 'licence' | 'report';
+  /** 머리의 길잡이 가운데 지금 페이지 (NavKey. 사이트 담당이 머리를 R42 로 바꿀 때 aria-current 를 붙인다) */
+  current?: NavKey;
   /** false 이면 검색 색인에 넣지 않는다 (404 처럼 찾아 들어올 까닭이 없는 페이지) */
   index?: boolean;
 }

@@ -41,7 +41,7 @@ npm test          # 시험을 돌립니다
 
 명세만 고치는 사람은 이 넷이면 됩니다. PDF와 PPTX는 깃허브의 CI가 만듭니다.
 
-전체를 만들어 보려면 `npm run build` 를 돌립니다. 사이트, 그림, PDF, PPTX, 검색 색인을 차례로 만들고 산출물을 검사합니다. PDF를 찍는 데 Chromium(`npx playwright install chromium`), PPTX를 만드는 데 python-pptx가 있는 Python이 필요합니다. 공개용으로 만들 때는 배포 주소를 `SITE_URL` 로 줍니다. 종이에 박히는 QR 주소가 여기에서 나오기 때문입니다.
+전체를 만들어 보려면 `npm run build` 를 돌립니다. 사이트, 그림, PDF와 자료 카드의 미리보기 그림, PPTX, 검색 색인을 차례로 만들고 산출물을 검사합니다. PDF를 찍는 데 Chromium(`npx playwright install chromium`), PPTX를 만드는 데 python-pptx가 있는 Python이 필요합니다. 공개용으로 만들 때는 배포 주소를 `SITE_URL` 로 줍니다. 종이에 박히는 QR 주소가 여기에서 나오기 때문입니다.
 
 사이트는 기본 가지(`main`)에 합칠 때 깃허브의 `lessons-deploy` 가 배포합니다. 저장소 변수 `SITE_URL` 을 넣기 전에는 배포를 건너뛰고 실행 요약에 그 까닭을 한 줄 남깁니다. 배포는 날쌤이 `production` 환경에서 승인해야 나갑니다.
 
@@ -49,6 +49,7 @@ npm test          # 시험을 돌립니다
 
 | 명령 | 하는 일 |
 |---|---|
+| `npm run new -- 5-2/1/02` | 차시표에 있는 묶음의 명세를 본보기에서 만들고, 공개까지 할 일을 알려 줍니다 |
 | `npm run factsheet -- 5-2/1/01` | 사실 대조표를 찍습니다. 사실마다 그것을 가리킨 글이 나란히 나옵니다 |
 | `npm run sign -- 5-2/1/01 voice --by "별명"` | 검수 기록을 적습니다 |
 | `npm run check:originality -- 5-2/1/01` | 교과서 자료와 겹치는 글을 찾습니다. 비공개 자료가 있는 컴퓨터에서만 돕니다 |
