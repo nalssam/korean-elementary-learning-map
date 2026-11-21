@@ -1,0 +1,56 @@
+---
+// 차시 자료실의 '자료' (R46): 이 차시의 자료를 catalog() 에서 얻어 ResourceCard 로 늘어놓는다. 전에 있던 큰 버튼 줄(수업 화면 띄우기, 학습지 인쇄,
+// 페이퍼크래프트 인쇄)이 이 카드들로 바뀌었다. 차례는 KIND_ORDER 이고 수업 화면 카드가 맨 앞에서 한 줄을 다 쓴다 (수업 중에 가장 먼저 누르는 단추다).
+// 거르기 탭(전체·수업·인쇄·학생 활동)은 덧붙이는 기능이다: 스크립트가 돌 때만 탭이 나타나고, 스크립트가 없으면 모든 카드가 보인다.
+// 탭은 켜고 끄는 단추 묶음(aria-pressed)이고, 카드의 data-group(KIND_GROUP)으로 칸을 숨긴다.
+import { catalog } from '#lib/content.ts';
+import { GROUP_LABEL, GROUP_ORDER, KIND_GROUP } from '#lib/site.ts';
+import type { Lesson } from '#schema/lesson.ts';
+import ResourceCard from './ui/ResourceCard.astro';
+
+interface Props { lesson: Lesson }
+const { lesson } = Astro.props;
+const items = catalog().filter((i) => i.lessonId === lesson.id);
+const groups = GROUP_ORDER.map((g) => ({ key: g, label: GROUP_LABEL[g], count: items.filter((i) => KIND_GROUP[i.kind] === g).length })).filter((g) => g.count > 0);
+---
+<section class="sec kit-materials" id="materials" aria-labelledby="materials-title">
+  <div class="kit-materials-head">
+    <h2 class="sec-title" id="materials-title">자료</h2>
+    <div class="kit-tabs" role="group" aria-label="자료 거르기" data-filter-tabs hidden data-pagefind-ignore>
+      <button type="button" class="kit-tab" data-filter="all" aria-pressed="true">전체 <span class="kit-tab-n">{items.length}</span></button>
+      {groups.map((g) => <button type="button" class="kit-tab" data-filter={g.key} aria-pressed="false">{g.label} <span class="kit-tab-n">{g.count}</span></button>)}
+    </div>
+  </div>
+  {/* 카드의 글(자료 종류, 담기, 한 줄 설명)은 검색 색인에서 뺀다. 검색 결과의 발췌가 '담기: 웹 활동 …' 같은 단추 글로 채워졌다.
+       자료의 이름은 아래 교사용 안내에 그대로 있어 그대로 찾힌다. */}
+  <ul class="book-cards kit-cards" data-filter-list data-pagefind-ignore>
+    {items.map((item, i) => <li class:list={[i === 0 && item.kind === 'slides' && 'book-cards-wide']}><ResourceCard item={item} /></li>)}
+  </ul>
+  <p class="visually-hidden" aria-live="polite" data-filter-status></p>
+</section>
+
+<script>
+  // 거르기 탭. 누른 갈래의 카드만 남기고 나머지 칸(<li>)을 숨긴다. '전체'는 모두 보인다.
+  // 화면 읽기 프로그램에는 몇 가지가 남았는지 알린다.
+  for (const tabs of document.querySelectorAll<HTMLElement>('[data-filter-tabs]')) {
+    const section = tabs.closest('section');
+    const list = section?.querySelector<HTMLElement>('[data-filter-list]');
+    const status = section?.querySelector<HTMLElement>('[data-filter-status]');
+    if (!list) continue;
+    const buttons = [...tabs.querySelectorAll<HTMLButtonElement>('button[data-filter]')];
+    const show = (button: HTMLButtonElement) => {
+      const group = button.dataset.filter;
+      let shown = 0;
+      for (const li of list.children as HTMLCollectionOf<HTMLElement>) {
+        const card = li.querySelector<HTMLElement>('[data-group]');
+        const on = group === 'all' || card?.dataset.group === group;
+        li.hidden = !on;
+        if (on) shown++;
+      }
+      for (const b of buttons) b.setAttribute('aria-pressed', String(b === button));
+      if (status) status.textContent = `${button.firstChild?.textContent?.trim() ?? ''} 자료 ${shown}가지를 보여 줍니다.`;
+    };
+    for (const b of buttons) b.addEventListener('click', () => show(b));
+    tabs.hidden = false;
+  }
+</script>

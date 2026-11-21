@@ -1,0 +1,62 @@
+---
+// 교과서 목차 (/<학기>/, R44). 차시표가 있는 학기에만 페이지가 있다.
+// 넓은 화면: 왼쪽에 따라오는 목차, 본문에 학기 머리(학기, 교과서, 학기 소개, N/M 차시 공개와 진행 막대)와 단원마다 머리말·단원명·접힌 성취기준·묶음 표.
+// 좁은 화면: 목차는 맨 위의 '목차' 상자다 (BookFrame).
+// 차시표의 글 가운데 여기에 찍는 것은 단원명과 학기 소개(blurb)뿐이다. focus 는 찍지 않는다 (docs/CONTRACT.md 3절).
+import { loadRegistry, pagesLabel, semesterLabel, semesterProgress, standardSummary, unitPages, unitProgress } from '#lib/content.ts';
+import SiteLayout from '#src/layouts/SiteLayout.astro';
+import { href } from '#src/lib/url.ts';
+import BookFrame from '#src/components/site/BookFrame.astro';
+import Fold from '#src/components/site/Fold.astro';
+import LessonList from '#src/components/site/LessonList.astro';
+import ProgressBar from '#src/components/site/ProgressBar.astro';
+import Kicker from '#src/components/site/ui/Kicker.astro';
+import { progressText, semesterRows } from '#src/components/site/book.ts';
+import { textbookLabel } from '#src/components/site/data.ts';
+import { standardCode } from '#src/components/site/format.ts';
+
+export function getStaticPaths() {
+  return loadRegistry().semesters.filter((s) => s.units.length > 0).map((s) => ({ params: { semester: s.id } }));
+}
+const id = Astro.params.semester;
+const semester = loadRegistry().semesters.find((s) => s.id === id);
+if (!semester) throw new Error(`차시표에 ${id} 학기가 없습니다`);
+const rows = semesterRows(id);
+const label = semesterLabel(id);
+const progress = semesterProgress(id);
+---
+<SiteLayout title={label} description={semester.blurb} crumbs={[{ label: '처음', href: href('/') }, { label }]}>
+  <BookFrame semester={id}>
+    <header class="book-head">
+      <Kicker>교과서 목차</Kicker>
+      <h1 class="page-title">{label}</h1>
+      <p class="book-textbook">{textbookLabel()} 기준</p>
+      {semester.blurb && <p class="lead">{semester.blurb}</p>}
+      <ProgressBar progress={progress} label={progressText(progress)} />
+    </header>
+
+    {semester.units.map((unit) => {
+      const p = unitProgress(id, unit.no);
+      return (
+        <section class="book-unit" id={`unit-${unit.no}`} aria-labelledby={`unit-${unit.no}-title`}>
+          <Kicker>{unit.no}단원</Kicker>
+          <h2 class="book-unit-title" id={`unit-${unit.no}-title`}>{unit.title}</h2>
+          <p class="book-unit-meta" data-pagefind-ignore>
+            <span>{pagesLabel(unitPages(unit))}</span>
+            <span>{progressText(p)}</span>
+            <a href={href(`/${id}/${unit.no}/`)}>{unit.no}단원 보기<span class="visually-hidden">: {unit.title}</span></a>
+          </p>
+          <div class="book-standards">
+            <Fold title="성취기준" count={`${unit.standards.length}개`}>
+              <dl class="standards">
+                {unit.standards.map((code) => <div><dt>{standardCode(code)}</dt><dd>{standardSummary(code)}</dd></div>)}
+              </dl>
+              <p class="fine" data-pagefind-ignore>코드 옆의 글은 줄여 쓴 요약이고, 교육부가 고시한 문장과 다릅니다.</p>
+            </Fold>
+          </div>
+          <LessonList rows={rows.filter((r) => r.ref.unit.no === unit.no)} />
+        </section>
+      );
+    })}
+  </BookFrame>
+</SiteLayout>

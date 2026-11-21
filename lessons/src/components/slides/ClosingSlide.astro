@@ -1,0 +1,12 @@
+---
+// 마무리. 항목이 없으면 제목만 가운데에 크게 둔다.
+import { keepParticle } from '#lib/site.ts';
+import type { SlideProps } from './types.ts';
+
+type Props = SlideProps<'closing'>;
+const { slide } = Astro.props;
+---
+<div class:list={['sl-closing', slide.points.length === 0 && 'is-bare']}>
+  <h2 class="sl-closing-title">{keepParticle(slide.title)}</h2>
+  {slide.points.length > 0 && <ul class="sl-checks">{slide.points.map((p) => <li>{keepParticle(p)}</li>)}</ul>}
+</div>

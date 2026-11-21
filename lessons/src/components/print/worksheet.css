@@ -1,0 +1,322 @@
+/* 학습지 블록의 모양. 5학년이 연필로 쓰는 종이다.
+   쓰는 줄은 10mm 간격, 본문 12pt, 지시문 13.5pt (docs/CONTRACT.md 7절).
+   색 없이 읽히게 만든다: 읽는 글은 굵은 왼쪽 띠, 쓰는 칸은 가는 테두리와 회색 줄, 번호는 테두리가 있는 동그라미.
+
+   쪽에 남는 자리는 쓰는 칸(줄 쓰기 칸, 빈 칸, 글을 쓰는 표, 본 것·짐작한 것·까닭)이 똑같이 나누어 갖는다.
+   .ws 가 본문 높이의 세로 flex 이고, 쓰는 칸만 flex-grow 를 받는다. 줄지는 않는다(flex-shrink 0):
+   적힌 크기(줄 수, height_mm, 표의 칸 높이)가 가장 작은 크기이고, 넘치면 render-pdf 가 잡는다.
+   줄 쓰기 칸이 늘어나면 늘어난 자리(.ws-more)에도 10mm 간격으로 줄을 긋는다. */
+
+/* 아래 여백은 바닥글 앞의 틈이다 (R29: 마지막 블록과 바닥글 글자 사이 6mm 이상). 값은 바닥글의 줄 수로 worksheet.astro 가 준다
+   (layout.ts 의 footReserve). 쓰는 칸이 남는 높이를 나누어 가져도 이 여백 안으로는 들어오지 않는다. */
+.ws {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding-bottom: var(--foot-reserve, 3.2mm);
+  color: var(--ink);
+}
+/* 글과 목록의 바깥 여백을 지운다. :where 로 묶어 아래의 블록 규칙이 이긴다. */
+.ws :where(p, h2, h3, ol, ul) { margin: 0; }
+
+/* 쪽 제목 */
+.ws-heading {
+  display: flex;
+  align-items: center;
+  gap: 2.5mm;
+  margin: 0 0 1mm;
+  font-size: 14pt;
+  font-weight: 800;
+  line-height: 1.3;
+}
+.ws-heading::before { content: ''; flex: none; width: 1.6mm; height: 5.5mm; border-radius: 0.8mm; background: var(--print-accent); }
+
+/* 블록 사이. 지시문과 그 아래 쓰는 칸은 바짝 붙이고, 다음 물음과는 넉넉히 띄운다. */
+.ws-block { flex: none; margin-top: 6mm; }
+.ws > .ws-block:first-child,
+.ws-col > .ws-block:first-child { margin-top: 0; }
+.ws-heading + .ws-block { margin-top: 3.5mm; }
+.ws-prompt + .ws-block,
+.ws-sub + .ws-block { margin-top: 2mm; }
+.ws-prompt + .ws-sub { margin-top: 3.5mm; }
+
+/* 남는 자리를 나누어 갖는 쓰는 칸 */
+.ws > :is(.ws-lines, .ws-box, .ws-oi) { flex: 1 0 auto; }
+/* 나란히 놓은 단에 쓰는 칸이 있으면 단째로 늘어나고, 단 안의 쓰는 칸이 그 높이를 채운다 */
+.ws > .ws-columns:has(> .ws-col > :is(.ws-lines, .ws-box, .ws-oi)) { flex: 1 0 auto; align-items: stretch; }
+.ws-col > :is(.ws-lines, .ws-box, .ws-oi) { flex: 1 0 auto; }
+/* 글을 쓰는 표는 채우는 칸 22mm 를 바라는 높이(--want, WorksheetBlocks 가 줄 수로 셈)로 두고,
+   쪽이 빠듯하면 다른 칸보다 먼저 12mm 까지 줄인다. 남는 자리가 있으면 다른 쓰는 칸과 같이 늘어난다. */
+.ws > .ws-table-write { flex: 1 1 var(--want); }
+.ws-col > .ws-table-write { flex: 0 1 var(--want); }
+/* 늘어난 자리의 쓰는 줄: 위에서부터 10mm 마다 한 줄 */
+.ws-more {
+  flex: 1 0 0;
+  background: repeating-linear-gradient(to bottom, transparent 0 9.7mm, var(--rule) 9.7mm 10mm);
+}
+
+/* 지시문·질문 */
+.ws-prompt {
+  display: flex;
+  align-items: flex-start;
+  gap: 2.5mm;
+  font-size: 13.5pt;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.ws-prompt-text { flex: 1 1 0; min-width: 0; }
+/* 번호: 굵은 테두리 동그라미 안의 숫자. 바탕색을 쓰지 않아 브라우저 인쇄에서 '배경 그래픽'을 꺼도 그대로 찍힌다. */
+.ws-no {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 7.5mm;
+  height: 7.5mm;
+  padding: 0 1mm;
+  border: 0.6mm solid var(--ink);
+  border-radius: 3.75mm;
+  color: var(--ink);
+  font-size: 12pt;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 번호 없는 작은 제목: 번호 붙은 지시 아래 표나 칸의 이름. 물음이 아니라 이름표로 읽힌다. */
+.ws-sub {
+  display: flex;
+  align-items: center;
+  gap: 2mm;
+  font-size: 13pt;
+  font-weight: 800;
+  line-height: 1.35;
+}
+.ws-sub::before { content: ''; flex: none; width: 2.2mm; height: 2.2mm; background: var(--ink); }
+
+/* 작은 이름표 (줄·빈 칸 위) */
+.ws-label { font-size: 12pt; line-height: 1.4; color: var(--ink-dim); }
+
+/* 줄 쓰기 칸: 줄 사이 10mm */
+.ws-lines { display: flex; flex-direction: column; }
+.ws-rule { flex: none; height: 10mm; border-bottom: 0.3mm solid var(--rule); }
+.ws-lines .ws-label { margin-bottom: -2mm; }
+
+/* 빈 칸 (그리기·자유롭게 쓰기) */
+.ws-box { padding: 2mm 3mm; border: 0.4mm solid var(--ink-dim); border-radius: 2.5mm; }
+
+/* 그림. 그림 · 설명 · 출처 표시 차례로 찍는다.
+   설명은 Media 가 아니라 여기에서 찍는다 (아이가 읽는 글이라 keepParticle 을 거친다). 그래서 Media 의 figure 와
+   figcaption 을 상자로 두지 않고(display: contents) 그 안의 그림과 출처 표시를 설명과 한 줄기에 놓는다. */
+.ws-figcell .media,
+.ws-figcell .media figcaption { display: contents; }
+.ws-figcell img { order: 1; grid-row: 1; }
+.ws-figcell .ws-fig-caption { order: 2; grid-row: 2; margin-top: 1.5mm; font-size: 12pt; line-height: 1.4; text-align: center; }
+.ws-figcell .media-credit { order: 3; grid-row: 3; margin-top: 0.6mm; text-align: center; }
+
+/* 한 장짜리 그림 */
+.ws-figure { display: flex; justify-content: center; }
+.ws-figure .ws-figcell { display: flex; flex-direction: column; align-items: center; width: 100%; }
+.ws-figure[data-width='half'] .ws-figcell { width: 50%; }
+.ws-figure[data-width='third'] .ws-figcell { width: 34%; }
+/* 그림 상자는 그려진 그림과 같은 크기다 (폭과 높이 모두 auto 에 최댓값만 둔다. 가로세로 비가 지켜진다).
+   상자 옆에 빈 띠가 없어 사진 테두리(Media.astro)가 그림에 꼭 맞는다. */
+.ws-figure img { width: auto; height: auto; max-width: 100%; max-height: 105mm; }
+.ws-figure[data-width='half'] img { max-height: 75mm; }
+.ws-figure[data-width='third'] img { max-height: 55mm; }
+/* 글을 써 넣는 표가 있는 쪽에서는 그림을 줄여 쓰는 칸과 마지막 물음에 자리를 준다.
+   반 폭 그림은 50mm 높이까지 (가로로 긴 사진이면 폭 75mm 남짓), 그림 아래의 틈도 조금 좁힌다. */
+.ws:has(.ws-table-write) .ws-figure img { max-height: 70mm; }
+.ws:has(.ws-table-write) .ws-figure[data-width='half'] img { max-height: 50mm; }
+.ws:has(.ws-table-write) .ws-figure[data-width='third'] img { max-height: 45mm; }
+.ws:has(.ws-table-write) .ws-figure + .ws-block { margin-top: 4.5mm; }
+
+/* 그림 줄 (단마다 그림 한 장인 나란히 놓기). 모든 그림이 같은 높이의 상자에 줄여 들어가고(자르지 않는다),
+   아래끝을 맞춰 선다. 설명과 출처 표시는 단마다 같은 줄에 놓인다 (subgrid 로 세 줄을 함께 쓴다).
+   단은 그 설명이 한 줄에 드는 폭보다 좁지 않고 줄 폭의 절반을 넘지 않는다 (R34. 폭과 높이는 학습지 페이지(worksheet.astro)의 스크립트가 정한다).
+   줄의 출처 표시가 모두 같으면 그림마다 찍지 않고 줄 아래 왼쪽 끝에 한 번 찍는다 (.ws-figrow-credit). */
+.ws-figrow {
+  --fig-h: 62mm;
+  display: grid;
+  /* --fig-fit 은 학습지 페이지(worksheet.astro)의 스크립트가 정한 공통 그림 높이다 (설명이 한 줄에 드는 단 폭에서 찾은 가장 큰 높이, R34) */
+  grid-template-rows: var(--fig-fit, var(--fig-h)) auto auto auto;
+  column-gap: 5mm;
+}
+.ws-figrow[data-count='2'] { --fig-h: 72mm; }
+.ws-figrow[data-count='4'] { --fig-h: 46mm; }
+.ws:has(.ws-table-write) .ws-figrow { --fig-h: 54mm; }
+.ws:has(.ws-table-write) .ws-figrow[data-count='2'] { --fig-h: 62mm; }
+.ws:has(.ws-table-write) .ws-figrow[data-count='4'] { --fig-h: 40mm; }
+.ws-figrow .ws-figcell { display: grid; grid-row: 1 / span 3; grid-template-rows: subgrid; justify-items: center; min-width: 0; }
+.ws-figrow img { width: 100%; height: 100%; max-width: none; object-fit: contain; object-position: center bottom; }
+.ws-figrow .ws-fig-caption { align-self: start; max-width: 100%; text-wrap: balance; }
+.ws-figrow .media-credit { align-self: start; }
+.ws-figrow[data-shared-credit] .media-credit { display: none; }
+/* 줄 전체의 출처 표시는 줄의 왼쪽 끝에서 시작한다. 가운데에 두면 가운데 그림 하나의 출처로 읽힌다. */
+.ws-figrow-credit { grid-column: 1 / -1; grid-row: 4; margin-top: 1.2mm; font-size: 7.5pt; line-height: 1.3; color: var(--ink-dim); text-align: left; }
+
+/* 풀어 놓은 보기. 아이가 할 일의 본보기라 지시문보다 조용하게: 옅은 테두리 상자, 보통 굵기의 글, 번호 없음.
+   왼쪽의 작은 "예" 표시로 보기임을 알린다. 칸(parts)은 이름표 + 글이 한 줄에 놓이고 화살표로 이어진다.
+   단이 좁으면(120mm 아래) 칸을 위아래로 쌓고 화살표가 아래를 가리킨다. */
+.ws-example {
+  container-type: inline-size;
+  display: flex;
+  align-items: flex-start;
+  gap: 3mm;
+  padding: 2.6mm 4mm 2.8mm 3mm;
+  border: 0.3mm solid var(--rule);
+  border-radius: 2.5mm;
+  font-size: 12pt;
+  font-weight: 400;
+  line-height: 1.45;
+}
+.ws-prompt + .ws-example { margin-top: 3mm; }
+/* "예" 표시: 옅은 테두리의 작은 네모. 바탕색을 쓰지 않아 '배경 그래픽'을 꺼도 그대로 찍힌다. */
+.ws-example-tag {
+  flex: none;
+  margin-top: 0.4mm;
+  padding: 0 1.5mm;
+  border: 0.3mm solid var(--rule);
+  border-radius: 1.2mm;
+  font-size: 9.5pt;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+.ws-example-text { flex: 1 1 0; min-width: 0; }
+.ws-example-parts { flex: 1 1 0; min-width: 0; display: flex; align-items: stretch; gap: 1.5mm; margin: 0; padding: 0; list-style: none; }
+/* 칸은 글 길이만큼, 화살표는 남는 폭을 나누어 가져 칸 사이 한가운데에 놓인다. 글이 길면 칸이 줄어 줄을 바꾼다. */
+.ws-example-part { flex: 0 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 0.6mm; }
+.ws-example-label { font-size: 10pt; font-weight: 700; line-height: 1.3; color: var(--ink-dim); }
+.ws-example-said { overflow-wrap: break-word; }
+.ws-example-arrow { flex: 1 1 0; min-width: 7mm; display: flex; justify-content: center; align-items: center; color: var(--ink-dim); padding-top: 4.5mm; }
+.ws-example-arrow svg { display: block; width: 4mm; height: 4mm; }
+@container (max-width: 120mm) {
+  .ws-example-parts { flex-direction: column; gap: 0.8mm; }
+  .ws-example-arrow { flex: none; justify-content: flex-start; padding: 0 0 0 1mm; }
+  .ws-example-arrow svg { transform: rotate(90deg); width: 3.4mm; height: 3.4mm; }
+}
+
+/* 본 것 → 짐작한 것 → 까닭. 자리가 넓으면(가로 종이) 그림을 왼쪽에, 좁으면 위에 둔다.
+   쪽에 자리가 남으면 세 칸의 쓰는 줄이 아래로 늘어난다 (.ws-oi 부터 .ws-oi-lines 까지 세로 flex). */
+.ws-oi { container-type: inline-size; display: flex; flex-direction: column; }
+.ws-oi-in { flex: 1 0 auto; display: flex; flex-direction: column; }
+.ws-oi-main { flex: 1 0 auto; display: flex; flex-direction: column; align-items: flex-start; }
+.ws-oi-cols { flex: 1 0 auto; align-self: stretch; }
+.ws-oi-col { display: flex; flex-direction: column; }
+.ws-oi-lines { flex: 1 0 auto; display: flex; flex-direction: column; }
+.ws-oi-media { margin: 0 auto 3mm; width: 40%; }
+.ws-oi-media img { width: 100%; max-height: 55mm; }
+.ws-oi-target {
+  display: inline-block;
+  padding: 0.8mm 4mm 0.6mm;
+  border: 0.4mm solid var(--ink-dim);
+  border-bottom: 0;
+  border-radius: 2.5mm 2.5mm 0 0;
+  font-size: 12pt;
+  font-weight: 800;
+  line-height: 1.4;
+}
+.ws-oi-cols {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 0.4mm solid var(--ink-dim);
+  border-radius: 0 2.5mm 2.5mm 2.5mm;
+}
+.ws-oi-col { position: relative; padding: 0 3mm 3mm; }
+.ws-oi-col + .ws-oi-col { border-left: 0.4mm solid var(--ink-dim); }
+.ws-oi-label {
+  margin: 0 -3mm;
+  padding: 1.6mm 3mm 1.4mm;
+  border-bottom: 0.4mm solid var(--ink-dim);
+  font-size: 12pt;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+}
+/* 칸과 칸 사이의 화살촉: 왼쪽 칸에서 오른쪽 칸으로 생각이 이어진다 */
+.ws-oi-col + .ws-oi-col::before {
+  content: '';
+  position: absolute;
+  left: -0.2mm;
+  top: 2.9mm;
+  border: 1.5mm solid transparent;
+  border-left: 2.2mm solid var(--ink);
+  border-right: 0;
+}
+@container (min-width: 230mm) {
+  .ws-oi-in:has(.ws-oi-media) { display: grid; grid-template-columns: 22% minmax(0, 1fr); column-gap: 6mm; align-items: center; }
+  .ws-oi-in:has(.ws-oi-media) .ws-oi-main { align-self: stretch; }
+  .ws-oi-media { margin: 0; width: 100%; }
+  .ws-oi-media img { max-height: 40mm; }
+}
+
+/* 표. 빈 칸은 아이가 채운다.
+   칸 폭은 layout.ts 의 tableWidths() 가 정한다. 낱말 가운데와 괄호·"~낱말"(.ws-keep) 안에서는 줄을 바꾸지 않는다. */
+.ws-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.ws-table th,
+.ws-table td { height: 12mm; padding: 1.5mm 3mm; border: 0.4mm solid var(--ink-dim); font-size: 12pt; line-height: 1.4; text-align: left; vertical-align: middle; word-break: keep-all; overflow-wrap: break-word; }
+.ws-table th { height: 9mm; border-bottom-width: 0.8mm; border-bottom-color: var(--ink); font-weight: 700; text-align: center; }
+.ws-keep { white-space: nowrap; }
+/* 글을 쓰는 표: 채우는 칸은 22mm 를 바라고(위 --want), 아래 테두리에서 10mm 마다 옅은 쓰는 줄이 있다.
+   칸 위쪽 6mm 에는 줄을 긋지 않는다 (위 테두리에 바짝 붙은 줄은 쓸 수 없다). 칸이 높아지면 줄이 늘어나고, 12mm 로 줄면 줄 없이 빈 칸이다. */
+.ws-table-write td.ws-fill {
+  background: repeating-linear-gradient(to top, transparent 0 9.7mm, var(--rule-soft) 9.7mm 10mm) left bottom / 100% calc(100% - 6mm) no-repeat;
+}
+
+/* 선 잇기. 가운데를 비워 선을 긋게 한다. */
+.ws-match { display: grid; grid-template-columns: minmax(0, 5fr) minmax(18mm, 3fr) minmax(0, 7fr); row-gap: 3mm; align-items: stretch; }
+.ws-match-item { display: flex; align-items: center; gap: 2.5mm; min-height: 11mm; }
+.ws-match-item span { flex: 1 1 0; min-width: 0; padding: 1.8mm 3.5mm; border: 0.4mm solid var(--ink-dim); border-radius: 2.5mm; font-size: 12pt; line-height: 1.4; }
+.ws-match-left { grid-column: 1; }
+.ws-match-right { grid-column: 3; }
+.ws-dot { flex: none; width: 2.6mm; height: 2.6mm; border-radius: 50%; background: var(--ink); }
+
+/* 확인 퀴즈 문항 */
+.ws-q + .ws-q { margin-top: 5mm; }
+.ws-ox { flex: none; display: flex; gap: 2.5mm; margin-left: 2mm; }
+.ws-ox span { display: grid; place-items: center; width: 9.5mm; height: 9.5mm; border: 0.4mm solid var(--ink-dim); border-radius: 2.5mm; font-size: 13pt; font-weight: 700; line-height: 1; }
+.ws-choices { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5mm 6mm; margin: 2mm 0 0 9.5mm; padding: 0; list-style: none; }
+.ws-choices[data-columns='2'] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ws-choices[data-columns='4'] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ws-choices li { display: flex; align-items: flex-start; gap: 2mm; font-size: 12pt; line-height: 1.5; }
+/* 보기 번호는 "1)" 꼴이다. 문항 번호(테두리 동그라미)와 헷갈리지 않게 한다. */
+.ws-choice-no { flex: none; min-width: 5mm; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ws-answer { width: min(100% - 9.5mm, 90mm); height: 11mm; margin: 2mm 0 0 9.5mm; border: 0.4mm solid var(--ink-dim); border-radius: 2.5mm; }
+
+/* 문장 틀. 빈칸은 60mm 이고 줄이 좁으면 줄어든다. 빈칸 뒤의 말(조사·어미)은 빈칸에 바로 붙는다. */
+.ws-frame { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1mm 2mm; font-size: 13pt; font-weight: 500; line-height: 1.3; }
+.ws-frame-text { padding: 5mm 0 0.7mm; }
+.ws-frame-blank { flex: 0 1 60mm; min-width: 30mm; height: 10.5mm; border-bottom: 0.3mm solid var(--rule); }
+.ws-frame-break { flex: 0 0 100%; height: 0; }
+
+/* 연표. 때는 늘 찍고, 빈칸인 곳은 속이 빈 점과 쓰는 줄을 둔다. */
+.ws-timeline { display: grid; grid-template-columns: max-content 9mm minmax(0, 1fr); margin-bottom: 0; padding: 0; list-style: none; }
+.ws-timeline li { display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; align-items: center; min-height: 12mm; }
+.ws-timeline-when { font-size: 12pt; font-weight: 700; line-height: 1.3; text-align: right; font-variant-numeric: tabular-nums; }
+.ws-timeline-mark { position: relative; align-self: stretch; }
+.ws-timeline-mark::before { content: ''; position: absolute; left: calc(50% - 0.25mm); top: 0; bottom: 0; width: 0.5mm; background: var(--ink); }
+.ws-timeline li:first-child .ws-timeline-mark::before { top: 50%; }
+.ws-timeline li:last-child .ws-timeline-mark::before { bottom: 50%; }
+.ws-timeline-mark::after { content: ''; position: absolute; left: calc(50% - 1.6mm); top: calc(50% - 1.6mm); width: 3.2mm; height: 3.2mm; border: 0.5mm solid var(--ink); border-radius: 50%; background: var(--ink); box-sizing: border-box; }
+.ws-timeline-blank .ws-timeline-mark::after { background: var(--card); }
+.ws-timeline-what { font-size: 12pt; line-height: 1.4; }
+.ws-timeline-blank .ws-timeline-what { align-self: stretch; margin: 0 0 1.6mm; border-bottom: 0.3mm solid var(--rule); }
+
+/* 짧은 글 (낱말 풀이·도움말): 굵은 왼쪽 띠 */
+.ws-note { padding: 0.5mm 0 0.5mm 4mm; border-left: 1.2mm solid var(--print-accent); font-size: 12pt; line-height: 1.55; }
+.ws-note-title { font-weight: 800; }
+.ws-source { margin-top: 1mm; font-size: 9pt; line-height: 1.4; color: var(--ink-dim); }
+
+/* 읽기 자료: 위아래 굵은 줄 사이에 글 */
+.ws-passage { padding: 3mm 4mm 2.5mm; border-top: 0.8mm solid var(--ink); border-bottom: 0.3mm solid var(--ink); }
+.ws-passage h3 { margin: 0 0 1.5mm; font-size: 13.5pt; font-weight: 800; line-height: 1.35; }
+.ws-passage p { font-size: 12pt; line-height: 1.65; text-indent: 1em; }
+.ws-passage p + p { margin-top: 0.8mm; }
+.ws-passage p.ws-source { margin-top: 1.2mm; font-size: 9pt; line-height: 1.4; text-indent: 0; text-align: right; }
+
+/* 나란히 놓기 */
+.ws-columns { display: grid; column-gap: 5mm; align-items: start; }
+.ws-col { display: flex; flex-direction: column; min-width: 0; }

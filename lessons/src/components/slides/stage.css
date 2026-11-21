@@ -1,0 +1,355 @@
+/* 수업 화면. 모든 치수는 1920 × 1080 무대의 px 이고 var(--u) 를 곱해 화면 크기에 맞춘다.
+   --u 는 장(.slide, 크기 컨테이너)의 폭에서 나오므로 화면이 1024px 이든 3840px 이든 같은 모양으로 줄고 는다.
+   글자 크기는 copy.ts 의 STAGE_TYPE 과 같은 값이다 (PPTX 는 그 절반을 pt 로 쓴다). 색은 tokens.css 의 것만 쓴다. */
+
+body[data-kind='stage'] { background: var(--bg); }
+
+.stage { --pad-x: 120; --pad-t: 80; --pad-b: 88; }
+
+/* ───────── 무대 크기: 스크립트가 돌면 한 장씩, 아니면 모든 장을 위에서 아래로 ───────── */
+.slide {
+  position: relative;
+  container-type: inline-size;
+  width: min(100vw, calc(100vh * 16 / 9));
+  aspect-ratio: 16 / 9;
+  margin: 0 auto 24px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.stage-js body[data-kind='stage'] { overflow: hidden; }
+.stage-js .screen {
+  position: fixed; inset: 0; margin: auto;
+  width: min(100vw, calc(100dvh * 16 / 9));
+  height: min(100dvh, calc(100vw * 9 / 16));
+  cursor: default;
+}
+.stage-js .slide { position: absolute; inset: 0; width: auto; margin: 0; border: 0; }
+.stage-js .slide[hidden] { display: none; }
+.slide-notes { display: none; }
+
+.slide-in {
+  --u: calc(100cqw / 1920);
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  padding: calc(var(--pad-t) * var(--u)) calc(var(--pad-x) * var(--u)) calc(var(--pad-b) * var(--u));
+  font-size: calc(44 * var(--u));
+  line-height: 1.4;
+  color: var(--navy);
+}
+.slide-in > :first-child { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+/* 브라우저 기본 여백을 지운다. :where 로 감싸 아래의 장별 규칙이 언제나 이기게 한다. */
+:where(.slide-in) :where(p, h2, h3, ol, ul, li, dl) { margin: 0; padding: 0; }
+:where(.slide-in) :where(ol, ul) { list-style: none; }
+
+/* 장의 둘레 (R55): 왼쪽 아래 바닥글 줄(stageFooter)과 오른쪽 아래 장 번호. 같은 크기(STAGE_TYPE.footer·counter = 24)로 한 줄에 선다.
+   바닥글 줄의 '  |  ' 앞뒤 두 칸을 그대로 둔다 (white-space: pre). 장 번호는 Pretendard Medium(500), 숫자 폭을 고르게. */
+.sl-foot, .sl-counter {
+  position: absolute; bottom: calc(36 * var(--u));
+  font-size: calc(24 * var(--u)); line-height: 1; color: var(--gray);
+}
+.sl-foot { left: calc(var(--pad-x) * var(--u)); white-space: pre; }
+.sl-counter { right: calc(48 * var(--u)); font-weight: 500; font-variant-numeric: tabular-nums; }
+/* 흐름 단계 머리말 "01 도입" (R55, STAGE_TYPE.phase · STAGE_PHASE). 제 머리말이 없는 장의 제목 위에 청록 굵게.
+   머리말은 위 여백(80) 안에 놓는다: 40 에서 한 줄(36)을 쓰고 4 를 띄우면 제목이 머리말 없는 장과 같은 80 에서 시작한다.
+   그래서 본문 자리는 그대로다 (단계 장 2 × 2 의 그림, 글 곁 그림 칸의 크기가 머리말 때문에 줄지 않는다). */
+.slide[data-phase] .slide-in { padding-top: calc(40 * var(--u)); }
+.sl-phase {
+  flex: none; height: calc(36 * var(--u)); margin-bottom: calc(4 * var(--u));
+  font-size: calc(30 * var(--u)); font-weight: 700; line-height: 1.2; color: var(--teal);
+  letter-spacing: 0.01em; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+/* 장에 맞게 줄어드는 글 (copy.ts 의 STAGE_FIT). 스크립트가 data-fit 의 크기를 앞에서부터 해 보고 --fit 을 고른다. */
+.sl-fit { font-size: calc(var(--fit) * var(--u)); }
+
+/* ───────── 글자 ───────── */
+/* 마지막 줄에 낱말 하나만 남지 않게 한다. 한 줄짜리 안내(힌트·그림 설명·부제)는 줄 길이를 고르게 나누고 (제목 h2 는 Base.astro 가 이미 그렇게 한다),
+   항목·단계 글은 'pretty' 로 끝줄만 다듬는다 (고르게 나누면 '아는 / 것을'처럼 이어진 말이 갈리는 일이 잦았다). */
+.sl-hint, .sl-caption, .sl-term-meaning, .sl-box-text, .sl-cover-sub { text-wrap: balance; }
+.sl-li-text, .sl-step-text, .sl-bullets > li, .sl-checks > li { text-wrap: pretty; }
+.sl-title { font-size: calc(72 * var(--u)); font-weight: 700; line-height: 1.25; margin-bottom: calc(48 * var(--u)); flex: none; }
+.sl-kicker { font-size: calc(44 * var(--u)); font-weight: 700; line-height: 1.3; color: var(--teal); margin-bottom: calc(24 * var(--u)); }
+.sl-kicker-accent { color: var(--coral); }
+.sl-num {
+  flex: none; display: inline-grid; place-items: center;
+  width: calc(64 * var(--u)); height: calc(64 * var(--u)); border-radius: 50%;
+  background: var(--teal-soft); color: var(--teal); font-weight: 700; font-size: calc(40 * var(--u)); line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.sl-list { display: flex; flex-direction: column; gap: calc(32 * var(--u)); }
+.sl-list > li { display: flex; gap: calc(28 * var(--u)); align-items: flex-start; }
+.sl-list .sl-num { margin-top: calc(1 * var(--u)); }
+.sl-li-text { flex: 1; min-width: 0; }
+.sl-list-tight { gap: calc(20 * var(--u)); }
+
+/* 그림: 틀(figure) 안에 contain 으로 줄이고 자르지 않는다. 그림과 출처 표시를 한 덩어리로 틀의 가운데에 두어
+   출처 표시가 그려진 그림 바로 아래에 붙는다 (그림은 폭에 맞춘 뒤, 높이가 모자라면 flex 로 줄어든다). */
+.slide .media { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 0; min-width: 0; }
+.slide .media img { flex: 0 1 auto; min-height: 0; width: 100%; height: auto; max-height: 100%; object-fit: contain; object-position: center; }
+.slide .media figcaption {
+  flex: none; justify-content: center; text-align: center; max-width: 100%;
+  margin-top: calc(10 * var(--u)); font-size: calc(24 * var(--u)); line-height: 1.3; color: var(--gray);
+}
+/* 그림 파일을 불러오지 못했을 때 그림 자리에 두는 틀 (Stage.astro 의 스크립트가 넣는다). 출처 표시는 그대로 둔다. */
+.slide .media .sl-missing {
+  flex: 1 1 auto; align-self: stretch; display: grid; place-items: center; min-height: calc(120 * var(--u)); padding: calc(24 * var(--u));
+  border: calc(3 * var(--u)) solid var(--line); border-radius: calc(20 * var(--u)); background: var(--card);
+  font-size: calc(30 * var(--u)); line-height: 1.3; color: var(--gray); text-align: center;
+}
+
+/* ───────── 표지 ───────── */
+.sl-cover { justify-content: space-between; }
+.sl-cover-main { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.sl-cover-main::before { content: ''; display: block; width: calc(120 * var(--u)); height: calc(10 * var(--u)); background: var(--teal); margin-bottom: calc(40 * var(--u)); border-radius: calc(5 * var(--u)); }
+.sl-cover-title { font-size: calc(104 * var(--u)); font-weight: 700; line-height: 1.2; }
+.sl-cover-sub { font-size: calc(52 * var(--u)); color: var(--gray); margin-top: calc(32 * var(--u)); line-height: 1.35; }
+.sl-cover-foot { border-top: 1px solid var(--line); padding-top: calc(28 * var(--u)); display: flex; flex-direction: column; gap: calc(8 * var(--u)); }
+.sl-cover-meta { font-size: calc(30 * var(--u)); color: var(--navy); }
+
+/* ───────── 글 곁에 그림 하나 (질문·항목, R12) ─────────
+   제목 아래(질문 장은 장 전체)를 두 칸으로 나눈다. 글은 왼쪽, 그림은 오른쪽 칸(폭 --pic, copy.ts 의 STAGE_SIDE)에 둔다.
+   그림 틀은 칸의 높이를 다 쓰고 그림은 그 안에 contain 으로 크게 그린다. 글 덩어리와 그림은 칸 안에서 위아래 가운데에 놓여
+   가운데 높이가 같다. 글이 칸보다 길어질 일은 스크립트가 그림 칸을 좁히고 글을 줄여 막는다. */
+:is(.sl-points-body, .sl-question, .sl-compare-body).sl-side {
+  flex: 1 1 auto; min-height: 0; display: grid;
+  grid-template-columns: minmax(0, 1fr) calc(var(--pic) * var(--u)); grid-template-rows: minmax(0, 1fr);
+  column-gap: calc(72 * var(--u)); align-items: center;
+}
+.sl-side > .sl-side-media { align-self: stretch; }
+/* 글이 그림보다 길면 위 끝을 맞춘다. 줄 하나를 글 높이로 두고 그 줄을 자리의 위아래 가운데에 놓는다 (그림은 칸의 폭에 걸린 높이 그대로) */
+.sl-side[data-align='top'] { grid-template-rows: auto; align-content: center; align-items: start; }
+.sl-side[data-align='top'] > .sl-side-media { align-self: start; justify-content: flex-start; }
+
+/* ───────── 질문 ───────── */
+.sl-question { justify-content: center; }
+.sl-question-text { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.sl-question-title { font-size: calc(80 * var(--u)); font-weight: 700; line-height: 1.3; }
+.sl-question-title.sl-fit { font-size: calc(var(--fit) * var(--u)); }
+.sl-hint {
+  margin-top: calc(48 * var(--u)); align-self: flex-start;
+  padding: calc(20 * var(--u)) calc(32 * var(--u)); border-radius: calc(16 * var(--u));
+  background: var(--teal-soft); color: var(--navy); line-height: 1.35;
+}
+
+/* ───────── 그림 한 장 ───────── */
+.sl-picture .sl-title { margin-bottom: calc(32 * var(--u)); }
+.sl-media-big { flex: 1 1 0; }
+.sl-caption { flex: none; margin-top: calc(16 * var(--u)); text-align: center; line-height: 1.3; }
+
+/* ───────── 항목 ───────── */
+.sl-points-body:not(.sl-side) { flex: 1; min-height: 0; display: flex; }
+.sl-points-body .sl-list { flex: 1; min-width: 0; justify-content: flex-start; }
+/* 그림이 없으면 항목을 크게 쓰고 제목 아래 48 만큼 내려 위에 맞춘다 (C3-05). 장을 넘겨도 목록이 같은 높이에서 시작한다.
+   PPTX 는 build_pptx.py 의 BODY_DROP. 할 일 장(.sl-activity-body)도 같다. */
+.sl-points:not(.has-media) .sl-points-body { align-items: flex-start; padding-top: calc(48 * var(--u)); }
+.sl-points:not(.has-media) .sl-list { gap: calc(48 * var(--u)); }
+/* 번호 동그라미는 첫 줄의 가운데에 (줄 높이가 동그라미보다 낮으면 위를 맞춘다) */
+.sl-points-body .sl-list .sl-num { margin-top: calc(max(1, (var(--fit) * 1.4 - 64) / 2) * var(--u)); }
+
+/* ───────── 견주기 ───────── */
+.sl-compare-body:not(.sl-side) { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: calc(48 * var(--u)); }
+.sl-card {
+  min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: calc(16 * var(--u));
+  padding: calc(24 * var(--u)) calc(36 * var(--u)); border: 1px solid var(--line); border-radius: calc(20 * var(--u)); background: var(--card);
+}
+.sl-label { flex: none; align-self: flex-start; font-size: calc(44 * var(--u)); font-weight: 700; color: var(--teal); line-height: 1.3; }
+/* 그림이 없으면 카드는 글 높이만큼만 (두 카드는 같은 높이) */
+.sl-compare-body:not(.has-media, .sl-side) { flex: none; align-items: stretch; margin-block: auto; }
+/* 쪽마다 그림 하나 (R23b): 이름표·그림 상자·항목을 두 카드에서 같은 높이의 줄에 맞춘다 (subgrid).
+   그림 상자의 높이가 같고, 그림은 상자 안에서 아래 끝에 붙어 출처 표시가 상자의 아래 끝에 선다.
+   그래서 두 쪽의 출처 표시와 첫 항목이 같은 높이에 온다. 그림은 contain 으로 줄일 뿐 자르지 않는다. */
+.sl-compare-body.has-media { grid-template-rows: auto minmax(0, 1fr) auto; row-gap: 0; }
+.sl-compare-body.has-media > .sl-card { grid-row: span 3; display: grid; grid-template-rows: subgrid; row-gap: calc(16 * var(--u)); }
+.sl-compare-body.has-media > .sl-card > :is(.media, .sl-media-gap) { min-height: 0; }
+.sl-compare-body.has-media > .sl-card > .media { justify-content: flex-end; }
+.sl-compare-body.has-media > .sl-card > .media img { flex: 1 1 0; height: 0; max-height: none; object-position: 50% 100%; }
+/* 함께 보는 그림 하나 (R23a): 왼쪽에 두 카드를 위아래로 쌓고 오른쪽에 그림 (위의 .sl-side 두 칸 짜임) */
+.sl-compare-stack { display: flex; flex-direction: column; gap: calc(32 * var(--u)); min-width: 0; }
+.sl-bullets { flex: none; display: flex; flex-direction: column; gap: calc(12 * var(--u)); line-height: 1.32; }
+.sl-bullets > li { position: relative; padding-left: calc(36 * var(--u)); }
+.sl-bullets > li::before { content: ''; position: absolute; left: 0; top: calc((var(--fit, 44) * 1.32 / 2 - 7) * var(--u)); width: calc(14 * var(--u)); height: calc(14 * var(--u)); border-radius: 50%; background: var(--teal); }
+
+/* ───────── 단계 ───────── */
+.sl-steps-list { flex: 1; min-height: 0; display: flex; }
+/* 세로 단계: 이름표 칸의 폭은 가장 긴 이름표에 맞춘다 (subgrid) */
+.sl-steps-list.is-down { display: grid; grid-template-columns: max-content minmax(0, 1fr); row-gap: calc(24 * var(--u)); column-gap: calc(32 * var(--u)); align-content: start; }
+.sl-steps-list.is-down .sl-step { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: start; padding-bottom: calc(24 * var(--u)); border-bottom: 1px solid var(--line); }
+.sl-steps-list.is-down .sl-chip { justify-self: stretch; }
+.sl-steps-list.is-down .sl-step-text { padding-top: calc(6 * var(--u)); }
+.sl-steps-list.is-down .sl-step:last-child { border-bottom: 0; padding-bottom: 0; }
+/* 가로 단계: 이름표·그림·글을 칸마다 같은 높이의 줄에 맞춘다 (subgrid). 글의 첫 줄이 모든 칸에서 같은 높이에 온다. */
+.sl-steps-list.is-across { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); grid-template-rows: auto minmax(0, var(--media-row, 1fr)) auto; align-content: center; column-gap: calc(32 * var(--u)); row-gap: 0; }
+.sl-steps-list.is-across .sl-step { min-width: 0; min-height: 0; display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: calc(20 * var(--u)); padding-top: calc(24 * var(--u)); border-top: calc(6 * var(--u)) solid var(--teal); }
+.sl-steps-list.is-across .sl-chip { justify-self: start; }
+.sl-steps-list.is-across .media, .sl-media-gap { flex: 1 1 0; min-height: 0; }
+.sl-step-text { line-height: 1.35; min-width: 0; }
+/* 그림 넷: 2 × 2 (R22). 칸마다 위에 머리 한 줄(단계 표와 단계 글), 그 아래 남은 자리에 그림.
+   그림은 그 자리 안에 contain 으로 가운데 놓인다. 그림의 테두리는 그림의 것이라 그려진 그림에 꼭 맞고, 칸의 폭 전체를 채우지 않아도 된다 (R36). 머리 글의 크기(--fit)는 스크립트가 STAGE_STEPS.gridFit 에서 고른다.
+   단계 표는 글과 같은 크기로, 글은 표의 안쪽 여백만큼 내려 두 글의 줄이 맞는다. 글이 두 줄이 되면 표 옆에서 줄을 바꾼다. */
+.sl-steps-list.is-across[data-arrange='grid'] { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); align-content: stretch; column-gap: calc(48 * var(--u)); row-gap: calc(32 * var(--u)); }
+.sl-steps-list.is-across[data-arrange='grid'] .sl-step {
+  grid-row: auto; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr);
+  column-gap: calc(20 * var(--u)); row-gap: calc(16 * var(--u)); padding-top: calc(16 * var(--u));
+}
+.sl-steps-list.is-across[data-arrange='grid'] .sl-chip { grid-column: 1; grid-row: 1; align-self: start; font-size: calc(var(--fit) * var(--u)); box-sizing: border-box; min-width: calc(var(--chip-em, 1) * 1em + 36 * var(--u)); }
+.sl-steps-list.is-across[data-arrange='grid'] .sl-step-text { grid-column: 2; grid-row: 1; padding-top: calc(6 * var(--u)); }
+.sl-steps-list.is-across[data-arrange='grid'] .sl-step > .media, .sl-steps-list.is-across[data-arrange='grid'] .sl-media-gap { grid-column: 1 / -1; grid-row: 2; }
+/* 단계 그림의 출처 표시가 모두 같으면 목록 아래에 한 번만 */
+.has-shared-credit .sl-step .media figcaption { display: none; }
+.sl-shared-credit { flex: none; margin-top: calc(16 * var(--u)); text-align: right; font-size: calc(24 * var(--u)); line-height: 1.3; color: var(--gray); }
+.sl-chip {
+  display: inline-block; padding: calc(6 * var(--u)) calc(18 * var(--u)); border-radius: calc(40 * var(--u)); white-space: nowrap;
+  background: var(--teal-soft); color: var(--teal); font-weight: 700; line-height: 1.3; text-align: center;
+}
+
+/* ───────── 낱말 ───────── */
+.sl-term { justify-content: center; }
+.sl-term-word { font-size: calc(128 * var(--u)); font-weight: 700; line-height: 1.15; }
+.sl-term-meaning { font-size: calc(56 * var(--u)); line-height: 1.4; margin-top: calc(40 * var(--u)); max-width: calc(1500 * var(--u)); }
+.sl-box { margin-top: calc(56 * var(--u)); padding: calc(28 * var(--u)) calc(40 * var(--u)); border-radius: calc(20 * var(--u)); background: var(--paper); max-width: calc(1500 * var(--u)); }
+.sl-box-label { font-weight: 700; color: var(--teal); line-height: 1.3; margin-bottom: calc(8 * var(--u)); }
+.sl-box-text { line-height: 1.4; }
+
+/* ───────── 읽기 자료 ───────── */
+.sl-passage .sl-title { margin-bottom: calc(36 * var(--u)); }
+.sl-passage-text { flex: none; display: flex; flex-direction: column; gap: calc(20 * var(--u)); line-height: 1.5; }
+.sl-source { flex: none; margin-top: calc(20 * var(--u)); font-size: calc(30 * var(--u)); color: var(--gray); line-height: 1.3; }
+
+/* ───────── 활동 ───────── */
+.sl-activity-body { flex: 0 1 auto; min-height: 0; margin-top: calc(48 * var(--u)); margin-bottom: auto; display: flex; gap: calc(64 * var(--u)); }
+.sl-activity-body .sl-list { flex: 1; min-width: 0; line-height: 1.35; }
+.sl-aside {
+  flex: 0 0 calc(540 * var(--u)); align-self: flex-start; display: flex; flex-direction: column; gap: calc(32 * var(--u));
+  padding: calc(32 * var(--u)) calc(40 * var(--u)); border-radius: calc(20 * var(--u)); background: var(--paper);
+}
+.sl-aside-label { font-weight: 700; color: var(--teal); line-height: 1.3; margin-bottom: calc(8 * var(--u)); }
+.sl-aside-big { font-size: calc(72 * var(--u)); font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.sl-materials { display: flex; flex-direction: column; gap: calc(8 * var(--u)); line-height: 1.3; }
+/* 상자 안의 목록은 점을 머리표로 쓴다 (R27. 견주기 상자의 .sl-bullets 와 같은 점) */
+.sl-materials > li { position: relative; padding-left: calc(36 * var(--u)); }
+.sl-materials > li::before { content: ''; position: absolute; left: 0; top: calc((44 * 1.3 / 2 - 7) * var(--u)); width: calc(14 * var(--u)); height: calc(14 * var(--u)); border-radius: 50%; background: var(--teal); }
+
+/* ───────── 퀴즈 ───────── */
+.sl-quiz-q { font-size: calc(72 * var(--u)); font-weight: 700; line-height: 1.3; margin-bottom: calc(48 * var(--u)); }
+.sl-choices { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: min-content; gap: calc(24 * var(--u)); align-content: start; }
+.sl-choices.is-three { grid-template-columns: 1fr; }
+.sl-choice, .sl-ox-cell {
+  position: relative; display: flex; align-items: center; gap: calc(24 * var(--u));
+  padding: calc(24 * var(--u)) calc(32 * var(--u)); border: calc(3 * var(--u)) solid var(--line); border-radius: calc(20 * var(--u));
+  background: var(--card); line-height: 1.35; min-width: 0;
+}
+.sl-choice .sl-li-text { padding-right: calc(8 * var(--u)); }
+.sl-correct {
+  display: none; flex: none; padding: calc(2 * var(--u)) calc(20 * var(--u)); border-radius: calc(40 * var(--u));
+  border: calc(3 * var(--u)) solid var(--teal); background: var(--card); color: var(--teal); font-size: calc(32 * var(--u)); font-weight: 700; line-height: 1.3;
+}
+.sl-ox { display: flex; gap: calc(64 * var(--u)); justify-content: center; }
+.sl-ox-cell { flex-direction: column; justify-content: center; width: calc(420 * var(--u)); height: calc(340 * var(--u)); padding: calc(16 * var(--u)); gap: calc(8 * var(--u)); }
+.sl-ox-glyph { font-size: calc(200 * var(--u)); font-weight: 700; line-height: 1; color: var(--navy); }
+.sl-short { display: flex; align-items: flex-end; gap: calc(32 * var(--u)); }
+.sl-short-label { font-weight: 700; color: var(--teal); line-height: 1.2; padding-bottom: calc(14 * var(--u)); }
+.sl-short-blank { flex: 0 1 calc(900 * var(--u)); min-height: calc(110 * var(--u)); border-bottom: calc(4 * var(--u)) solid var(--navy); display: flex; align-items: flex-end; padding: 0 calc(16 * var(--u)) calc(8 * var(--u)); }
+.sl-short-answer { visibility: hidden; font-size: calc(72 * var(--u)); font-weight: 700; line-height: 1.2; color: var(--teal); }
+/* 정답이 드러난 뒤 (R27): 맞는 칸은 청록 테두리와 확인 퀴즈와 같은 청록 테두리의 '정답' 표, 번호 동그라미는 청록으로 채워 그대로 둔다.
+   나머지는 회색 글씨. 산호색은 정답에 쓰지 않는다. 스크립트가 없으면 처음부터 드러낸다. */
+.slide[data-revealed='true'] [data-answer], html:not(.stage-js) .slide [data-answer] { border-color: var(--teal); background: var(--teal-soft); }
+.slide[data-revealed='true'] [data-answer] .sl-correct, html:not(.stage-js) .slide [data-answer] .sl-correct { display: inline-block; }
+.slide[data-revealed='true'] .sl-choice:not([data-answer]), .slide[data-revealed='true'] .sl-ox-cell:not([data-answer]) { color: var(--gray); }
+.slide[data-revealed='true'] .sl-ox-cell:not([data-answer]) .sl-ox-glyph { color: var(--gray); }
+.slide[data-revealed='true'] .sl-short-answer, html:not(.stage-js) .slide .sl-short-answer { visibility: visible; }
+.sl-choice .sl-correct { margin-left: auto; }
+.slide[data-revealed='true'] .sl-choice[data-answer] .sl-num, html:not(.stage-js) .slide .sl-choice[data-answer] .sl-num { background: var(--teal); color: var(--card); }
+
+/* ───────── 마무리 ───────── */
+.sl-closing { justify-content: center; }
+.sl-closing.is-bare { align-items: center; text-align: center; }
+.sl-closing-title { font-size: calc(80 * var(--u)); font-weight: 700; line-height: 1.3; }
+.sl-closing.is-bare .sl-closing-title { font-size: calc(96 * var(--u)); max-width: calc(1500 * var(--u)); }
+.sl-closing.is-bare::after { content: ''; width: calc(120 * var(--u)); height: calc(10 * var(--u)); border-radius: calc(5 * var(--u)); background: var(--teal); margin-top: calc(48 * var(--u)); }
+.sl-checks { margin-top: calc(56 * var(--u)); display: flex; flex-direction: column; gap: calc(28 * var(--u)); font-size: calc(48 * var(--u)); line-height: 1.35; }
+.sl-checks > li { position: relative; padding-left: calc(72 * var(--u)); }
+.sl-checks > li::before {
+  content: ''; position: absolute; left: calc(6 * var(--u)); top: calc(10 * var(--u));
+  width: calc(18 * var(--u)); height: calc(34 * var(--u));
+  border: solid var(--teal); border-width: 0 calc(7 * var(--u)) calc(7 * var(--u)) 0; transform: rotate(45deg);
+}
+
+/* ───────── 조작 단추 (무대 밖, 실제 px) ───────── */
+.hud { display: none; }
+.stage-js .hud {
+  position: fixed; left: 0; right: 0; bottom: 16px; margin: 0 auto; width: max-content; z-index: 3;
+  display: flex; align-items: center; gap: 6px; padding: 6px; max-width: calc(100vw - 16px); flex-wrap: wrap; justify-content: center;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  font-size: var(--fs-sm); line-height: 1.2;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+.stage.is-awake .hud, .stage-js .hud:has(:focus-visible) { opacity: 1; pointer-events: auto; }
+.stage.is-awake .screen { cursor: pointer; }
+.hud button, .hud a {
+  display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid transparent; border-radius: var(--radius-sm);
+  background: transparent; color: var(--navy); font: inherit; text-decoration: none; cursor: pointer; white-space: nowrap;
+}
+.hud button:hover, .hud a:hover { background: var(--teal-soft); }
+.hud button[aria-pressed='true'] { background: var(--teal-soft); border-color: var(--teal); }
+.hud button[hidden] { display: none; }
+.hud kbd { font: inherit; font-size: var(--fs-xs); color: var(--gray); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; min-width: 1.6em; text-align: center; }
+.hud-count { margin: 0 4px; color: var(--gray); font-variant-numeric: tabular-nums; }
+.hud-gap { width: 1px; align-self: stretch; background: var(--line); margin: 4px 4px; }
+
+/* ───────── 화면 가리기 (B, .) ───────── */
+.stage-blank { position: fixed; inset: 0; z-index: 4; background: var(--bg); }
+.stage-blank[hidden] { display: none; }
+
+/* ───────── 교사 메모 (N) ─────────
+   메모 창은 장을 가리지 않는다 (R24). 창은 화면 아래 --notes-h 높이에 놓이고(길면 창 안에서 넘겨 읽는다),
+   장은 창 위의 자리에 16:9 로 줄여 가운데에 그린다. 장의 크기는 .slide 의 폭에서 나오므로 글과 그림이 함께 준다. */
+.stage { --notes-h: clamp(180px, 34vh, 420px); }
+.stage-js .stage.has-notes .screen {
+  bottom: var(--notes-h);
+  width: min(100vw, calc((100dvh - var(--notes-h)) * 16 / 9));
+  height: min(calc(100dvh - var(--notes-h)), calc(100vw * 9 / 16));
+}
+.notes {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 2; height: var(--notes-h); overflow: auto;
+  padding: 20px max(24px, calc((100vw - 1040px) / 2)) 96px;
+  background: var(--paper); border-top: 1px solid var(--line); color: var(--navy);
+  font-size: var(--fs-lg); line-height: var(--lh);
+}
+.notes[hidden] { display: none; }
+.notes h2 { margin: 0 0 8px; font-size: var(--fs-md); color: var(--teal); }
+.notes-no { color: var(--gray); font-weight: 400; margin-left: 8px; font-variant-numeric: tabular-nums; }
+.notes ul { margin: 0; padding-left: 1.2em; }
+.notes p { margin: 0; }
+.notes dl { margin: 12px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; }
+.notes dt { font-weight: 700; color: var(--teal); }
+.notes dd { margin: 0; }
+.notes-hint { margin-top: 12px; color: var(--gray); font-size: var(--fs-md); }
+
+/* ───────── QR 창 (Q, R25) ─────────
+   이 차시에 준비된 학생 페이지(확인 퀴즈, 웹 활동)의 QR 과 주소. 교실 뒤에서도 찍히게 크게 (1920 × 1080 에서 한 변 360px 넘게).
+   창 바깥(어둡게 덮은 자리)을 누르거나 Esc, Q 로 닫는다. */
+.qr-layer {
+  position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; padding: 24px;
+  background: color-mix(in srgb, var(--navy) 55%, transparent);
+}
+.qr-layer[hidden] { display: none; }
+.qr-panel {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: clamp(16px, 3vh, 40px);
+  max-width: 100%; max-height: 100%; overflow: auto;
+  padding: clamp(20px, 4vh, 48px) clamp(24px, 4vw, 72px);
+  background: var(--bg); border-radius: var(--radius); color: var(--navy);
+}
+.qr-heading { margin: 0; font-size: clamp(22px, 3.6vh, 44px); font-weight: 700; line-height: 1.3; text-align: center; }
+.qr-list { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(24px, 4vw, 80px); }
+.qr-item { display: flex; flex-direction: column; align-items: center; gap: clamp(8px, 1.4vh, 16px); min-width: 0; }
+.qr-name { margin: 0; font-size: clamp(20px, 3.4vh, 40px); font-weight: 700; color: var(--teal); line-height: 1.2; }
+.qr-item .qr { display: block; width: min(40vh, 30vw); height: auto; aspect-ratio: 1; }
+.qr-addr { margin: 0; max-width: min(40vh + 120px, 40vw); font-size: clamp(14px, 2vh, 24px); line-height: 1.35; color: var(--navy); text-align: center; overflow-wrap: normal; font-variant-numeric: tabular-nums; }
+.qr-close {
+  position: absolute; top: 12px; right: 12px; padding: 8px 14px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--card); color: var(--navy); font: inherit; font-size: clamp(18px, 2.4vh, 28px); font-weight: 700; cursor: pointer;
+}
+.qr-close:hover { background: var(--teal-soft); }
+
+@media print {
+  .hud, .notes, .stage-blank, .qr-layer { display: none !important; }
+}

@@ -1,0 +1,262 @@
+---
+// 첫 화면 (R43). 이 차례를 지킨다:
+//   ① 머리글과 찾기(쪽수·차시로 찾기, 낱말로 찾기를 한 카드에. id="find")  ② 학년·학기 타일 여덟  ③ 자료 유형 타일
+//   ④ 최근 올라온 자료(업데이트 소식 넷)  ⑤ 제작 현황 요약  ⑥ 이렇게 만듭니다(납작한 카드 넷, 민트 띠 하나)
+// 공개한 차시가 하나도 없는 동안(첫 공개 전)은 머리글 아래에 그렇다고 한 줄 적는다. 자료를 약속하는 제목 아래 '준비 중'만 늘어서면 빈 껍데기로 읽힌다.
+// 세는 값은 모두 도우미에서 얻는다: semesterProgress(), catalog(), visibleUpdates(). 손으로 세지 않는다.
+// 만드는 법의 말은 docs/CONTRACT.md 12절과 같게 쓴다 (사실 확인은 AI 검증자 둘이어도 되고, 마지막 승인은 날쌤이 한다).
+// 검색 색인에는 머리글의 제목과 한 줄 설명만 넣는다. 나머지는 다른 페이지에 있는 것을 줄여 보여 주는 자리라 data-pagefind-ignore 로 뺀다.
+import { catalog, lessonIds, loadRegistry, semesterProgress, showDrafts, visibleUpdates } from '#lib/content.ts';
+import { REVIEW_LABEL, SITE } from '#lib/site.ts';
+import { REVIEW_KINDS } from '#schema/lesson.ts';
+import SiteLayout from '#src/layouts/SiteLayout.astro';
+import { href } from '#src/lib/url.ts';
+import Finder from '#src/components/site/Finder.astro';
+import KindTiles from '#src/components/site/KindTiles.astro';
+import Search from '#src/components/site/Search.astro';
+import SemesterTiles from '#src/components/site/SemesterTiles.astro';
+import Band from '#src/components/site/ui/Band.astro';
+import Kicker from '#src/components/site/ui/Kicker.astro';
+import StatusChip from '#src/components/site/ui/StatusChip.astro';
+
+// 휴대폰에서 '바로 / 쓰는', 'CC BY- / NC-SA'처럼 말 덩어리 가운데서 줄이 갈리지 않게, 함께 읽는 말을 한 덩어리(nowrap)로 묶는다.
+// 묶을 말이 글에 없으면 그대로 흐른다 (글자는 한 자도 바꾸지 않는다. SITE.tagline 이 바뀌어도 깨지지 않는다).
+type Chunk = { text: string; keep: boolean };
+function chunks(text: string, together: readonly string[]): Chunk[] {
+  const out: Chunk[] = [];
+  let rest = text;
+  while (rest) {
+    const hit = together.map((t) => ({ t, at: rest.indexOf(t) })).filter((h) => h.at >= 0).sort((x, y) => x.at - y.at)[0];
+    if (!hit) { out.push({ text: rest, keep: false }); break; }
+    if (hit.at > 0) out.push({ text: rest.slice(0, hit.at), keep: false });
+    out.push({ text: hit.t, keep: true });
+    rest = rest.slice(hit.at + hit.t.length);
+  }
+  return out;
+}
+const heading = chunks(SITE.tagline, ['교과서 차시마다', '바로 쓰는', '초등 사회', '수업 자료']);
+const sub = chunks('교과서 쪽수나 차시 번호를 넣으면 그 시간의 수업 화면, 학습지, 확인 퀴즈가 나옵니다.', ['수업 화면', '확인 퀴즈']);
+
+// ③ 자료 유형: 실린 자료가 하나도 없으면(공개 빌드의 지금) 누를 타일이 없으므로 '누르면' 안내를 빼고 수만 말한다
+const anyKind = catalog().length > 0;
+
+// ④ 최근 올라온 자료. 산호색 '새 자료' 표는 가장 최근의 새 자료 하나에만 (R53 의 산호 한 방울). 그 앞의 것은 조용한 표다.
+const updates = visibleUpdates().slice(0, 4);
+const newest = updates.find((u) => u.kind === 'new');
+const dateLabel = (d: string) => { const [y, m, day] = d.split('-').map(Number); return `${y}. ${m}. ${day}.`; };
+
+// ⑤ 제작 현황: 여덟 학기를 더한 값. 초안은 미리 보기 빌드에서만 보여 준다.
+const preview = showDrafts();
+const semesters = loadRegistry().semesters;
+const sum = semesters.map((s) => semesterProgress(s.id)).reduce(
+  (a, p) => ({ total: a.total + p.total, published: a.published + p.published, draft: a.draft + p.draft, planned: a.planned + p.planned }),
+  { total: 0, published: 0, draft: 0, planned: 0 },
+);
+const tabled = semesters.filter((s) => s.units.length > 0).length;
+// ① 아래의 한 줄: 공개한 차시가 없을 때만. 명세가 하나라도 있으면(초안) 검수하고 있다고 말한다.
+const unopened = sum.published === 0;
+const reviewing = lessonIds().length > 0;
+const share = (n: number) => (sum.total ? `${((100 * n) / sum.total).toFixed(2)}%` : '0%');
+
+// ⑥ 이렇게 만듭니다. 검수 이름은 REVIEW_LABEL 에서 가져온다 (날쌤 승인은 따로 말한다).
+const checks = REVIEW_KINDS.filter((k) => k !== 'owner').map((k) => REVIEW_LABEL[k]).join(', ');
+const ways = [
+  { title: '사실마다 공개 출처를 붙입니다', body: '출처는 박물관이나 공공 기관처럼 누구나 열어 볼 수 있는 곳입니다. 두 확인자가 사실과 출처를 따로 대조합니다. 확인자는 AI 검증자일 수 있습니다.' },
+  { title: '교과서 문장을 옮기지 않습니다', body: '교과서에서는 단원명, 차시 번호, 쪽수만 가져옵니다. 교과서의 문장, 그림, 활동, 예시 답은 싣지 않습니다.' },
+  { title: '날쌤이 승인한 차시만 공개합니다', body: `초안은 AI 도구로 만듭니다. ${checks}을 거친 차시를 날쌤이 끝까지 읽고 승인해야 공개합니다.` },
+  { title: '무료이고, 팔지 않습니다', body: `로그인 없이 씁니다. 글과 직접 만든 그림은 ${SITE.licence.name} 조건이라 수업에 쓰고 고쳐 써도 되지만, 팔 수는 없습니다. 고쳐 쓴 자료를 나눌 때는 출처를 남기고 같은 조건으로 나눕니다.` },
+];
+---
+<SiteLayout title={SITE.tagline} current="home">
+  <section class="hm-hero" aria-labelledby="hero-title">
+    <Kicker>{SITE.name}</Kicker>
+    <h1 class="hm-hero-title" id="hero-title">{heading.map((c) => (c.keep ? <span class="hm-keep">{c.text}</span> : c.text))}</h1>
+    <p class="hm-hero-sub">{sub.map((c) => (c.keep ? <span class="hm-keep">{c.text}</span> : c.text))}</p>
+    {unopened && (
+      <p class="hm-hero-wait">아직 공개한 차시가 없습니다. {reviewing ? '첫 차시를 검수하고 있고, 공개하면 ' : '차시를 공개하면 '}<a href={href('/updates/')}>업데이트</a>에 알립니다.</p>
+    )}
+    <div class="findbox" id="find" data-pagefind-ignore>
+      <Finder />
+      <Search />
+    </div>
+  </section>
+
+  <section class="hm-sec" aria-labelledby="sems-title" data-pagefind-ignore>
+    <div class="hm-head">
+      <div>
+        <Kicker>교과서 자료</Kicker>
+        <h2 class="hm-title" id="sems-title">학년·학기</h2>
+      </div>
+      <p class="hm-note">학기를 고르면 단원과 차시를 교과서 차례대로 보여 줍니다.</p>
+    </div>
+    <SemesterTiles />
+  </section>
+
+  <section class="hm-sec" aria-labelledby="kinds-title" data-pagefind-ignore>
+    <div class="hm-head">
+      <div>
+        <Kicker>자료 유형별</Kicker>
+        <h2 class="hm-title" id="kinds-title">자료 종류</h2>
+      </div>
+      <p class="hm-note">종류마다 지금 실린 자료의 수입니다.{anyKind && ' 누르면 그 종류만 모아 봅니다.'}</p>
+    </div>
+    <KindTiles />
+  </section>
+
+  <div class="hm-pair" data-pagefind-ignore>
+    <section class="hm-sec" aria-labelledby="news-title">
+      <div class="hm-head">
+        <div>
+          <Kicker>업데이트</Kicker>
+          <h2 class="hm-title" id="news-title">최근 올라온 자료</h2>
+        </div>
+        <a class="hm-more" href={href('/updates/')}>업데이트 모두 보기</a>
+      </div>
+      {updates.length > 0 ? (
+        <ul class="hm-news">
+          {updates.map((u) => (
+            <li class="hm-news-item">
+              <p class="hm-news-meta">
+                <time datetime={u.date}>{dateLabel(u.date)}</time>
+                <StatusChip state={u.kind} quiet={u.kind === 'new' && u !== newest} />
+                {u.draft && <StatusChip state="draft" />}
+              </p>
+              <h3 class="hm-news-title">{u.links.length === 1 ? <a href={href(u.links[0].route)}>{u.title}</a> : u.title}</h3>
+              {u.links.length > 1 && (
+                <p class="hm-news-links">{u.links.map((l) => <a href={href(l.route)}>{l.title}</a>)}</p>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="hm-news-empty">아직 올라온 소식이 없습니다.</p>
+      )}
+    </section>
+
+    <section class="hm-sec" aria-labelledby="status-title">
+      <div class="hm-head">
+        <div>
+          <Kicker>제작 현황</Kicker>
+          <h2 class="hm-title" id="status-title">지금까지 공개한 차시</h2>
+        </div>
+        <a class="hm-more" href={href('/status/')}>제작 현황 자세히 보기</a>
+      </div>
+      <div class="hm-made">
+        <div class="hm-made-head">
+          {/* 큰 숫자는 공개한 차시다 (제작 현황 페이지와 같은 꼴). 차시표에 오른 수는 뒤에 작게 */}
+          <p class="hm-made-total"><span class="hm-made-num">{sum.published}</span> / {sum.total}차시 공개</p>
+          <p class="hm-made-sub">학기 {semesters.length}개 가운데 {tabled}개 학기의 차시표가 있습니다.</p>
+        </div>
+        <span class="hm-made-bar" aria-hidden="true">
+          <span class="hm-made-bar-pub" style={`width:${share(sum.published)}`}></span>
+          {preview && <span class="hm-made-bar-draft" style={`width:${share(sum.draft)}`}></span>}
+        </span>
+        <dl class="hm-made-list">
+          <div><dt><span class="hm-made-key hm-made-key-pub" aria-hidden="true"></span>공개</dt><dd>{sum.published}차시</dd></div>
+          {preview && <div><dt><span class="hm-made-key hm-made-key-draft" aria-hidden="true"></span>초안</dt><dd>{sum.draft}차시</dd></div>}
+          <div><dt><span class="hm-made-key" aria-hidden="true"></span>준비 중</dt><dd>{sum.planned}차시</dd></div>
+        </dl>
+      </div>
+    </section>
+  </div>
+
+  <section class="hm-sec" aria-labelledby="ways-title" data-pagefind-ignore>
+    <div class="hm-head">
+      <div>
+        <Kicker>소개</Kicker>
+        <h2 class="hm-title" id="ways-title">이렇게 만듭니다</h2>
+      </div>
+      <a class="hm-more" href={href('/about/')}>소개 자세히 보기</a>
+    </div>
+    <ul class="hm-ways">
+      {ways.map((w) => (
+        <li class="hm-way">
+          <h3 class="hm-way-title">{w.title}</h3>
+          <p class="hm-way-body">{chunks(w.body, [SITE.licence.name]).map((c) => (c.keep ? <span class="hm-keep">{c.text}</span> : c.text))}</p>
+        </li>
+      ))}
+    </ul>
+    {/* 민트 띠는 이 절의 결론 한 줄 (페이지에 하나) */}
+    <Band>출처로 사실을 확인하고, <strong>날쌤이 승인한 차시만</strong> 무료로 나눕니다.</Band>
+  </section>
+</SiteLayout>
+
+<style>
+  /* ① 머리글 */
+  .hm-hero { padding-top: var(--s4); }
+  .hm-hero-title { margin: 0; font-size: var(--fs-3xl); font-weight: var(--fw-heading); line-height: 1.22; letter-spacing: -0.03em; }
+  .hm-keep { white-space: nowrap; }
+  .hm-hero-sub { max-width: var(--measure); margin-top: var(--s3); font-size: var(--fs-lg); line-height: 1.55; color: var(--navy); }
+  .hm-hero-wait { max-width: var(--measure); margin-top: var(--s2); font-size: var(--fs-sm); color: var(--gray); }
+  .findbox { margin-top: var(--s6); }
+
+  /* 섹션 머리: 왼쪽에 머리말과 제목, 오른쪽에 한 줄 설명이나 '모두 보기' */
+  .hm-sec { margin-top: var(--s8); }
+  .hm-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--s2) var(--s5); margin-bottom: var(--s4); }
+  .hm-title { font-size: var(--fs-xl); font-weight: var(--fw-heading); letter-spacing: -0.02em; }
+  .hm-note { max-width: 28rem; font-size: var(--fs-sm); color: var(--gray); }
+  .hm-more { display: inline-flex; align-items: center; gap: var(--s1); font-size: var(--fs-sm); font-weight: 700; text-decoration: none; }
+  .hm-more::after { content: ''; width: 0.4em; height: 0.4em; border-top: 2px solid currentColor; border-right: 2px solid currentColor; transform: rotate(45deg); }
+  .hm-more:hover { text-decoration: underline; }
+
+  /* ④·⑤ 넓은 화면에서는 나란히 */
+  .hm-pair { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--s6); }
+
+  /* ④ 최근 올라온 자료: 게시판처럼 줄로 */
+  .hm-news { border-top: 1px solid var(--navy); }
+  .hm-news-item { display: grid; gap: var(--s1); padding: var(--s4) var(--s1); border-bottom: 1px solid var(--line); }
+  .hm-news-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s2); font-size: var(--fs-sm); color: var(--gray); font-variant-numeric: tabular-nums; }
+  .hm-news-title { font-size: var(--fs-md); font-weight: 700; line-height: 1.45; }
+  /* 차시 자료실로 가는 소식의 제목은 청록 글자와 꺾쇠로 링크임을 보인다 (링크가 없는 알림의 제목은 남색) */
+  .hm-news-title a { color: var(--teal); text-decoration: none; }
+  .hm-news-title a::after { content: ''; display: inline-block; width: 0.4em; height: 0.4em; margin: 0 0 0.12em 0.4em; border-top: 2px solid currentColor; border-right: 2px solid currentColor; transform: rotate(45deg); }
+  .hm-news-title a:hover { color: var(--navy); text-decoration: underline; }
+  .hm-news-links { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s4); font-size: var(--fs-sm); font-weight: 600; }
+  .hm-news-empty { padding: var(--s4) 0; border-top: 1px solid var(--navy); font-size: var(--fs-sm); color: var(--gray); }
+
+  /* ⑤ 제작 현황 요약 */
+  .hm-made { display: grid; gap: var(--s4); padding: var(--s5); border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
+  .hm-made-head { display: grid; gap: var(--s1); }
+  .hm-made-total { font-weight: 700; }
+  .hm-made-num { margin: 0 2px; font-size: var(--fs-2xl); font-weight: var(--fw-heading); line-height: 1; color: var(--teal); font-variant-numeric: tabular-nums; }
+  .hm-made-sub { font-size: var(--fs-sm); color: var(--gray); }
+  .hm-made-bar { display: flex; height: 10px; border-radius: var(--radius-pill); background: var(--paper); overflow: hidden; }
+  .hm-made-bar-pub { background: var(--teal); }
+  .hm-made-bar-draft { background: color-mix(in srgb, var(--teal) 35%, var(--card)); }
+  .hm-made-list { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s5); }
+  .hm-made-list > div { display: flex; align-items: center; gap: var(--s2); }
+  .hm-made-list dt { display: inline-flex; align-items: center; gap: var(--s2); font-size: var(--fs-sm); color: var(--gray); }
+  .hm-made-list dd { margin: 0; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .hm-made-key { width: 10px; height: 10px; border-radius: 2px; border: 1px solid var(--line); background: var(--paper); }
+  .hm-made-key-pub { border-color: var(--teal); background: var(--teal); }
+  .hm-made-key-draft { border-color: transparent; background: color-mix(in srgb, var(--teal) 35%, var(--card)); }
+
+  /* ⑥ 이렇게 만듭니다: 납작한 흰 카드 넷 */
+  .hm-ways { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s4); }
+  .hm-way { display: grid; align-content: start; gap: var(--s2); padding: var(--s5); border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
+  .hm-way-title { font-size: var(--fs-md); font-weight: var(--fw-heading); line-height: 1.4; }
+  .hm-way-body { font-size: var(--fs-sm); line-height: 1.6; color: var(--gray); }
+
+  @media (max-width: 999.98px) {
+    .hm-ways { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 760px) {
+    .hm-hero { padding-top: 0; }
+    .hm-hero-title { font-size: calc(var(--fs-xl) * 1.08); line-height: 1.3; }
+    .hm-hero-sub { font-size: var(--fs-md); line-height: var(--lh); }
+    .findbox { margin-top: var(--s5); }
+    .hm-sec { margin-top: var(--s7); }
+    .hm-title { font-size: var(--fs-lg); }
+    .hm-head { margin-bottom: var(--s3); }
+    /* 한 줄 설명은 늘 제목 아래 줄에 (짧으면 머리말 줄 오른쪽에 붙어 제목보다 먼저 읽혔다) */
+    .hm-note { flex-basis: 100%; max-width: none; }
+    .hm-more { min-height: var(--tap); }
+    .hm-pair { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .hm-ways { grid-template-columns: minmax(0, 1fr); gap: var(--s3); }
+    .hm-way { padding: var(--s4); }
+    .hm-made { padding: var(--s4); }
+    .hm-news-item { padding-inline: 0; }
+    /* 줄 간격은 그대로 두고 누르는 자리만 44px 로 넓힌다 (inline 상자의 위아래 padding) */
+    .hm-news-title a, .hm-news-links a, .hm-hero-wait a { padding-block: calc((var(--tap) - 1em) / 2); }
+  }
+</style>

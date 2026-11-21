@@ -1,0 +1,16 @@
+# 내려받은 것
+node_modules/
+.venv/
+
+# 만들어진 것 (저장소에 넣지 않는다. 빌드할 때마다 다시 만든다)
+# 그림은 빌드 뒤에 dist/media/ 로 바로 복사한다. public/ 은 쓰지 않는다.
+dist/
+.astro/
+.cache/
+__pycache__/
+*.pyc
+
+# 저마다의 설정
+.env
+.env.*
+.DS_Store

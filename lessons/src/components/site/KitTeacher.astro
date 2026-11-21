@@ -1,0 +1,107 @@
+---
+// 접어 둔 교사용 자료: 학습지 풀이, 오개념, 평가, 교사 메모, 고친 내용, 사실과 출처, 그림 출처.
+// 학습지 풀이(worksheetKey)는 이 페이지의 접힌 상자에만 보여 준다. 인쇄물과 PDF 에는 넣지 않는다 (docs/CONTRACT.md 6절).
+// 상자마다 id 가 있어 교사용 안내의 길잡이(book.ts 의 guideSections)가 가리킨다. 그림 출처(#credits)는 수업 화면의 '그림 출처' 링크도 연다.
+// 그림 출처는 shownMedia() 의 creditFull() 이다. 앞 묶음에서 빌려 온 그림과 단원 덱에 모은 카드의 그림도 들어 있다. 출처 표시를 손으로 쓰지 않는다.
+import { creditFull, getFact, shownMedia, worksheetKey } from '#lib/content.ts';
+import { ASSET_LABEL } from '#lib/site.ts';
+import type { Lesson } from '#schema/lesson.ts';
+import { factRefs, uniqueSources } from './data.ts';
+import Fold from './Fold.astro';
+import { koDate, quoteTitle } from './format.ts';
+
+interface Props { lesson: Lesson }
+const { lesson } = Astro.props;
+const key = worksheetKey(lesson);
+// 한 사실 아래 같은 출처(이름·제목·주소가 같은 것)는 한 번만 보여 준다 (docs/CONTRACT.md 6절)
+const facts = factRefs(lesson).map((ref) => getFact(lesson, ref)).map((f) => ({ claim: f.claim, sources: uniqueSources(f.sources) }));
+const pictures = shownMedia(lesson).map((m) => ({ alt: m.alt, credit: creditFull(m) }));
+// 접을 것이 하나도 없으면 제목과 선만 남은 빈 칸이 되므로 칸을 통째로 뺀다
+const any = key.length > 0 || lesson.misconceptions.length > 0 || !!lesson.assessment || lesson.teacher_notes.length > 0
+  || lesson.corrections.length > 0 || facts.length > 0 || pictures.length > 0;
+---
+{any && (
+<section class="sec guide-sec" id="teacher" aria-labelledby="teacher-title">
+  <h2 class="sec-title" id="teacher-title">교사용 자료</h2>
+  <div class="folds">
+    {key.length > 0 && (
+      <Fold title={`${ASSET_LABEL.worksheet} 풀이`} count={`${key.length}곳`} id="worksheet-key">
+        <dl class="pairs">
+          {key.map((k) => <div><dt>{k.where}</dt><dd>{k.text}</dd></div>)}
+        </dl>
+      </Fold>
+    )}
+    {lesson.misconceptions.length > 0 && (
+      <Fold title="예상되는 오개념" count={`${lesson.misconceptions.length}가지`} id="misconceptions">
+        <dl class="pairs pairs-stack">
+          {lesson.misconceptions.map((m) => <div><dt>{m.belief}</dt><dd>{m.response}</dd></div>)}
+        </dl>
+      </Fold>
+    )}
+    {lesson.assessment && (
+      <Fold title="평가" id="assessment">
+        <dl class="pairs">
+          <div><dt>볼 것</dt><dd>{lesson.assessment.look_for}</dd></div>
+          <div><dt>보는 곳</dt><dd>{lesson.assessment.where}</dd></div>
+        </dl>
+      </Fold>
+    )}
+    {lesson.teacher_notes.length > 0 && (
+      <Fold title="교사 메모" count={`${lesson.teacher_notes.length}가지`} id="notes">
+        {lesson.teacher_notes.map((n) => (
+          <div class="note">
+            <p class="note-title">{n.title}</p>
+            <ul class="dots">{n.body.map((b) => <li>{b}</li>)}</ul>
+          </div>
+        ))}
+      </Fold>
+    )}
+    {lesson.corrections.length > 0 && (
+      <Fold title="공개한 뒤 고친 내용" count={`${lesson.corrections.length}건`} id="corrections">
+        <dl class="pairs">
+          {lesson.corrections.map((c) => <div><dt><time datetime={c.date}>{koDate(c.date)}</time></dt><dd>{c.text}</dd></div>)}
+        </dl>
+      </Fold>
+    )}
+    {facts.length > 0 && (
+      <Fold title="사실과 출처" count={`${facts.length}가지`} id="facts">
+        <ol class="sources">
+          {facts.map((f) => (
+            <li>
+              <p class="source-claim">{f.claim}</p>
+              {f.sources.length > 0 ? (
+                <ul class="source-list">
+                  {f.sources.map((s) => (
+                    <li>
+                      <a href={s.url} rel="noopener">{s.name}{s.title && `, ${quoteTitle(s.title)}`}</a>
+                      <span class="fine">(<time datetime={s.accessed}>{koDate(s.accessed)}</time> 확인)</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p class="fine">출처를 아직 달지 않았습니다.</p>
+              )}
+            </li>
+          ))}
+        </ol>
+      </Fold>
+    )}
+    {pictures.length > 0 && (
+      <Fold title="그림 출처" count={`${pictures.length}장`} id="credits">
+        <ul class="sources">
+          {pictures.map((p) => (
+            <li>
+              <p class="source-claim">{p.alt}</p>
+              <p class="source-credit">
+                {p.credit.text}
+                {p.credit.sourceUrl && <a href={p.credit.sourceUrl} rel="noopener">원본 보기</a>}
+                {p.credit.licenceUrl && <a href={p.credit.licenceUrl} rel="noopener">이용 조건 보기</a>}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </Fold>
+    )}
+  </div>
+</section>
+)}

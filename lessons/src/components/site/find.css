@@ -1,0 +1,90 @@
+/* 찾기 두 가지(쪽수·차시로 찾기 Finder.astro, 낱말로 찾기 Search.astro)의 모양. 두 컴포넌트가 함께 싣는다.
+   결과는 스크립트가 만들어 넣으므로 컴포넌트 안에 가두지 않고 lookup- 로 시작하는 이름으로 둔다.
+   혼자 놓이면(학기 페이지) .lookup 이 흰 카드다. 첫 화면에서는 .findbox 하나가 카드이고, 두 찾기를 윗줄에 나란히,
+   결과는 그 아래에 온 폭으로 놓는다 (.lookup 을 display: contents 로 풀어 안의 것들을 .findbox 의 격자에 바로 올린다). */
+
+.lookup { display: grid; gap: var(--s4); min-width: 0; padding: var(--s5); border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
+.lookup[hidden] { display: none; }
+.lookup-form { display: grid; align-content: start; gap: var(--s3); min-width: 0; }
+.lookup-title { margin: 0; font-size: var(--fs-md); font-weight: 800; color: var(--navy); }
+.lookup-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--s2); }
+.lookup-field { display: grid; gap: var(--s1); min-width: 0; }
+.lookup-grow { flex: 1 1 9rem; }
+.lookup-label { font-size: var(--fs-xs); font-weight: 700; color: var(--gray); }
+.lookup-input {
+  width: 100%; height: 3rem; padding: 0 var(--s3); border: 1px solid var(--gray); border-radius: var(--radius-sm);
+  background: var(--card); font: inherit; font-size: var(--fs-md); color: var(--navy);
+}
+.lookup-input::placeholder { color: var(--gray); opacity: 0.75; }
+.lookup-input::-webkit-search-cancel-button { cursor: pointer; }
+/* 학기 고르기. 화살표는 그림 대신 테두리 두 변을 돌려 그린다 (그러데이션을 쓰지 않는다) */
+.lookup-select { position: relative; display: block; }
+.lookup-select select { appearance: none; padding-right: var(--s7); font-size: var(--fs-md); cursor: pointer; }
+.lookup-select::after {
+  content: ''; position: absolute; right: var(--s4); top: 50%; width: 0.45rem; height: 0.45rem;
+  border-right: 2px solid var(--navy); border-bottom: 2px solid var(--navy); transform: translateY(-70%) rotate(45deg); pointer-events: none;
+}
+.lookup-go {
+  flex: none; min-width: 5.5rem; height: 3rem; padding: 0 var(--s5); border: 1px solid var(--teal); border-radius: var(--radius-sm);
+  background: var(--teal); color: var(--card); font: inherit; font-weight: 700; cursor: pointer;
+}
+.lookup-go:hover { border-color: var(--navy); background: var(--navy); }
+.lookup-hint { margin: 0; font-size: var(--fs-xs); line-height: 1.55; color: var(--gray); }
+
+/* 결과 */
+.lookup-results { min-width: 0; padding-top: var(--s4); border-top: 1px solid var(--line); }
+.lookup-results:empty { display: none; }
+.lookup-group + .lookup-group { margin-top: var(--s4); }
+.lookup-group-title { margin: 0 0 var(--s2); font-size: var(--fs-sm); font-weight: 700; color: var(--gray); }
+.lookup-list { display: grid; gap: var(--s2); margin: 0; padding: 0; list-style: none; }
+.lookup-hit {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s1) var(--s4); padding: var(--s3) var(--s4);
+  border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg); text-decoration: none;
+}
+a.lookup-hit:hover { border-color: var(--teal); background: var(--teal-soft); }
+.lookup-where { flex: none; font-size: var(--fs-sm); font-weight: 600; color: var(--gray); font-variant-numeric: tabular-nums; }
+.lookup-what { font-weight: 700; color: var(--navy); }
+a.lookup-hit .lookup-what { color: var(--teal); }
+.lookup-hit.is-off .lookup-what { font-weight: 400; color: var(--gray); }
+.lookup-hit-text { display: grid; gap: var(--s1); }
+.lookup-hit-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s2); }
+.lookup-excerpt { font-size: var(--fs-sm); color: var(--gray); }
+.lookup-excerpt mark { background: var(--teal-soft); color: var(--navy); }
+.lookup-msg { margin: 0; font-size: var(--fs-sm); color: var(--gray); }
+.lookup-list + .lookup-msg { margin-top: var(--s3); }
+.lookup-chip { display: inline-flex; align-items: center; padding: 0 var(--s2); border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--paper); font-size: var(--fs-xs); font-weight: 700; line-height: 1.6; color: var(--navy); white-space: nowrap; }
+
+/* 첫 화면: 두 찾기를 한 카드에 */
+.findbox { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); padding: var(--s5) 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
+.findbox .lookup { display: contents; }
+.findbox .lookup[hidden] { display: none; }
+.findbox .lookup-form { grid-row: 1; padding-inline: var(--s5); }
+.findbox .lookup:not(.lookup-search) .lookup-form { grid-column: 1; }
+.findbox .lookup-search .lookup-form { grid-column: 2; border-left: 1px solid var(--line); }
+.findbox .lookup-results { grid-column: 1 / -1; margin: var(--s5) var(--s5) 0; }
+/* 낱말 찾기가 숨어 있으면(검색 색인이 없는 빌드) 쪽수·차시 찾기가 카드를 혼자 쓴다 */
+.findbox:has(.lookup-search[hidden]) { grid-template-columns: minmax(0, 1fr); }
+.findbox:has(.lookup-search[hidden]) .lookup-form { max-width: 40rem; }
+
+/* 태블릿 아래: 두 찾기를 위아래로 (나란히 두면 쪽수·차시 찾기의 단추가 다음 줄로 밀린다) */
+@media (max-width: 999.98px) {
+  .findbox, .findbox:has(.lookup-search[hidden]) { grid-template-columns: minmax(0, 1fr); padding: 0; }
+  .findbox .lookup-form, .findbox .lookup:not(.lookup-search) .lookup-form, .findbox .lookup-search .lookup-form { grid-row: auto; grid-column: 1; padding: var(--s5); }
+  .findbox .lookup-search .lookup-form { border-left: 0; border-top: 1px solid var(--line); }
+  .findbox .lookup-results { margin: 0 var(--s5) var(--s5); }
+  .findbox .lookup-form { max-width: none; }
+}
+/* 휴대폰 */
+@media (max-width: 760px) {
+  .lookup { padding: var(--s4); }
+  .findbox .lookup-form, .findbox .lookup:not(.lookup-search) .lookup-form, .findbox .lookup-search .lookup-form { padding: var(--s4); }
+  .findbox .lookup-results { margin: 0 var(--s4) var(--s4); }
+  .lookup-field-sem { flex: 1 1 100%; }
+  .lookup-hit { min-height: var(--tap); align-items: center; }
+}
+@media (max-width: 380px) {
+  .lookup-go { flex: 1 1 100%; }
+}
+@media print {
+  .lookup, .findbox { display: none; }
+}

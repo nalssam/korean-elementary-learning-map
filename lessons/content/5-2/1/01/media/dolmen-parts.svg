@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 380" role="img" aria-labelledby="t">
+  <title id="t">고인돌을 옆에서 본 그림. 받침돌 두 개가 서 있고 그 위에 넓은 덮개돌이 얹혀 있다.</title>
+  <defs>
+  <pattern id="soil" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="#f3f0e8"/><circle cx="3" cy="3" r="1.6" fill="#586875"/><circle cx="9" cy="9" r="1.6" fill="#586875"/></pattern>
+  <pattern id="earth" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="#ffffff"/><line x1="0" y1="0" x2="0" y2="10" stroke="#586875" stroke-width="1.4"/></pattern>
+  <marker id="ah" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#18766b"/></marker>
+</defs>
+  <rect x="1.5" y="1.5" width="597" height="377" rx="16" fill="#fbfaf6" stroke="#e4dfd3" stroke-width="3"/>
+  
+  <line x1="40" y1="300" x2="560" y2="300" stroke="#132c3d" stroke-width="3"/>
+  <rect x="200" y="180" width="44" height="120" rx="5" fill="#d8d2c4" stroke="#132c3d" stroke-width="3"/><rect x="342" y="180" width="44" height="120" rx="5" fill="#d8d2c4" stroke="#132c3d" stroke-width="3"/>
+  <path d="M120 180 L150 138 L300 126 L450 136 L478 176 L440 192 L160 192 Z" fill="#c4bcaa" stroke="#132c3d" stroke-width="3" stroke-linejoin="round"/>
+  <text x="300" y="92" font-family="Pretendard, 'Noto Sans KR', sans-serif" font-size="28" font-weight="700" fill="#132c3d" text-anchor="middle" paint-order="stroke" stroke="#fbfaf6" stroke-width="6" stroke-linejoin="round">덮개돌</text><line x1="300" y1="100" x2="300" y2="124" stroke="#18766b" stroke-width="2.5" stroke-linecap="round"/>
+  <text x="293" y="350" font-family="Pretendard, 'Noto Sans KR', sans-serif" font-size="28" font-weight="700" fill="#132c3d" text-anchor="middle" paint-order="stroke" stroke="#fbfaf6" stroke-width="6" stroke-linejoin="round">받침돌</text><line x1="250" y1="336" x2="226" y2="282" stroke="#18766b" stroke-width="2.5" stroke-linecap="round"/><line x1="336" y1="336" x2="362" y2="282" stroke="#18766b" stroke-width="2.5" stroke-linecap="round"/>
+
+</svg>

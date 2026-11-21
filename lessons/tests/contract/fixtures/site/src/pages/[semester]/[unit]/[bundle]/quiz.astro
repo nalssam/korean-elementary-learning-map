@@ -1,0 +1,13 @@
+---
+// 시험용 학생 페이지
+import Base from '#src/layouts/Base.astro';
+import { lessonPaths, loadLesson, scored } from '#lib/content.ts';
+
+export function getStaticPaths() { return lessonPaths(); }
+const lesson = loadLesson(Astro.props.id);
+---
+<Base title={`${lesson.title} 확인 퀴즈`} kind="student" lesson={lesson}>
+  <main data-scored={String(scored(lesson))}>
+    <ol>{lesson.quiz.items.map((q) => <li>{q.q}</li>)}</ol>
+  </main>
+</Base>

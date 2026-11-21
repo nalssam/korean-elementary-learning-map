@@ -1,0 +1,327 @@
+---
+// 사이트 머리 (R40, R42). 왼쪽에 이름표, 가운데 길잡이(NAV), 오른쪽에 찾기와 내 자료함(NAV_TOOLS).
+//   - 이름표: 표시 그림 옆에 두 줄. SITE.nameLead(청록, 작게) 위에 SITE.shortName(남색, 굵게).
+//   - '교과서 자료'는 페이지가 아니라 학기 여덟 개를 펼치는 판이다. 차시표가 없는 학기는 링크 없이 '차시표 준비 중'.
+//   - 760px 아래에서는 이름표와 찾기·메뉴 두 단추만 둔다. 메뉴는 폭 전체를 쓰는 판이고 같은 링크를 늘어놓는다.
+// 펼치는 판은 둘 다 <details> 라서 스크립트 없이도 열리고 닫힌다. 스크립트는 Esc·바깥 누르기로 닫고 초점을 단추로 돌려주는 일만 덧붙인다.
+// 넓은 화면의 길잡이와 휴대폰의 메뉴는 같은 링크를 두 번 그린다. 한쪽은 늘 display:none 이라 화면 읽기 프로그램에는 한 번만 읽힌다.
+import { catalog, loadRegistry, semesterLabel, semesterProgress, showDrafts } from '#lib/content.ts';
+import { KIND_ORDER, NAV, NAV_TOOLS, SITE } from '#lib/site.ts';
+import type { NavKey } from '#lib/site.ts';
+import { href } from '#src/lib/url.ts';
+import { encodeKnown } from './collect.ts';
+import { textbookLabel } from './data.ts';
+
+interface Props {
+  /** 지금 페이지의 길잡이 자리. aria-current 를 붙인다. */
+  current?: NavKey;
+}
+const { current } = Astro.props;
+const here = Astro.url.pathname;
+const preview = showDrafts();
+
+// 학기 여덟 개. 지금 페이지가 그 학기(교과서 목차)이면 'page', 그 아래(단원·차시)이면 'true'.
+const semesters = loadRegistry().semesters.map((s) => {
+  const p = semesterProgress(s.id);
+  const to = p.total > 0 ? href(`/${s.id}/`) : undefined;
+  const at: 'page' | 'true' | undefined = to && here === to ? 'page' : to && here.startsWith(to) ? 'true' : undefined;
+  // 공개 빌드에서는 초안을 세지 않는다 (draft 가 늘 0 이다)
+  // 차시표가 없는 학기는 첫 화면의 학기 타일과 같은 말 (맨 '준비 중'은 아직 만들지 않은 차시의 상태다)
+  const state = p.total === 0 ? '차시표 준비 중' : `${p.published}/${p.total} 차시 공개`;
+  return { id: s.id, label: semesterLabel(s.id), to, at, state, draft: preview ? p.draft : 0 };
+});
+const links = NAV.filter((n) => 'route' in n);
+// 지금 자리는 current 로 받고, 받지 않았으면 주소로 알아낸다 (길잡이의 페이지 주소와 같거나, 학기 아래의 페이지).
+const routeOf: Partial<Record<NavKey, string>> = { home: '/', my: NAV_TOOLS.my.route, ...Object.fromEntries(links.map((n) => [n.key, n.route])) };
+const aria = (key: NavKey): 'page' | undefined => (current === key || (!current && routeOf[key] !== undefined && here === href(routeOf[key])) ? 'page' : undefined);
+const textbookHere = current === 'textbook' || semesters.some((s) => s.at) ? 'true' : undefined;
+// 담은 수는 이번 빌드에 실린 자료만 센다 (내 자료함에 보이는 수와 같게). 실린 자료의 열쇠를 짧게 적어 싣는다 (collect.ts 의 encodeKnown).
+const known = encodeKnown(catalog().map((i) => i.key), KIND_ORDER);
+---
+<header class="hd" data-collect-known={known}>
+  <div class="wrap hd-bar">
+    <a class="hd-lockup" href={href('/')} aria-current={aria('home')}>
+      <svg class="hd-mark" viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" focusable="false">
+        <rect x="6.5" y="3.5" width="11" height="17" rx="3" transform="rotate(32 12 12)" />
+        <path d="M8.6 14.9l6.8 4.2" />
+      </svg>
+      <span class="hd-name"><span class="hd-lead">{SITE.nameLead}</span> <span class="hd-short">{SITE.shortName}</span></span>
+    </a>
+
+    <nav class="hd-nav" aria-label="사이트 길잡이">
+      <ul class="hd-nav-list">
+        <li>
+          <details class="hd-drop" data-menu>
+            <summary class="hd-link" aria-current={textbookHere}>
+              {NAV[0].label}
+              <svg class="hd-caret" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" focusable="false"><path d="M2.5 4.5 6 8l3.5-3.5" /></svg>
+            </summary>
+            <div class="hd-panel">
+              <div class="wrap hd-panel-in">
+                <p class="hd-panel-note">학기를 고르면 그 학기의 교과서 목차가 열립니다. 차시 번호와 쪽수는 {textbookLabel()}를 따릅니다.</p>
+                <ul class="hd-sems">
+                  {semesters.map((s) => (
+                    <li>
+                      {s.to ? (
+                        <a class="hd-sem" href={s.to} aria-current={s.at}>
+                          <span class="hd-sem-name">{s.label}</span>
+                          <span class="hd-sem-state">{s.state}</span>{s.draft > 0 && <span class="hd-sem-draft">초안 {s.draft}차시</span>}
+                        </a>
+                      ) : (
+                        <span class="hd-sem is-off">
+                          <span class="hd-sem-name">{s.label}</span>
+                          <span class="hd-sem-state">{s.state}</span>
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </details>
+        </li>
+        {links.map((n) => <li><a class="hd-link" href={href(n.route)} aria-current={aria(n.key)}>{n.label}</a></li>)}
+      </ul>
+    </nav>
+
+    <div class="hd-tools">
+      <a class="hd-tool" href={href(NAV_TOOLS.search.route)} data-find-link>
+        <svg class="hd-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6" /><path d="m15 15 5 5" /></svg>
+        <span class="hd-tool-label">{NAV_TOOLS.search.label}</span>
+      </a>
+      <a class="hd-tool hd-tool-my" href={href(NAV_TOOLS.my.route)} aria-current={aria('my')}>
+        <svg class="hd-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M7 4.5h10a1 1 0 0 1 1 1v14l-6-4-6 4v-14a1 1 0 0 1 1-1z" /></svg>
+        <span class="hd-tool-label">{NAV_TOOLS.my.label}</span>
+        <span class="hd-count"><span class="visually-hidden">, 담은 자료 </span><span data-collect-count data-count="0">0</span><span class="visually-hidden">개</span></span>
+      </a>
+      <details class="hd-menu" data-menu>
+        <summary class="hd-tool">
+          <svg class="hd-icon hd-icon-open" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+          <svg class="hd-icon hd-icon-close" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18" /></svg>
+          <span class="hd-tool-label">메뉴</span>
+          <span class="hd-count hd-count-dot"><span class="visually-hidden">, 담은 자료 </span><span data-collect-count data-count="0">0</span><span class="visually-hidden">개</span></span>
+        </summary>
+        <div class="hd-sheet">
+          <nav class="wrap" aria-label="사이트 길잡이">
+            <p class="hd-sheet-title" aria-current={textbookHere}>{NAV[0].label}</p>
+            <ul class="hd-sems">
+              {semesters.map((s) => (
+                <li>
+                  {s.to ? (
+                    <a class="hd-sem" href={s.to} aria-current={s.at}>
+                      <span class="hd-sem-name">{s.label}</span>
+                      <span class="hd-sem-state">{s.state}</span>{s.draft > 0 && <span class="hd-sem-draft">초안 {s.draft}차시</span>}
+                    </a>
+                  ) : (
+                    <span class="hd-sem is-off">
+                      <span class="hd-sem-name">{s.label}</span>
+                      <span class="hd-sem-state">{s.state}</span>
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <ul class="hd-sheet-links">
+              {links.map((n) => <li><a href={href(n.route)} aria-current={aria(n.key)}>{n.label}</a></li>)}
+              <li>
+                <a href={href(NAV_TOOLS.my.route)} aria-current={aria('my')}>
+                  {NAV_TOOLS.my.label}
+                  <span class="hd-count"><span class="visually-hidden">, 담은 자료 </span><span data-collect-count data-count="0">0</span><span class="visually-hidden">개</span></span>
+                </a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<script>
+  // 펼치는 판(<details data-menu>)을 덧붙여 다룬다. 스크립트가 없어도 판은 summary 를 눌러 열고 닫힌다.
+  //   - 하나를 열면 다른 하나는 닫는다.
+  //   - Esc 로 닫으면 초점이 그 판의 단추(summary)로 돌아온다.
+  //   - 판 바깥을 누르거나 초점이 판 밖으로 나가면 닫는다.
+  const menus = [...document.querySelectorAll<HTMLDetailsElement>('details[data-menu]')];
+  const close = (d: HTMLDetailsElement, refocus = false) => {
+    d.open = false;
+    if (refocus) d.querySelector('summary')?.focus();
+  };
+  for (const d of menus) {
+    d.addEventListener('toggle', () => {
+      if (d.open) for (const other of menus) if (other !== d && other.open) other.open = false;
+    });
+    d.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && d.open) { e.preventDefault(); close(d, true); }
+    });
+    // 판 안의 빈 곳을 누르면 relatedTarget 이 없다. 그때는 닫지 않는다 (바깥 누르기는 아래의 click 이 맡는다).
+    d.addEventListener('focusout', (e) => {
+      const to = e.relatedTarget;
+      if (d.open && to instanceof Node && !d.contains(to)) close(d);
+    });
+  }
+  document.addEventListener('click', (e) => {
+    for (const d of menus) if (d.open && !d.contains(e.target as Node)) close(d);
+  });
+
+  // 찾기: 첫 화면에는 찾기 칸(#find)이 있다. 그 페이지에서는 이동하지 않고 칸으로 초점을 옮긴다.
+  // 다른 페이지에서는 링크 그대로 첫 화면의 #find 로 가고, 첫 화면이 열리면서 칸에 초점을 준다.
+  // 초점은 쪽수·차시 칸으로 간다: 교과서를 펴 놓은 교사가 가장 먼저 넣는 것이 쪽수나 차시 번호다 (첫 화면의 설명 문장도 그렇게 안내한다).
+  // 낱말 찾기 칸은 Tab 한 번 뒤에 있다. 쪽수·차시 칸이 없는 빌드(차시표가 없다)에서만 낱말 칸이다 (검색 색인을 불러온 뒤에야 보인다. Search.astro).
+  const findInput = (): HTMLInputElement | undefined => {
+    const box = document.getElementById('find');
+    if (!box) return undefined;
+    const shown = [...box.querySelectorAll<HTMLInputElement>('input')].filter((i) => i.offsetParent !== null);
+    return shown.find((i) => i.hasAttribute('data-finder-input')) ?? shown[0];
+  };
+  for (const a of document.querySelectorAll<HTMLAnchorElement>('[data-find-link]')) {
+    a.addEventListener('click', (e) => {
+      const input = findInput();
+      if (!input) return;
+      e.preventDefault();
+      for (const d of menus) d.open = false;
+      document.getElementById('find')?.scrollIntoView({ block: 'start' });
+      input.focus({ preventScroll: true });
+    });
+  }
+  if (location.hash === '#find' && document.getElementById('find')) {
+    const focusFind = () => {
+      // 그 사이에 이미 어느 칸에 적기 시작했으면 초점을 빼앗지 않는다
+      if (document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLSelectElement) return;
+      findInput()?.focus({ preventScroll: true });
+    };
+    const search = document.querySelector('site-search');
+    if (!findInput() && search && search.hasAttribute('hidden')) {
+      // 쪽수·차시 칸이 없으면 낱말 칸이 드러나기를 기다린다 (오래 걸리거나 색인이 없으면 그만둔다)
+      const timer = setTimeout(focusFind, 1200);
+      document.addEventListener('site-search-ready', () => { clearTimeout(timer); focusFind(); }, { once: true });
+    } else if (document.readyState === 'complete') {
+      focusFind();
+    } else {
+      // 페이지를 다 싣기 전에 초점을 주면, 싣고 나서 #find 로 내려가는 브라우저의 동작이 초점을 다시 걷어 간다 (Chromium)
+      addEventListener('load', () => requestAnimationFrame(focusFind), { once: true });
+    }
+  }
+</script>
+
+<style>
+  /* 머리. 그림자 없이 아래 1px 선으로만 나눈다 (R53). 펼치는 판은 이 상자에 맞춰 폭 전체로 놓인다. */
+  .hd { position: relative; z-index: 30; border-bottom: 1px solid var(--line); background: var(--bg); }
+  .hd-bar { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--s5); min-height: 4.5rem; }
+
+  /* 이름표 */
+  .hd-lockup { display: inline-flex; flex: none; align-items: center; gap: 10px; padding-block: var(--s3); color: var(--navy); text-decoration: none; }
+  .hd-mark { flex: none; fill: var(--teal-soft); stroke: var(--teal); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .hd-name { display: grid; }
+  .hd-lead { font-size: var(--fs-xs); font-weight: 700; line-height: 1.2; letter-spacing: 0.06em; color: var(--teal); }
+  .hd-short { font-size: var(--fs-lg); font-weight: 800; line-height: 1.25; letter-spacing: -0.02em; white-space: nowrap; }
+  .hd-lockup:hover .hd-short { color: var(--teal); }
+
+  /* 길잡이 */
+  .hd-nav { margin-right: auto; }
+  .hd-nav-list { display: flex; align-items: center; gap: 2px; }
+  .hd-link {
+    position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: 2.5rem; padding: 0 var(--s3); border-radius: var(--radius-sm);
+    font-size: var(--fs-sm); font-weight: 700; color: var(--navy); text-decoration: none; cursor: pointer; list-style: none; white-space: nowrap;
+  }
+  .hd-link::-webkit-details-marker { display: none; }
+  .hd-link:hover, .hd-drop[open] > .hd-link { background: var(--paper); color: var(--navy); }
+  /* 지금 페이지: 청록 글자와 밑줄 막대 */
+  .hd-link[aria-current] { color: var(--teal); }
+  .hd-link[aria-current]::after { content: ''; position: absolute; left: var(--s3); right: var(--s3); bottom: 2px; height: 2px; border-radius: 1px; background: var(--teal); }
+  .hd-caret { flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.15s; }
+  .hd-drop[open] .hd-caret { transform: rotate(180deg); }
+
+  /* 학기 판: 머리 바로 아래 폭 전체. 종이색 바탕과 아래 선으로 본문과 나눈다. */
+  .hd-panel { position: absolute; left: 0; right: 0; top: 100%; border-block: 1px solid var(--line); background: var(--paper); }
+  .hd-panel-in { display: grid; gap: var(--s3); padding-block: var(--s5) var(--s6); }
+  .hd-panel-note { margin: 0; font-size: var(--fs-sm); color: var(--gray); }
+  /* 학기 여덟 개: 가로는 학년, 세로는 학기 (첫 화면의 타일과 같은 차례) */
+  .hd-sems { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: auto auto; grid-auto-flow: column; gap: var(--s2); }
+  .hd-sem { display: grid; gap: 2px; height: 100%; padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--card); color: var(--navy); text-decoration: none; }
+  a.hd-sem:hover { border-color: var(--teal); }
+  .hd-sem[aria-current] { border-color: var(--teal); background: var(--teal-soft); }
+  .hd-sem-name { font-weight: 800; }
+  .hd-sem-state { font-size: var(--fs-xs); font-weight: 600; color: var(--teal); font-variant-numeric: tabular-nums; }
+  .hd-sem-draft { font-size: var(--fs-xs); color: var(--gray); }
+  .hd-sem.is-off { border-style: dashed; background: none; }
+  .hd-sem.is-off .hd-sem-name { color: var(--gray); font-weight: 700; }
+  .hd-sem.is-off .hd-sem-state { color: var(--gray); font-weight: 400; }
+
+  /* 오른쪽 단추: 찾기, 내 자료함, (휴대폰) 메뉴 */
+  .hd-tools { display: flex; align-items: center; gap: var(--s2); margin-left: auto; }
+  .hd-tool {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 2.5rem; padding: 0 var(--s3);
+    border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--card); color: var(--navy);
+    font-size: var(--fs-sm); font-weight: 700; text-decoration: none; white-space: nowrap; cursor: pointer; list-style: none;
+  }
+  .hd-tool::-webkit-details-marker { display: none; }
+  .hd-tool:hover { border-color: var(--teal); color: var(--teal); }
+  .hd-tool[aria-current] { border-color: var(--teal); color: var(--teal); }
+  .hd-icon { flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  /* 담은 수. 0 이면 숨긴다 (스크립트가 돌기 전에도 0 으로 그려 둔다) */
+  .hd-count { display: inline-flex; align-items: center; justify-content: center; min-width: 1.375rem; height: 1.375rem; padding: 0 6px; border-radius: var(--radius-pill); background: var(--teal); color: var(--card); font-size: var(--fs-xs); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+  .hd-count:has([data-count='0']) { display: none; }
+
+  /* 휴대폰 메뉴 */
+  .hd-menu { display: none; }
+  .hd-icon-close { display: none; }
+  .hd-menu[open] .hd-icon-open { display: none; }
+  .hd-menu[open] .hd-icon-close { display: block; }
+  .hd-menu[open] > .hd-tool { border-color: var(--navy); }
+  .hd-sheet { position: absolute; left: 0; right: 0; top: 100%; max-height: calc(100vh - 4.5rem); overflow-y: auto; border-block: 1px solid var(--line); background: var(--paper); }
+  .hd-sheet .wrap { display: grid; gap: var(--s4); padding-block: var(--s4) var(--s5); }
+  .hd-sheet-title { margin: 0; font-size: var(--fs-sm); font-weight: 700; color: var(--gray); }
+  .hd-sheet-title[aria-current] { color: var(--teal); }
+  .hd-sheet .hd-sems { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; grid-auto-flow: row; }
+  .hd-sheet .hd-sem { min-height: var(--tap); padding: var(--s2) var(--s3); }
+  .hd-sheet-links { border-top: 1px solid var(--line); }
+  .hd-sheet-links a {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--s2); min-height: 3.25rem; padding: 0 var(--s1);
+    border-bottom: 1px solid var(--line); font-size: var(--fs-md); font-weight: 700; color: var(--navy); text-decoration: none;
+  }
+  .hd-sheet-links a[aria-current] { color: var(--teal); }
+  /* 링크마다 오른쪽 끝에 작은 꺾쇠: 누르면 다른 페이지로 간다 */
+  .hd-sheet-links a::after { content: ''; flex: none; width: 0.5em; height: 0.5em; margin-left: auto; border-top: 2px solid var(--gray); border-right: 2px solid var(--gray); transform: rotate(45deg); }
+  .hd-sheet-links .hd-count { margin-left: var(--s2); }
+
+  /* 760~999px: 길잡이가 둘째 줄로 내려간다 (한 줄에 이름표·길잡이·단추가 다 들지 않는다) */
+  @media (max-width: 999.98px) {
+    .hd-nav { order: 3; flex-basis: 100%; margin: 0 0 var(--s2) calc(-1 * var(--s3)); }
+  }
+
+  /* 760px 아래: 이름표와 찾기·메뉴 두 단추. 단추는 그림 아래에 이름을 작게 단다 (한 줄에 이름표와 두 단추가 들도록). */
+  @media (max-width: 759.98px) {
+    .hd-bar { flex-wrap: nowrap; min-height: 4rem; column-gap: var(--s3); }
+    .hd-nav, .hd-tool-my, .hd-panel { display: none; }
+    .hd-menu { display: block; }
+    .hd-tools { gap: var(--s1); }
+    .hd-tool {
+      position: relative; flex-direction: column; gap: 2px; min-width: var(--tap); min-height: var(--tap); padding: 2px var(--s1);
+      border-color: transparent; background: none; font-size: var(--fs-xs); line-height: 1.1;
+    }
+    .hd-tool:hover, .hd-menu[open] > .hd-tool { border-color: transparent; background: var(--paper); color: var(--navy); }
+    .hd-icon { width: 20px; height: 20px; }
+    .hd-mark { width: 28px; height: 28px; }
+    .hd-count-dot { position: absolute; top: 0; right: -2px; min-width: 1.125rem; height: 1.125rem; padding: 0 4px; }
+  }
+  @media (max-width: 374.98px) {
+    .hd-short { font-size: 1.125rem; }
+    .hd-mark { width: 26px; height: 26px; }
+  }
+  /* 360px 아래: 단추는 그림만 남기고 이름은 화면 읽기 프로그램에만 */
+  @media (max-width: 359.98px) {
+    .hd-bar { column-gap: var(--s2); }
+    .hd-lockup { gap: 6px; }
+    .hd-short { font-size: 1rem; }
+    .hd-mark { width: 24px; height: 24px; }
+    .hd-tool-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  }
+
+  @media print {
+    .hd { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hd-caret { transition: none; }
+  }
+</style>

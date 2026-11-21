@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 300" role="img" aria-labelledby="t">
+  <title id="t">첫째. 받침돌 두 개를 세운다.</title>
+  <defs>
+    <pattern id="soil" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="#f3f0e8"/><circle cx="3" cy="3" r="1.6" fill="#586875"/><circle cx="9" cy="9" r="1.6" fill="#586875"/></pattern>
+    <pattern id="earth" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="#ffffff"/><line x1="0" y1="0" x2="0" y2="10" stroke="#586875" stroke-width="1.4"/></pattern>
+    <marker id="ah" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#18766b"/></marker>
+  </defs>
+  <rect x="1.5" y="1.5" width="777" height="297" rx="16" fill="#fbfaf6" stroke="#e4dfd3" stroke-width="3"/>
+  <rect x="16" y="250" width="748" height="32" fill="url(#earth)"/>
+  <line x1="16" y1="250" x2="764" y2="250" stroke="#132c3d" stroke-width="3"/>
+  <rect x="420" y="120" width="40" height="142" rx="5" fill="#d8d2c4" stroke="#132c3d" stroke-width="3"/>
+  <rect x="560" y="120" width="40" height="142" rx="5" fill="#d8d2c4" stroke="#132c3d" stroke-width="3"/>
+  <text x="510.0" y="76" font-family="Pretendard, 'Noto Sans KR', sans-serif" font-size="36" font-weight="700" fill="#132c3d" text-anchor="middle">받침돌</text>
+  <line x1="488.0" y1="88" x2="446.0" y2="114" stroke="#18766b" stroke-width="3" stroke-linecap="round"/>
+  <line x1="532.0" y1="88" x2="574.0" y2="114" stroke="#18766b" stroke-width="3" stroke-linecap="round"/>
+</svg>

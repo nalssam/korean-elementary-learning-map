@@ -1,0 +1,6 @@
+# 수업 자료(lessons/)에서 날쌤의 승인이 있어야 바뀌는 곳 (lessons/docs/CONTRACT.md 12절).
+# lessons/ 전체와 .github/ 전체입니다. 명세와 검수 기록만이 아니라, 검사가 돌지 말지를 정하는 파일
+# (package.json 의 명령, 시험, 빌드 스크립트, 워크플로)도 바꾸면 검사를 건너뛸 수 있기 때문입니다.
+# 가지 보호에서 "Require review from Code Owners" 를 켜야 이 파일이 승인을 막습니다.
+/lessons/ @nalssam
+/.github/ @nalssam

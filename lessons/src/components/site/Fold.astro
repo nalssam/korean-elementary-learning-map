@@ -1,0 +1,18 @@
+---
+// 접힌 상자 하나 (<details>). 교사용 자료처럼 수업 중에는 가려 두는 글에 쓴다.
+// 인쇄할 때는 접힌 채로 빠지지 않도록 site.css 와 SiteLayout 의 스크립트가 모두 펴 준다.
+interface Props {
+  title: string;
+  /** 제목 옆에 작게 붙는 말. 예: "4곳" */
+  count?: string;
+  id?: string;
+}
+const { title, count, id } = Astro.props;
+---
+<details class="fold" id={id}>
+  <summary>
+    <span class="fold-title">{title}</span>
+    {count && <span class="fold-count" data-pagefind-ignore>{count}</span>}
+  </summary>
+  <div class="fold-body"><slot /></div>
+</details>

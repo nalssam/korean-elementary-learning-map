@@ -1,0 +1,39 @@
+---
+// 차례가 있는 단계 2~5개. 그림이 하나라도 있으면 가로로 늘어놓고, 없으면 위에서 아래로 늘어놓는다.
+// 그림이 넷이면 2 × 2 로 놓는다 (R22). 칸마다 위에 머리 한 줄(단계 표와 단계 글), 아래에 그림 (그림 상자는 그려진 그림에 꼭 맞고 폭 500px 이상, R36).
+// 머리 글의 크기(STAGE_STEPS.gridFit)는 Stage.astro 의 스크립트가 골라 data-arrange 에 적는다. 머리가 두 줄을 넘거나
+// 그림 상자가 너무 작아지는 아주 긴 글은 한 줄(4칸)로 놓는다.
+// 한 줄로 놓았는데 그림이 칸의 폭에 걸려 틀보다 낮게 그려지면, 스크립트가 그림 줄을 그림 높이로 줄이고 단계 전체를 위아래 가운데에 둔다.
+// 모든 단계 그림의 출처 표시가 같으면 그림마다 찍지 않고 목록 아래에 한 번만 찍는다.
+import { keepParticle } from '#lib/site.ts';
+import { creditShort, getMedia } from '#lib/content.ts';
+import Media from '#src/components/Media.astro';
+import { STAGE_FIT, STAGE_STEPS } from './copy.ts';
+import type { SlideProps } from './types.ts';
+
+type Props = SlideProps<'steps'>;
+const { lesson, slide, phase } = Astro.props;
+const pictured = slide.steps.filter((s) => s.media);
+const across = pictured.length > 0;
+const credits = [...new Set(pictured.map((s) => creditShort(getMedia(lesson, s.media!))))];
+const shared = pictured.length > 1 && credits.length === 1 ? credits[0] : undefined;
+const fit = STAGE_FIT.stepsMedia;
+const grid = pictured.length === 4 && slide.steps.length === 4;
+// 2 × 2 에서 단계 표는 모두 가장 긴 표의 폭으로 그린다 (한 단 안의 두 단계 글이 같은 왼쪽 끝에서 시작한다)
+const chipEm = Math.max(...slide.steps.map((s) => [...s.label].length));
+---
+<div class:list={['sl-steps', shared && 'has-shared-credit']} data-fit={across ? fit.join(' ') : undefined} style={across ? `--fit: ${grid ? STAGE_STEPS.gridFit.at(-1) : fit.at(-1)}` : undefined}>
+  {phase && <p class="sl-phase">{phase}</p>}
+  <h2 class="sl-title">{keepParticle(slide.title)}</h2>
+  <ol class:list={['sl-steps-list', across ? 'is-across' : 'is-down']} style={`--n: ${slide.steps.length}; --chip-em: ${chipEm}`}
+    data-arrange={grid ? 'grid' : undefined} data-grid-fit={grid ? STAGE_STEPS.gridFit.join(' ') : undefined} data-max-lines={grid ? STAGE_STEPS.maxLines : undefined}>
+    {slide.steps.map((s) => (
+      <li class="sl-step">
+        <span class="sl-chip">{keepParticle(s.label)}</span>
+        {across && (s.media ? <Media lesson={lesson} id={s.media} caption={false} class="sl-media" /> : <span class="sl-media-gap" />)}
+        <span class:list={['sl-step-text', across && 'sl-fit']}>{keepParticle(s.text)}</span>
+      </li>
+    ))}
+  </ol>
+  {shared && <p class="sl-shared-credit">{shared}</p>}
+</div>

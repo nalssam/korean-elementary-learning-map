@@ -1,0 +1,124 @@
+---
+// 내 자료함 (/my/, R51). 담은 자료는 이 브라우저의 localStorage 에만 있다. 사이트 밖으로 아무것도 보내지 않는다.
+// 이번 빌드에 실리는 자료의 목록(catalog())을 JSON 으로 싣고, 브라우저에서 담은 것만 담은 차례대로 자료 카드로 그린다 (catalog/my.ts).
+// 목록에 없는 열쇠(공개 빌드에서 사라진 초안 따위)는 그리지 않고 지우지도 않는다. 대신 몇 개가 안 보이는지 알린다.
+// 담은 것이 브라우저마다 달라서 검색 색인에 넣지 않는다 (index={false}).
+// 스크립트가 없거나 저장소가 막혀 있으면 빈 자료함과 안내가 보인다.
+import { absoluteUrl, catalog, lessonRoute } from '#lib/content.ts';
+import { KIND_ORDER } from '#lib/site.ts';
+import SiteLayout from '#src/layouts/SiteLayout.astro';
+import { href } from '#src/lib/url.ts';
+import PageHead from '#src/components/site/PageHead.astro';
+import type { MyItem } from '#src/components/site/catalog/my.ts';
+// 자료 카드의 CSS 는 ResourceCard.astro 에 있다. 이 페이지는 카드를 브라우저에서 그리므로 컴포넌트를 불러 CSS 만 싣는다.
+import ResourceCard from '#src/components/site/ui/ResourceCard.astro';
+import StatusChip from '#src/components/site/ui/StatusChip.astro';
+import TypeIcon from '#src/components/site/ui/TypeIcon.astro';
+import '#src/components/site/catalog/catalog.css';
+
+void ResourceCard;
+const items: MyItem[] = catalog().map((i) => ({
+  key: i.key, kind: i.kind, title: i.title, lessonTitle: i.lessonTitle, course: i.course,
+  lesson: href(lessonRoute(i.lessonId)), route: href(i.route),
+  ...(i.file ? { file: { route: href(i.file.route), name: i.file.name } } : {}),
+  format: i.format,
+  ...(i.thumb ? { thumb: href(i.thumb) } : {}),
+  draft: i.draft,
+  ...(i.kind === 'quiz' || i.kind === 'web_activity' ? { qr: absoluteUrl(i.route) } : {}),
+}));
+// <script> 안에 싣는 JSON. 글을 HTML 로 풀지 않고 브라우저가 JSON.parse 로만 읽는다.
+// 꺾쇠를 유니코드 탈출 꼴(\u003c)로 적어 글 안의 닫는 script 꼬리표가 이 요소를 닫지 못하게 한다 (줄 구분 문자 둘도 같은 꼴로 적는다).
+const json = JSON.stringify(items).replaceAll('\x3c', '\\u003c').replaceAll('\u2028', '\\u2028').replaceAll('\u2029', '\\u2029');
+---
+<SiteLayout title="내 자료함" description="담기를 누른 자료를 이 브라우저에 모아 둡니다." current="my" index={false}>
+  <PageHead kicker="이 브라우저에 담은 자료" title="내 자료함">자료 카드의 담기를 누르면 여기에 모입니다. 여러 차시의 자료를 한곳에 모아 두고 수업을 준비할 때 씁니다.</PageHead>
+  <p class="my-note">
+    <svg class="my-note-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="12" rx="1.5" /><path d="M8 20h8M12 17v3" /></svg>
+    <span>담은 목록은 <strong>이 브라우저에만</strong> 남습니다. 다른 기기나 다른 브라우저에서는 보이지 않고, 브라우저의 방문 기록과 사이트 데이터를 지우면 함께 지워집니다.</span>
+  </p>
+
+  <section class="my-saved" aria-labelledby="my-title" data-my-saved hidden>
+    <h2 class="cat-sec-title" id="my-title" tabindex="-1">담은 자료 <span class="cat-num" data-my-count>0</span>개</h2>
+    <p class="my-missing" data-my-missing hidden></p>
+    <ul class="cat-cards" data-my-list></ul>
+  </section>
+
+  <section class="my-empty" aria-labelledby="my-empty-title" data-my-empty>
+    <h2 class="my-empty-title" id="my-empty-title" tabindex="-1">아직 담은 자료가 없습니다</h2>
+    <p>차시 자료실이나 자료 유형별에서 자료 카드의 <span class="my-pill"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false"><path d="M7 4.5h10a1 1 0 0 1 1 1v14l-6-4-6 4v-14a1 1 0 0 1 1-1z" /></svg>담기</span>를 누르면 여기에 담은 차례대로 모입니다.</p>
+    <p><a class="my-go" href={href('/types/')}>자료 유형별에서 고르기</a></p>
+  </section>
+  <section class="my-empty" aria-labelledby="my-blocked-title" data-my-blocked hidden>
+    <h2 class="my-empty-title" id="my-blocked-title">이 브라우저에서는 담을 수 없습니다</h2>
+    <p>사이트 데이터를 저장하지 않게 설정된 브라우저(사생활 보호 창, 학교 기기의 설정 등)에서는 담기 단추가 나오지 않습니다. 자료를 열고 내려받는 것은 그대로 됩니다.</p>
+  </section>
+  <noscript><p class="my-noscript">내 자료함은 브라우저의 스크립트가 켜져 있어야 보입니다. 자료는 <a href={href('/types/')}>자료 유형별</a>에서 모두 볼 수 있습니다.</p></noscript>
+  <p class="visually-hidden" aria-live="polite" data-my-live></p>
+
+  <script type="application/json" id="my-catalog" is:inline set:html={json}></script>
+  <template id="my-icons">
+    {KIND_ORDER.map((k) => <TypeIcon kind={k} size={44} class="rc-icon" />)}
+    {KIND_ORDER.map((k) => <TypeIcon kind={k} size={16} />)}
+    <StatusChip state="draft" />
+  </template>
+  <script>
+    import { init, read, remove, storage, subscribe } from '#src/components/site/collect.ts';
+    import { ASSET_LABEL } from '#lib/site.ts';
+    import { card } from '#src/components/site/catalog/my.ts';
+    import type { MyItem } from '#src/components/site/catalog/my.ts';
+
+    const items = new Map((JSON.parse(document.getElementById('my-catalog')?.textContent ?? '[]') as MyItem[]).map((i) => [i.key, i]));
+    const icons = document.getElementById('my-icons') as HTMLTemplateElement;
+    const saved = document.querySelector<HTMLElement>('[data-my-saved]')!;
+    const list = document.querySelector<HTMLElement>('[data-my-list]')!;
+    const count = document.querySelector<HTMLElement>('[data-my-count]')!;
+    const missing = document.querySelector<HTMLElement>('[data-my-missing]')!;
+    const empty = document.querySelector<HTMLElement>('[data-my-empty]')!;
+    const blocked = document.querySelector<HTMLElement>('[data-my-blocked]')!;
+    const live = document.querySelector<HTMLElement>('[data-my-live]')!;
+
+    function render(keys: string[]) {
+      const store = storage();
+      const shown = keys.map((k) => items.get(k)).filter((i): i is MyItem => i !== undefined);
+      const gone = keys.length - shown.length;
+      // 이미 그린 카드는 그대로 두고 빠진 것만 지우거나 새것만 그린다 (열린 QR 창과 초점이 사라지지 않게)
+      const have = new Map([...list.querySelectorAll<HTMLElement>(':scope > li')].map((li) => [li.dataset.key!, li]));
+      for (const [key, li] of have) if (!shown.some((i) => i.key === key)) li.remove();
+      for (const item of shown) {
+        let li = have.get(item.key);
+        if (!li) {
+          li = document.createElement('li');
+          li.dataset.key = item.key;
+          li.append(card(item, icons));
+        }
+        list.append(li); // 담은 차례대로 다시 놓는다
+      }
+      count.textContent = String(shown.length);
+      missing.hidden = gone === 0;
+      missing.textContent = gone ? `담은 자료 가운데 ${gone}개는 지금 이 사이트에 실려 있지 않아 보이지 않습니다. 다시 실리면 여기에 나옵니다.` : '';
+      saved.hidden = shown.length === 0;
+      empty.hidden = Boolean(store) ? shown.length > 0 : true;
+      blocked.hidden = Boolean(store);
+      // 머리의 담은 수와 새로 그린 단추를 맞춘다 (여러 번 불러도 된다)
+      init();
+    }
+
+    // 빼기: 저장소에서 지우면 subscribe 가 다시 그린다. 초점은 다음 카드의 빼기 단추로, 없으면 앞 카드로, 다 비었으면 빈 자료함의 제목으로 옮긴다.
+    list.addEventListener('click', (e) => {
+      const button = (e.target as Element).closest<HTMLButtonElement>('[data-remove]');
+      if (!button) return;
+      const key = button.dataset.remove!;
+      const li = button.closest('li')!;
+      const next = (li.nextElementSibling ?? li.previousElementSibling) as HTMLElement | null;
+      const item = items.get(key);
+      remove(key);
+      render(read());
+      live.textContent = item ? `내 자료함에서 뺐습니다: ${ASSET_LABEL[item.kind]} ${item.title}` : '';
+      const focus = next?.isConnected ? next.querySelector<HTMLElement>('[data-remove]') : null;
+      (focus ?? (empty.hidden ? document.getElementById('my-title') : document.getElementById('my-empty-title')))?.focus();
+    });
+
+    subscribe(render);
+    render(read());
+  </script>
+</SiteLayout>

@@ -1,0 +1,135 @@
+# 시험용 가짜 명세입니다. 내용은 사실이 아니고 수업에 쓰는 자료가 아닙니다.
+# 단원 정리 묶음의 본보기: 새 사실이 없고, 앞 묶음의 사실·그림을 가리키며, 앞 묶음의 카드를 모아 단원 덱을 만듭니다.
+schema_version: 1
+id: 5-2/1/05
+title: 시험용 단원 정리
+tagline: 단원 정리 묶음의 본보기입니다. 시험에서만 씁니다.
+status: draft
+
+objectives:
+  - 단원에서 배운 것을 차례대로 놓는다.
+
+flow:
+  - phase: 도입
+    minutes: 5
+    title: 덱 나누기
+    do:
+      - 모둠마다 단원 덱을 나누어 줍니다.
+    uses: [slides, cards]
+    slides: [1, 1]
+  - phase: 전개
+    minutes: 20
+    title: 덱 놀이
+    do:
+      - 카드를 차례대로 놓게 합니다.
+    uses: [cards, web_activity, slides]
+    slides: [2, 3]
+  - phase: 정리
+    minutes: 15
+    title: 단원 정리지 쓰기
+    do:
+      - 정리지를 혼자 쓰게 합니다.
+    uses: [worksheet, quiz, slides]
+    slides: [4, 4]
+
+slides:
+  - layout: title
+    title: 시험용 단원 정리
+  - layout: picture
+    title: 이 그림을 기억하나요?
+    media: 01/stone
+    facts: [01/f1]
+  # 두 쪽이 함께 보는 그림 한 장(media)을 실은 견주기 장. 앞 묶음의 그림을 빌려 온다.
+  # 이름표 상자 둘이 왼쪽에 쌓이고 그림이 오른쪽에 온다.
+  - layout: compare
+    title: 길의 두 끝을 견주어 봅시다
+    media: 02-03/map
+    left:
+      label: 서쪽 끝
+      points: [길이 곧게 뻗습니다., 마을에서 시작합니다.]
+    right:
+      label: 동쪽 끝
+      points: [길이 굽어 있습니다., 강가에서 끝납니다.]
+    facts: [02-03/f1]
+  - layout: closing
+    title: 가장 기억에 남는 것을 말해 봅시다
+
+worksheet:
+  title: 시험용 단원 정리지
+  print:
+    per: student
+    sides: duplex
+  pages:
+    - heading: 차례대로 놓기
+      blocks:
+        - type: timeline
+          points:
+            - when: 1392
+              what: 첫 해
+              blank: true
+              facts: [01/f2]
+            - when: 1446
+              what: 둘째 해
+              facts: [02-03/f2]
+        - type: figure
+          media: 01/stone
+          width: third
+          show_caption: false
+    - heading: 확인하기
+      blocks:
+        - type: quiz
+          items: [1, 2, 3]
+
+quiz:
+  items:
+    - type: ox
+      q: 돌탑은 돌을 쌓아 만든다.
+      answer: true
+      explain: 돌을 쌓아 올려 만듭니다.
+      facts: [01/f1]
+    - type: short
+      q: 시험용 연표의 첫 해는 몇 년인가요?
+      answer: 1392
+      explain: 1392년입니다.
+      facts: [01/f2]
+    - type: ox
+      q: 시험용 지도의 길은 동쪽에서 서쪽으로 이어진다.
+      answer: false
+      explain: 서쪽에서 동쪽으로 이어집니다.
+      facts: [02-03/f1]
+
+assets:
+  papercraft:
+    state: skip
+    reason: 정리 차시라 새로 만들지 않습니다.
+  coloring:
+    state: skip
+    reason: 정리 차시라 새로 만들지 않습니다.
+  making_kit:
+    state: skip
+    reason: 정리 차시라 새로 만들지 않습니다.
+  escape:
+    state: planned
+    idea: 단원 방탈출 (docs/ROADMAP.md 의 꼴이 정해지면 만든다)
+  virtual3d:
+    state: skip
+    reason: 정리 차시라 새로 만들지 않습니다.
+  web_activity:
+    state: ready
+    title: 차례대로 줄 세우기
+    instructions: 일어난 차례대로 놓아 봅시다.
+    activity:
+      kind: order
+      items: [하나, 둘, 셋, 넷, 다섯, 여섯, 일곱, 여덟, 아홉, 열, 열하나, 열둘]
+      facts: [01/f2, 02-03/f2]
+  cards:
+    state: ready
+    title: 시험용 단원 덱
+    collect:
+      - label: 가
+        bundles: ["01"]
+      - label: 나
+        bundles: ["02-03"]
+    games:
+      - name: 차례대로 놓기
+        how: 카드를 차례대로 놓습니다.

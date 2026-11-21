@@ -1,0 +1,26 @@
+---
+// 짧은 항목 2~4개.
+// 곁그림이 있으면 제목 아래를 두 칸으로 나눠 항목은 왼쪽, 그림은 오른쪽에 둔다 (R12, copy.ts 의 STAGE_SIDE).
+// 그림 칸의 폭과 글 크기는 Stage.astro 의 스크립트가 sideCandidates() 의 차례대로 해 보고 고른다.
+// 그림이 없으면 항목을 크게(STAGE_FIT.points) 쓰고 제목 아래 48 만큼 내려 위에 맞춘다 (장마다 같은 높이에서 시작한다).
+import { keepParticle } from '#lib/site.ts';
+import Media from '#src/components/Media.astro';
+import { STAGE_FIT, STAGE_SIDE, sideCandidates } from './copy.ts';
+import type { SlideProps } from './types.ts';
+
+type Props = SlideProps<'points'>;
+const { lesson, slide, phase } = Astro.props;
+const fit = slide.media ? STAGE_FIT.pointsMedia : STAGE_FIT.points;
+const side = slide.media ? sideCandidates(fit) : undefined;
+const style = `--fit: ${fit.at(-1)}${side ? `; --pic: ${STAGE_SIDE.picture.at(-1)}` : ''}`;
+---
+<div class:list={['sl-points', slide.media && 'has-media']} data-fit={fit.join(' ')} data-side={side ? JSON.stringify(side) : undefined} data-max-lines={side ? STAGE_SIDE.maxLines.points : undefined} style={style}>
+  {phase && <p class="sl-phase">{phase}</p>}
+  <h2 class="sl-title">{keepParticle(slide.title)}</h2>
+  <div class:list={['sl-points-body', slide.media && 'sl-side']}>
+    <ol class="sl-list sl-fit">
+      {slide.points.map((p, i) => <li><span class="sl-num" aria-hidden="true">{i + 1}</span><span class="sl-li-text">{keepParticle(p)}</span></li>)}
+    </ol>
+    {slide.media && <Media lesson={lesson} id={slide.media} caption={false} class="sl-media sl-side-media" />}
+  </div>
+</div>

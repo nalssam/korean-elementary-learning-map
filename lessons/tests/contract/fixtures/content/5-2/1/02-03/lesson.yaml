@@ -1,0 +1,328 @@
+# 시험용 가짜 명세입니다. 내용은 사실이 아니고 수업에 쓰는 자료가 아닙니다.
+# 두 차시 묶음의 본보기: 차시마다 도입·전개·정리, 읽기 자료, 연표·선 잇기·표·네 단, 지도에 놓기, 컬러링, 만들기 세트, 페이퍼크래프트.
+schema_version: 1
+id: 5-2/1/02-03
+title: 시험용 두 차시
+tagline: 두 차시 묶음의 본보기입니다. 시험에서만 씁니다.
+status: draft
+
+objectives:
+  - 시험용 목표 하나를 말한다.
+  - 시험용 목표 둘을 쓴다.
+
+sensitivity:
+  level: care
+  note: 시험용 주의 사항
+
+terms:
+  new:
+    - term: 길
+      meaning: 사람이 다니는 곳
+      facts: [f1]
+
+facts:
+  - id: f1
+    claim: 시험용 지도의 길은 서쪽에서 동쪽으로 이어진다.
+    sources:
+      - name: 시험용 출처
+        url: https://example.org/fact/3
+        quote: 시험용 근거 구절 셋
+        accessed: "2026-11-18"
+  - id: f2
+    claim: 시험용 연표의 둘째 해는 1446년이다.
+    sources:
+      - name: 시험용 출처
+        url: https://example.org/fact/4
+        quote: 시험용 근거 구절 넷
+        accessed: "2026-11-18"
+
+media:
+  - id: map
+    kind: map
+    file: media/map.svg
+    alt: 네모 안에 길 하나가 서쪽에서 동쪽으로 굽어 있는 지도
+    credit:
+      holder: 시험용 그린이
+      licence: original
+    facts: [f1]
+  - id: stone-line
+    kind: drawing
+    file: media/stone-line.svg
+    alt: 큰 돌 하나를 선으로 그린 그림
+    credit:
+      holder: 시험용 박물관
+      title: 시험용 큰 돌
+      source_url: https://example.org/item/1
+      licence: KOGL-1
+      checked: "2026-11-18"
+    change: traced
+  - id: sample
+    kind: photo
+    file: media/sample.png
+    alt: 누런 종이 한 장
+    credit:
+      holder: 시험용 사진가
+      title: 시험용 사진
+      source_url: https://example.org/item/2
+      licence: CC-BY-SA
+      licence_url: https://creativecommons.org/licenses/by-sa/3.0/
+      checked: "2026-11-18"
+
+passages:
+  - id: old-rule
+    title: 시험용 옛 규칙
+    text:
+      - 길을 막으면 안 된다고 적혀 있습니다.
+      - 길을 고친 사람에게 상을 준다고 적혀 있습니다.
+    source: 시험용 기록을 쉬운 말로 풀어 썼습니다.
+    facts: [f1]
+
+flow:
+  - lesson: 2
+    phase: 도입
+    minutes: 5
+    title: 2차시 도입
+    do:
+      - 지도를 띄웁니다.
+    uses: [slides]
+    slides: [1, 2]
+  - lesson: 2
+    phase: 전개
+    minutes: 30
+    title: 2차시 전개
+    do:
+      - 읽기 자료를 읽게 합니다.
+    ask:
+      - q: 길은 어디로 이어지나요?
+    uses: [worksheet, slides]
+    slides: [3, 4]
+    facts: [f1]
+  - lesson: 2
+    phase: 정리
+    minutes: 5
+    title: 2차시 정리
+    do:
+      - 한 문장으로 말하게 합니다.
+  - lesson: 3
+    phase: 도입
+    minutes: 5
+    title: 3차시 도입
+    do:
+      - 지난 시간 학습지를 다시 펴게 합니다.
+    uses: [slides, worksheet]
+    slides: [5, 5]
+  - lesson: 3
+    phase: 전개
+    minutes: 25
+    title: 3차시 전개
+    do:
+      - 지도에 이름표를 놓게 합니다.
+    uses: [web_activity, coloring, slides]
+    slides: [6, 6]
+  - lesson: 3
+    phase: 정리
+    minutes: 10
+    title: 3차시 정리
+    do:
+      - 확인 퀴즈를 풉니다.
+    uses: [quiz, cards, slides]
+    slides: [7, 8]
+
+slides:
+  - layout: title
+    title: 시험용 두 차시
+  - layout: question
+    kicker: 오늘의 물음
+    title: 길은 어디로 이어질까요?
+    media: sample
+  - layout: passage
+    passage: old-rule
+  - layout: points
+    title: 규칙에서 알 수 있는 것
+    points: [길을 막지 않습니다., 길을 고치면 상을 받습니다.]
+    facts: [f1]
+  - layout: title
+    title: 지도에 놓아 봅시다
+    subtitle: 3차시
+  - layout: activity
+    title: 이름표를 놓아 봅시다
+    instructions: [지도를 봅니다., 이름표를 알맞은 곳에 놓습니다.]
+    minutes: 15
+  - layout: quiz
+    item: 3
+  - layout: closing
+    title: 오늘 알게 된 것을 말해 봅시다
+
+worksheet:
+  title: 시험용 두 차시 학습지
+  subtitle: 읽고, 잇고, 채우기
+  print:
+    per: student
+    sides: duplex
+    orientation: landscape
+  pages:
+    - heading: 2차시
+      blocks:
+        - type: passage
+          passage: old-rule
+        - type: note
+          title: 낱말
+          text: [길은 사람이 다니는 곳입니다.]
+          source: 시험용 풀이
+          facts: [f1]
+        - type: table
+          columns: [규칙, 알 수 있는 것]
+          rows:
+            - [길을 막으면 안 된다, ""]
+            - [1446, ""]
+        - type: observe_infer
+          target: 지도
+          media: map
+          lines: 2
+    - heading: 3차시
+      blocks:
+        - type: timeline
+          points:
+            - when: 1392
+              what: 첫 해
+              facts: [01/f2]
+            - when: 1446년
+              what: 둘째 해
+              blank: true
+              facts: [f2]
+        - type: match
+          pairs:
+            - left: 서쪽
+              right: 길이 시작하는 곳
+            - left: 동쪽
+              right: 길이 끝나는 곳
+        - type: columns
+          columns:
+            - - type: box
+                label: 하나
+                height_mm: 30
+            - - type: box
+                label: 둘
+                height_mm: 30
+            - - type: box
+                label: 셋
+                height_mm: 30
+            - - type: box
+                label: 넷
+                height_mm: 30
+        - type: quiz
+          items: [1, 2]
+  guide:
+    - where: 표
+      text: 규칙에서 길이 중요했다는 것을 찾으면 됩니다.
+  facts: [f1, f2]
+
+quiz:
+  items:
+    - type: ox
+      lesson: 2
+      q: 시험용 지도의 길은 서쪽에서 동쪽으로 이어진다.
+      answer: true
+      explain: 서쪽에서 동쪽으로 이어집니다.
+      facts: [f1]
+    - type: choice
+      lesson: 2
+      q: 길이 시작하는 곳은 어디인가요?
+      choices: [서쪽, 동쪽, 남쪽, 북쪽]
+      answer: 1
+      explain: 서쪽에서 시작합니다.
+      facts: [f1]
+    - type: short
+      lesson: 3
+      q: 시험용 연표의 둘째 해는 몇 년인가요?
+      answer: "1446"
+      explain: 1446년입니다.
+      facts: [f2]
+    - type: ox
+      q: 시험용 연표의 둘째 해는 1392년이다.
+      answer: false
+      explain: 둘째 해는 1446년입니다.
+      facts: [f2, 01/f2]
+
+assets:
+  # 시험용 명세 가운데 페이퍼크래프트가 ready 인 것은 이 묶음 하나다 (안내 페이지의 버튼과 인쇄 줄, /<id>/papercraft/ 를 시험한다).
+  # 전개도 모듈은 고인돌 초안의 것을 빌려 쓴다. 모듈의 쪽수가 바뀌면 pages 를 같이 고친다 (npm run check 가 알려 준다).
+  papercraft:
+    state: ready
+    title: 시험용 종이 돌
+    module: dolmen-table
+    pages: 3
+    print:
+      per: group
+      materials: [가위, 풀]
+    steps:
+      - 실선을 따라 조각을 오립니다.
+      - 점선을 따라 접고 풀칠 자리를 붙입니다.
+    texts:
+      - 길을 따라 돌을 옮깁니다.
+      - 돌을 세웁니다.
+      - 돌을 얹습니다.
+      - 돌 둘레를 정리합니다.
+    try_it:
+      - 카드를 섞은 뒤 차례대로 놓아 봅시다.
+    reflect:
+      - 왜 그 차례라고 생각했나요?
+    facts: [f1]
+  coloring:
+    state: ready
+    title: 큰 돌 색칠하기
+    media: stone-line
+    look_for:
+      - 돌의 모서리가 몇 개인지 세어 봅시다.
+  making_kit:
+    state: ready
+    title: 시험용 만들기
+    when: extended
+    materials: [두꺼운 종이, 연필]
+    steps:
+      - 종이를 둥글게 오립니다.
+      - 연필을 가운데에 꽂습니다.
+    safety: 가위를 쓸 때 조심합니다.
+  escape:
+    state: skip
+    reason: 시험용이라 만들지 않습니다.
+  virtual3d:
+    state: planned
+    idea: 시험용 계획
+  web_activity:
+    state: ready
+    title: 지도에 이름표 놓기
+    instructions: 이름표를 알맞은 곳에 놓아 봅시다.
+    activity:
+      kind: place
+      media: map
+      spots:
+        - label: 시작하는 곳
+          x: 10
+          y: 75
+          why: 길의 서쪽 끝입니다.
+        - label: 끝나는 곳
+          x: 90
+          y: 50
+      facts: [f1]
+  cards:
+    state: ready
+    title: 시험용 두 차시 카드
+    cards:
+      - front: 길
+        facts: [f1]
+      - front: 서쪽
+        back: 길이 시작하는 곳
+        facts: [f1]
+      - front: 동쪽
+        back: 길이 끝나는 곳
+        facts: [f1]
+      - front: 1446
+        back: 시험용 연표의 둘째 해
+        facts: [f2]
+      - front: 옛 규칙
+        back: 길을 막지 말라는 규칙
+        facts: [f1]
+    print:
+      per: pair
+      paper: A4 두꺼운 종이

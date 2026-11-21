@@ -1,0 +1,13 @@
+/* 컬러링 도안 한 쪽. 본문(.sheet-body)을 세로로 나눈다: 그림이 남는 높이를 모두 쓰고, '찾아볼 것'은 제 높이만 쓴다. */
+/* 아래 여백은 바닥글 앞의 틈이다 (R29). 값은 coloring.astro 가 준다 (layout.ts 의 footReserve). */
+.coloring { display: flex; flex-direction: column; height: 100%; padding-bottom: var(--foot-reserve, 3.2mm); color: var(--ink); }
+.coloring-picture { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+.coloring-picture img { flex: 1 1 0; min-height: 0; width: 100%; }
+.coloring-picture figcaption { flex: none; }
+
+/* 찾아볼 것: 하나씩 해 보고 네모에 표시한다 */
+.coloring-look { flex: none; margin-top: 4mm; padding-top: 3mm; border-top: 0.4mm solid var(--ink-dim); }
+.coloring-look-title { margin: 0 0 1.5mm; font-size: 12pt; font-weight: 800; line-height: 1.4; }
+.coloring-tasks { display: grid; gap: 1.5mm; margin: 0; padding: 0; list-style: none; }
+.coloring-tasks li { position: relative; padding-left: 8.5mm; font-size: 13pt; line-height: 1.5; }
+.coloring-tasks li::before { content: ''; position: absolute; left: 0; top: 1mm; width: 5mm; height: 5mm; border: 0.4mm solid var(--ink); border-radius: 1mm; box-sizing: border-box; }

@@ -1,0 +1,42 @@
+---
+// QR 코드 한 개. 빌드할 때 SVG 로 그린다 (바깥 서비스를 부르지 않는다).
+// 함께 쓰는 컴포넌트다 (계약). 차시 자료실, 자료 카드, 수업 화면의 QR 창이 같이 쓴다. 크기는 부르는 쪽이 .qr 에 정한다.
+// 한 곳만 브라우저에서 그린다: 내 자료함(/my/)은 카드를 브라우저에서 만들어서 같은 qrcode 꾸러미로 같은 꼴의 SVG 를 그린다 (catalog/my.ts 의 qrSvg).
+// 주소는 부르는 쪽이 absoluteUrl() 로 만들어 준다. 종이에 박히는 주소라서 브라우저의 location 으로 만들지 않는다 (docs/CONTRACT.md 3절).
+import QRCode from 'qrcode';
+
+interface Props {
+  /** 온전한 주소 */
+  url: string;
+  /** 화면 낭독기에 읽어 줄 이름. 예: "확인 퀴즈 QR 코드" */
+  label: string;
+}
+const { url, label } = Astro.props;
+// 흐린 프로젝터 화면이나 구겨진 종이에서도 읽히도록 오류 복원 수준을 M 으로 둔다
+const { modules } = QRCode.create(url, { errorCorrectionLevel: 'M' });
+const size = modules.size;
+// 둘레에 네 칸의 흰 여백 (QR 규격의 조용한 자리)
+const QUIET = 4;
+// 가로로 이어진 검은 칸을 한 줄로 묶어 그린다
+let d = '';
+for (let y = 0; y < size; y++) {
+  for (let x = 0; x < size; x++) {
+    if (!modules.get(y, x)) continue;
+    let run = 1;
+    while (x + run < size && modules.get(y, x + run)) run++;
+    d += `M${x + QUIET} ${y + QUIET}h${run}v1h-${run}z`;
+    x += run;
+  }
+}
+const box = size + QUIET * 2;
+---
+<svg class="qr" viewBox={`0 0 ${box} ${box}`} role="img" aria-label={label} shape-rendering="crispEdges">
+  <rect class="qr-ground" width={box} height={box} />
+  <path class="qr-ink" d={d} />
+</svg>
+
+<style is:global>
+  /* 바탕은 늘 밝게, 칸은 늘 짙게 (읽는 기계가 어두운 칸을 찾는다). 부르는 쪽의 CSS 가 없어도 읽히는 QR 이 나오게 여기에 둔다. */
+  .qr-ground { fill: var(--card); }
+  .qr-ink { fill: var(--navy); }
+</style>

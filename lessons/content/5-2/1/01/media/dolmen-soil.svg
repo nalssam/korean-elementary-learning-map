@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 460" role="img" aria-labelledby="t">
+  <title id="t">덮개돌이 받침돌 위에 얹힌 곳을 가까이에서 본 그림. 위의 덮개돌과 아래의 받침돌 사이에 얇게 눌린 흙이 끼어 있다.</title>
+  <defs>
+    <pattern id="soil" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="#f3f0e8"/><circle cx="3" cy="3" r="1.6" fill="#586875"/><circle cx="9" cy="9" r="1.6" fill="#586875"/></pattern>
+    <pattern id="earth" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="#ffffff"/><line x1="0" y1="0" x2="0" y2="10" stroke="#586875" stroke-width="1.4"/></pattern>
+    <marker id="ah" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#18766b"/></marker>
+    <pattern id="soilbig" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="#f3f0e8"/><circle cx="4" cy="4" r="2.4" fill="#586875"/><circle cx="12" cy="12" r="2.4" fill="#586875"/></pattern>
+    <clipPath id="frame"><rect x="3" y="3" width="594" height="454" rx="14"/></clipPath>
+  </defs>
+  <rect x="1.5" y="1.5" width="597" height="457" rx="16" fill="#fbfaf6" stroke="#e4dfd3" stroke-width="3"/>
+  <g clip-path="url(#frame)">
+    <path d="M-10,-10 L610,-10 L610,176 L540,184 L470,178 L400,186 L300,182 L200,188 L120,180 L60,186 L-10,180 Z" fill="#c4bcaa" stroke="#132c3d" stroke-width="3" stroke-linejoin="round"/>
+    <rect x="176" y="222" width="248" height="260" rx="6" fill="#d8d2c4" stroke="#132c3d" stroke-width="3"/>
+    <path d="M168,188 L200,188 L300,182 L400,186 L432,186 C446,196 444,214 430,224 L170,224 C156,214 154,198 168,188 Z" fill="url(#soilbig)" stroke="#132c3d" stroke-width="3" stroke-linejoin="round"/>
+  </g>
+  <text x="300" y="100" font-family="Pretendard, 'Noto Sans KR', sans-serif" font-size="26" font-weight="700" fill="#132c3d" text-anchor="middle">덮개돌</text>
+  <text x="300" y="340" font-family="Pretendard, 'Noto Sans KR', sans-serif" font-size="26" font-weight="700" fill="#132c3d" text-anchor="middle">받침돌</text>
+  <text x="566" y="300" font-family="Pretendard, 'Noto Sans KR', sans-serif" font-size="26" font-weight="700" fill="#132c3d" text-anchor="end">눌린 흙</text>
+  <line x1="500" y1="268" x2="444" y2="216" stroke="#18766b" stroke-width="3" stroke-linecap="round"/>
+</svg>

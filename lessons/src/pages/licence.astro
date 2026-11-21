@@ -1,0 +1,92 @@
+---
+// 이용 조건: 교사가 해도 되는 일과 하면 안 되는 일을 쉬운 말로 적는다.
+// 글과 직접 만든 그림은 CC BY-NC-SA 4.0, 코드는 MIT, 남의 사진·그림은 원래의 조건을 따른다.
+// 이용 조건을 말하는 자리에는 SITE.licence.name 과 SITE.licenceNote 를 함께 쓴다 (docs/CONTRACT.md 14절).
+import { absoluteUrl } from '#lib/content.ts';
+import { SITE } from '#lib/site.ts';
+import SiteLayout from '#src/layouts/SiteLayout.astro';
+import { href } from '#src/lib/url.ts';
+import PageHead from '#src/components/site/PageHead.astro';
+import { textbookLabel } from '#src/components/site/data.ts';
+
+const credit = `${SITE.author}, ${SITE.name} (${absoluteUrl('/')}), ${SITE.licence.name}`;
+// 이 페이지는 요약이다. 조건의 전문(한국어)과 코드의 라이선스 파일로 가는 링크를 둔다.
+const legalcode = SITE.licence.url.replace(/deed\.ko$/, 'legalcode.ko');
+const codeLicence = `${SITE.repo}/blob/main/lessons/LICENSE`;
+---
+<SiteLayout title="이용 조건" current="licence">
+  <PageHead kicker={SITE.licence.name} title="이용 조건">수업에 쓰고, 고쳐 쓰고, 동료와 나누어도 됩니다. 팔 수는 없습니다.</PageHead>
+  <article class="prose lc-doc">
+
+    <h2>글과 직접 만든 그림</h2>
+    <p>이 사이트의 글, 수업 화면, 학습지, 카드, 직접 그린 그림과 도안, 그리고 여기에서 내려받는 PDF와 PPTX는 <a href={SITE.licence.url}>{SITE.licence.name}</a>(저작자표시-비영리-동일조건변경허락) 조건으로 쓸 수 있습니다. {SITE.licenceNote}</p>
+
+    <div class="lc-rules">
+      <section class="lc-rule is-may" aria-labelledby="rule-may">
+        <h3 id="rule-may">해도 되는 일</h3>
+        <ul>
+          <li>수업에서 띄우고, 인쇄해서 학생에게 나누어 줍니다.</li>
+          <li>학급 누리집이나 학교 자료실에 올립니다.</li>
+          <li>우리 반에 맞게 고쳐 씁니다.</li>
+          <li>다른 교사에게 파일이나 주소를 건넵니다.</li>
+        </ul>
+      </section>
+      <section class="lc-rule is-must" aria-labelledby="rule-must">
+        <h3 id="rule-must">지킬 일</h3>
+        <ul>
+          <li>출처를 남깁니다. 인쇄물 바닥글에 적혀 있으니 지우지 않으면 됩니다.</li>
+          <li>고친 자료를 나눌 때는 고쳤다고 밝히고, 같은 조건으로 나눕니다. 조건의 이름은 {SITE.licence.name}입니다.</li>
+        </ul>
+      </section>
+      <section class="lc-rule is-not" aria-labelledby="rule-not">
+        <h3 id="rule-not">하면 안 되는 일</h3>
+        <ul>
+          <li>돈을 받고 팔지 않습니다.</li>
+          <li>유료 강의, 유료 자료집, 유료 서비스에 넣지 않습니다.</li>
+          <li>출처를 지우고 직접 만든 것처럼 올리지 않습니다.</li>
+        </ul>
+      </section>
+    </div>
+
+    <p>이 글은 이해를 돕는 요약이고, 정확한 조건은 <a href={legalcode}>라이선스 전문</a>을 따릅니다.</p>
+    <p>출처는 이렇게 적으면 됩니다.</p>
+    <p class="lc-credit">{credit}</p>
+    <p>쓰려는 곳이 여기에 맞는지 헷갈리면 <a href={href('/report/')}>오류 제보</a>에 적힌 곳으로 물어봅니다.</p>
+
+    <h2>다른 곳에서 가져온 사진과 그림</h2>
+    <p>다른 곳에서 가져온 사진과 그림은 {SITE.licence.name} 에 들지 않고 저마다의 조건(공공누리 제1유형, CC BY, CC BY-SA 등)을 따릅니다. 차시 자료실 아래쪽 ‘그림 출처’에 사진마다 소장처, 이용 조건, 원본 주소가 있습니다.</p>
+    <p>CC BY-SA 사진은 고치면 고친 것도 같은 조건으로만 나눌 수 있어서, 이 사이트는 자르거나 덧그리지 않고 그대로 씁니다. 학습지를 고쳐 쓸 때에도 사진은 그대로 두고 찍힌 출처를 지우지 않습니다.</p>
+
+    <h2>코드</h2>
+    <p>사이트와 자료를 만드는 코드는 MIT 라이선스입니다. 저작권 표시를 남기면 누구나 가져다 쓰고 고칠 수 있습니다. 코드는 <a href={SITE.repo}>깃허브 저장소</a>에 있고, 조건의 전문은 <a href={codeLicence}>LICENSE 파일</a>에 있습니다. 검색 기능은 Pagefind(MIT)를 씁니다.</p>
+
+    <h2>교과서에서 가져온 것</h2>
+    <p>단원명, 차시 번호, 쪽수는 {textbookLabel()}의 것입니다. 교과서의 문장과 그림은 이 사이트에 없습니다.</p>
+
+    <h2 id="standards">성취기준 요약</h2>
+    <p>성취기준 코드 옆의 한 줄 요약은 교육부가 고시한 문장이 아닙니다. 공개된 자료인 한국 초등 학습지도(Korean Elementary Learning Map, DECK, MIT 라이선스)의 요약을 가져왔습니다. 받은 곳과 고친 것은 저장소의 NOTICE.md 파일에 적어 두었습니다.</p>
+
+    <h2>글꼴</h2>
+    <p>글꼴은 Pretendard(길형진)이고, <a href="https://openfontlicense.org/open-font-license-official-text/">SIL Open Font License 1.1</a> 조건으로 씁니다.</p>
+  </article>
+</SiteLayout>
+
+<style>
+  .lc-doc { margin-top: var(--s5); }
+  .lc-doc > h2:first-child { margin-top: var(--s5); }
+  /* 해도 되는 일 · 지킬 일 · 하면 안 되는 일: 납작한 흰 카드 셋. 머리의 짧은 선 색으로 갈래를 가른다 (하면 안 되는 일만 산호색). */
+  .lc-rules { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s4); margin-block: var(--s5); }
+  .lc-rule { display: grid; align-content: start; gap: var(--s3); padding: var(--s5) var(--s4); border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
+  .lc-rule h3 { display: grid; gap: var(--s2); font-size: var(--fs-md); font-weight: var(--fw-heading); }
+  .lc-rule h3::before { content: ''; width: var(--s6); height: 3px; border-radius: 2px; background: var(--teal); }
+  .lc-rule.is-must h3::before { background: var(--navy); }
+  .lc-rule.is-not h3::before { background: var(--coral); }
+  .lc-rule ul { display: grid; gap: var(--s2); font-size: var(--fs-sm); line-height: 1.6; }
+  .lc-rule li { position: relative; padding-left: var(--s4); }
+  .lc-rule li::before { content: ''; position: absolute; left: 0; top: 0.72em; width: 5px; height: 5px; border-radius: 50%; background: var(--gray); }
+  /* 출처 적는 본보기: 종이색 상자 하나 */
+  .lc-credit { padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper); font-size: var(--fs-sm); font-weight: 600; overflow-wrap: anywhere; }
+  @media (max-width: 999.98px) {
+    .lc-rules { grid-template-columns: minmax(0, 1fr); max-width: 44rem; }
+  }
+</style>

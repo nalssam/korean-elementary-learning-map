@@ -1,0 +1,49 @@
+---
+// 인쇄물 한 쪽. docs/CONTRACT.md 7절의 꼴(.sheet > .sheet-head + .sheet-body + .sheet-foot)을 내놓는다.
+// 학습지·카드·컬러링·페이퍼크래프트 페이지가 모두 이것으로 쪽을 만든다.
+// props 와 class 이름·치수는 바꾸지 않는다 (페이퍼크래프트 담당이 같이 기대고 있다).
+// 바깥 꼴(<section class="sheet" data-orientation>, 글만 든 <footer class="sheet-foot">)은 계약 시험(tests/contract/frame.test.ts)이 글자 그대로 본다.
+//
+// 머리(.sheet-head)는 22mm 로 고정이다. 맨 윗줄에 학기·단원·차시와 반·이름 칸, 그 아래에 title 과 sub 가 놓인다.
+// title 은 30자, sub 는 40자까지 한 줄에 들어간다 (세로 190mm 기준). 둘이 한 줄에 들어가지 않으면 sub 가 아랫줄로 내려간다.
+// 그보다 긴 글은 본문 위에 겹쳐 찍히고, render-pdf 가 빌드를 멈춘다 (7절 조건 2).
+import { sheetFooter } from '#lib/content.ts';
+import type { PrintJob } from '#lib/content.ts';
+import type { Lesson } from '#schema/lesson.ts';
+import { sheetKicker } from './layout.ts';
+
+interface Props {
+  lesson: Lesson;
+  /** printJobs(lesson) 가운데 이 페이지의 것. 방향과 전체 쪽수를 여기에서 얻는다. */
+  job: PrintJob;
+  /** 몇째 쪽인가 (1부터) */
+  no: number;
+  title: string;
+  sub?: string;
+  /** 반·이름 칸. student: 반·번호·이름 · group: 모둠 이름 · none: 없음 */
+  name?: 'student' | 'group' | 'none';
+}
+const { lesson, job, no, title, sub, name = 'none' } = Astro.props;
+---
+<section class="sheet" data-orientation={job.print.orientation}>
+  <header class="sheet-head">
+    <div class="sheet-head-in">
+      <p class="sheet-kicker">{sheetKicker(lesson)}</p>
+      {name === 'student' && (
+        <div class="sheet-name">
+          <span class="sheet-blank"></span><span>반</span>
+          <span class="sheet-blank"></span><span>번</span>
+          <span class="sheet-name-label">이름</span><span class="sheet-blank sheet-blank-wide"></span>
+        </div>
+      )}
+      {name === 'group' && (
+        <div class="sheet-name">
+          <span class="sheet-blank sheet-blank-wide"></span><span>모둠</span>
+        </div>
+      )}
+      <div class="sheet-title"><strong>{title}</strong>{sub && <span>{sub}</span>}</div>
+    </div>
+  </header>
+  <div class="sheet-body"><slot /></div>
+  <footer class="sheet-foot">{sheetFooter(lesson)} · {no}/{job.pages}</footer>
+</section>

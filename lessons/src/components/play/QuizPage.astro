@@ -1,0 +1,144 @@
+---
+// 확인 퀴즈 화면 전체. 페이지 파일(src/pages/[semester]/[unit]/[bundle]/quiz.astro)은 id 만 넘긴다.
+// 문항은 모두 HTML 로 찍어 두고, 브라우저 스크립트(quiz.ts)는 한 문제씩 보여 주며 맞고 틀림을 가린다.
+// 명세의 글은 글자로만 넣는다. 정답은 data- 속성에 싣는다 (브라우저 스크립트가 lib/content.ts 를 읽을 수 없다. 4절).
+// 아이가 읽는 명세의 글(물음, 보기, 정답, 풀이)은 keepParticle() 을 거친다 (‘…’은 이 줄 끝과 다음 줄 첫머리로 갈리지 않게. 15절).
+// OX 문항의 표시와 그 읽는 말은 MARK·MARK_LABEL 에서 가져온다. 손으로 적지 않는다 (9절).
+import StudentLayout from './StudentLayout.astro';
+import { answerText, lessonRoute, loadLesson, quizByLesson, scored } from '#lib/content.ts';
+import { ASSET_ROUTE, MARK, MARK_LABEL, keepParticle as kp } from '#lib/site.ts';
+import { href } from '#src/lib/url.ts';
+
+interface Props { id: string }
+const lesson = loadLesson(Astro.props.id);
+const isScored = scored(lesson);
+// 문항이 없는 차시는 고르지 않는다. 두 차시 묶음이어도 한쪽에만 문항이 있으면 고르는 화면 없이 바로 푼다.
+const groups = quizByLesson(lesson).filter((g) => g.items.length > 0);
+const multi = groups.length > 1;
+const playReady = lesson.assets.web_activity.state === 'ready';
+const OX = [{ value: 'true', key: 'yes' }, { value: 'false', key: 'no' }] as const;
+---
+<StudentLayout lesson={lesson} asset="quiz" heading={lesson.title}>
+  <quiz-runner class="quiz" data-scored={String(isScored)}>
+    {multi && (
+      <section class="quiz-pick" data-screen="pick" aria-labelledby="quiz-pick-title">
+        <h2 id="quiz-pick-title" class="quiz-screen-title" tabindex="-1">어느 차시 문제를 풀까요?</h2>
+        <ul class="quiz-pick-list">
+          {groups.map((g) => (
+            <li>
+              <button type="button" class="pick-btn" data-start={g.lesson}>
+                <span class="pick-main">{g.lesson}차시 문제</span>
+                <span class="pick-sub">{g.items.length}문제</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    {groups.map((g) => g.items.map(({ no, item }, i) => (
+      <section class="q" data-screen="q" data-group={g.lesson} data-index={i} data-type={item.type}
+        data-answer={String(item.answer)}
+        data-accept={item.type === 'short' ? JSON.stringify(item.accept.map(String)) : undefined}
+        data-answer-text={answerText(item)}
+        aria-labelledby={`q${no}-text`}>
+        <div class="q-progress">
+          <p class="q-count">
+            {multi && <span class="q-lesson">{g.lesson}차시</span>}
+            <span aria-hidden="true"><b>{i + 1}</b> / {g.items.length}</span>
+            <span class="visually-hidden">{g.items.length}문제 가운데 {i + 1}번 문제</span>
+          </p>
+          <ol class="q-steps" aria-hidden="true">
+            {g.items.map((_, k) => <li class:list={[{ done: k < i, now: k === i }]} />)}
+          </ol>
+        </div>
+
+        <h2 class="q-text" id={`q${no}-text`} tabindex="-1">{kp(item.q)}</h2>
+
+        {item.type === 'ox' && (
+          <div class="ox" role="group" aria-label={`${MARK_LABEL.yes}, ${MARK_LABEL.no} 가운데 고르기`}>
+            {OX.map((o) => (
+              <button type="button" class="ans ox-btn" data-value={o.value} aria-label={MARK_LABEL[o.key]}>
+                <span class="ox-mark" aria-hidden="true">{MARK[o.key]}</span>
+                <span class="ox-say" aria-hidden="true">{MARK_LABEL[o.key]}</span>
+                <span class="ans-tag" data-tag aria-hidden="true"></span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {item.type === 'choice' && (
+          <ol class="choices" aria-label="보기">
+            {item.choices.map((c, k) => (
+              <li>
+                <button type="button" class="ans choice-btn" data-value={String(k + 1)}>
+                  <span class="choice-no" aria-hidden="true">{k + 1}</span>
+                  <span class="choice-text"><span class="visually-hidden">{k + 1}번 </span>{kp(c)}</span>
+                  <span class="ans-tag" data-tag></span>
+                </button>
+              </li>
+            ))}
+          </ol>
+        )}
+
+        {item.type === 'short' && (
+          <form class="short" novalidate>
+            <label class="short-label" for={`q${no}-input`}>답을 써 봅시다</label>
+            <div class="short-row">
+              <input class="short-input" id={`q${no}-input`} type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" />
+              <button type="submit" class="btn btn-primary short-submit">확인하기</button>
+            </div>
+            <p class="short-hint" data-hint aria-live="polite"></p>
+          </form>
+        )}
+
+        <div class="feedback" data-feedback hidden>
+          <p class="feedback-head" tabindex="-1">
+            <svg class="fb-icon fb-right" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M7.5 12.5 10.5 15.5 16.5 9" /></svg>
+            <svg class="fb-icon fb-wrong" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 7v6M12 16.5v.5" /></svg>
+            <span data-verdict></span>
+          </p>
+          <p class="feedback-answer" data-correct hidden>
+            <span class="answer-label">정답</span>
+            {item.type === 'ox'
+              ? <b><span class="answer-mark" aria-hidden="true">{answerText(item)}</span> <span class="answer-say">{MARK_LABEL[item.answer ? 'yes' : 'no']}</span></b>
+              : <b>{kp(answerText(item))}</b>}
+          </p>
+          <p class="feedback-explain">{kp(item.explain)}</p>
+          <button type="button" class="btn btn-primary next-btn" data-next>{i + 1 < g.items.length ? '다음 문제' : '끝내기'}</button>
+        </div>
+      </section>
+    )))}
+
+    <section class="quiz-end" data-screen="end" aria-labelledby="quiz-end-title">
+      <h2 id="quiz-end-title" class="quiz-screen-title" tabindex="-1">문제를 다 풀었습니다</h2>
+      {isScored && <p class="quiz-end-score" data-score></p>}
+      {/* 틀린 문제만 정답·풀이와 함께 다시 보여 준다. 처음부터 다시 풀지 않아도 풀이를 읽을 수 있게. 모두 맞혔으면 이 칸은 없다. */}
+      <section class="review" data-review aria-labelledby="review-title" hidden>
+        <h3 class="review-title" id="review-title">다시 읽어 볼 문제</h3>
+        <ol class="review-list">
+          {groups.map((g) => g.items.map(({ item }, i) => (
+            <li class="review-item" data-review-for={`${g.lesson}-${i}`} hidden>
+              <p class="review-q"><span class="review-no">{i + 1}번</span> {kp(item.q)}</p>
+              <p class="feedback-answer">
+                <span class="answer-label">정답</span>
+                {item.type === 'ox'
+                  ? <b><span class="answer-mark" aria-hidden="true">{answerText(item)}</span> <span class="answer-say">{MARK_LABEL[item.answer ? 'yes' : 'no']}</span></b>
+                  : <b>{kp(answerText(item))}</b>}
+              </p>
+              <p class="review-explain">{kp(item.explain)}</p>
+            </li>
+          )))}
+        </ol>
+      </section>
+      <div class="quiz-end-actions">
+        <button type="button" class="btn btn-primary" data-restart>처음부터 다시 풀기</button>
+        {multi && groups.map((g) => <button type="button" class="btn btn-quiet" data-start={g.lesson} data-other>{g.lesson}차시 문제 풀기</button>)}
+        {playReady && <a class="btn btn-quiet" href={href(lessonRoute(lesson.id, ASSET_ROUTE.web_activity))}>웹 활동 하러 가기</a>}
+      </div>
+    </section>
+  </quiz-runner>
+  <script>
+    import './quiz.ts';
+  </script>
+</StudentLayout>

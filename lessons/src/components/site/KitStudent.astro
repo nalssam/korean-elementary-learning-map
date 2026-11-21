@@ -1,0 +1,43 @@
+---
+// 확인 퀴즈와 웹 활동: 아이들이 여는 페이지에 관한 안내와 접어 둔 문항과 정답.
+// QR 과 여는 링크는 '자료'의 자료 카드(QR 단추가 여는 작은 창)에 있다. 이 페이지에서 QR 을 그리는 곳은 그 카드뿐이다 (docs/CONTRACT.md 6절).
+// 정답은 접어 둔다. 수업 중에 이 페이지를 교실 화면에 띄워도 정답이 보이지 않는다.
+import { answerText, quizByLesson, scored } from '#lib/content.ts';
+import { ASSET_LABEL, MARK_LABEL } from '#lib/site.ts';
+import type { Lesson } from '#schema/lesson.ts';
+import Fold from './Fold.astro';
+
+interface Props { lesson: Lesson }
+const { lesson } = Astro.props;
+const web = lesson.assets.web_activity.state === 'ready';
+const groups = quizByLesson(lesson).filter((g) => g.items.length > 0);
+const multi = quizByLesson(lesson).length > 1;
+const count = lesson.quiz.items.length;
+// 두 차시 묶음은 차시마다 몇 문항인지 함께 적는다
+const perLesson = multi ? groups.map((g) => `${g.lesson}차시 ${g.items.length}문항`).join(' · ') : '';
+---
+<section class="sec guide-sec" id="student" aria-labelledby="student-title">
+  <h2 class="sec-title" id="student-title">{web ? `${ASSET_LABEL.quiz}와 ${ASSET_LABEL.web_activity}` : ASSET_LABEL.quiz}</h2>
+  <p class="sec-note" data-pagefind-ignore>아이들이 QR 코드를 찍거나 주소를 넣어 엽니다. 이름을 묻지 않고, 답을 저장하거나 다른 곳으로 보내지 않습니다.{!scored(lesson) && ' 이 차시에서는 점수를 보여 주지 않습니다.'}{lesson.slides.length > 0 && ' 수업 화면의 QR 버튼(q 키)을 눌러도 같은 QR 코드를 띄울 수 있습니다.'}</p>
+  <div class="folds">
+    <Fold title="문항과 정답" count={`${count}문항${perLesson && ` (${perLesson})`}`} id="quiz-key">
+      {groups.map((g) => (
+        <>
+          {multi && <p class="fold-sub">{g.lesson}차시</p>}
+          <ol class="quiz-items">
+            {g.items.map(({ no, item }) => (
+              <li value={no}>
+                <p class="quiz-q">{item.q}</p>
+                {item.type === 'choice' && <ol class="quiz-choices">{item.choices.map((c) => <li>{c}</li>)}</ol>}
+                <p class="quiz-a"><strong>정답</strong> {item.type === 'ox'
+                  ? <><span class="quiz-mark" aria-hidden="true">{answerText(item)}</span> {MARK_LABEL[item.answer ? 'yes' : 'no']}</>
+                  : answerText(item)}</p>
+                <p class="quiz-why">{item.explain}</p>
+              </li>
+            ))}
+          </ol>
+        </>
+      ))}
+    </Fold>
+  </div>
+</section>

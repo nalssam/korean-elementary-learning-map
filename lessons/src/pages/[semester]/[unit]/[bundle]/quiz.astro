@@ -1,0 +1,9 @@
+---
+// 확인 퀴즈 (학생용, QR 로 연다). 화면은 src/components/play/QuizPage.astro 가 그린다.
+// 퀴즈는 모든 차시에 있으므로 주소는 lessonPaths() 전체다.
+import QuizPage from '#src/components/play/QuizPage.astro';
+import { lessonPaths } from '#lib/content.ts';
+
+export function getStaticPaths() { return lessonPaths(); }
+---
+<QuizPage id={Astro.props.id} />

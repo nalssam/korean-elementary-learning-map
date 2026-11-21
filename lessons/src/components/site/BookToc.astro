@@ -1,0 +1,74 @@
+---
+// 교과서 목차 (R44): 한 학기의 단원과 묶음. 학기·단원·차시 자료실 페이지가 같은 목차를 쓴다.
+// 넓은 화면(1100px 이상)에서는 왼쪽에 따라오고(place="rail"), 좁은 화면에서는 맨 위의 '목차' 상자 안에 든다(place="fold").
+// 두 자리 모두 HTML 에 있고 CSS 가 하나만 보여 준다. 스크립트 없이 읽히고 눌린다.
+// - 실리는 묶음에만 링크를 건다. 아직인 묶음은 차시 번호와 쪽수만 흐리게 둔다 (화면 읽기 프로그램에는 '준비 중'을 붙인다).
+// - 학기 페이지에서는 모든 단원의 묶음을 펼치고, 단원·차시 페이지에서는 지금 단원의 묶음만 펼친다 (목차가 화면보다 길어지지 않게).
+// - 지금 페이지(학기·단원·묶음)에 aria-current="page". 차시 자료실에서는 지금 묶음 아래에 그 페이지의 길잡이(sections)를 단다.
+// - 학기 페이지의 단원 링크는 그 페이지 안의 단원 칸(#unit-N)으로 간다. 다른 페이지에서는 단원 페이지로 간다.
+// 차시표의 focus 는 찍지 않는다 (docs/CONTRACT.md 3절).
+import { lessonRoute, lessonsLabel, loadRegistry, pagesLabel, semesterLabel } from '#lib/content.ts';
+import { href } from '#src/lib/url.ts';
+import type { GuideSection } from './book.ts';
+import { semesterRows } from './book.ts';
+import { textbookLabel } from './data.ts';
+
+interface Props {
+  semester: string;
+  /** 지금 보는 단원 번호. 없으면 학기 페이지다. */
+  unit?: number;
+  /** 지금 보는 묶음 id (차시 자료실) */
+  bundle?: string;
+  /** 지금 묶음 아래에 펼칠 이 페이지의 길잡이 (차시 자료실의 자료와 교사용 안내) */
+  sections?: GuideSection[];
+  place: 'rail' | 'fold';
+}
+const { semester, unit, bundle, sections = [], place } = Astro.props;
+const units = loadRegistry().semesters.find((s) => s.id === semester)?.units ?? [];
+const rows = semesterRows(semester);
+const onSemester = unit === undefined;
+---
+<nav class:list={['toc', `toc-in-${place}`]} aria-label="교과서 목차" data-pagefind-ignore>
+  <p class="toc-book">
+    <a href={href(`/${semester}/`)} aria-current={onSemester ? 'page' : undefined}>{semesterLabel(semester)}</a>
+    <span class="toc-textbook">{textbookLabel()}</span>
+  </p>
+  <ol class="toc-units">
+    {units.map((u) => {
+      const open = onSemester || u.no === unit;
+      const here = u.no === unit && !bundle;
+      return (
+        <li class="toc-unit">
+          <a class="toc-unit-link" href={onSemester ? `#unit-${u.no}` : href(`/${semester}/${u.no}/`)} aria-current={here ? 'page' : undefined}>
+            <span class="toc-unit-no">{u.no}단원</span>
+            <span class="toc-unit-title">{u.title}</span>
+          </a>
+          {open && (
+            <ol class="toc-bundles">
+              {rows.filter((r) => r.ref.unit.no === u.no).map(({ ref, lesson }) => (
+                <li class:list={['toc-bundle', !lesson && 'is-off']}>
+                  {lesson ? (
+                    <a href={href(lessonRoute(lesson.id))} aria-current={lesson.id === bundle ? 'page' : undefined}>
+                      <span class="toc-no">{lessonsLabel(ref.lessons)}</span>
+                      <span class="toc-name">{lesson.title}</span>
+                    </a>
+                  ) : (
+                    <span class="toc-off">
+                      <span class="toc-no">{lessonsLabel(ref.lessons)}</span>
+                      <span class="toc-pages">{pagesLabel(ref.pages)}<span class="visually-hidden"> 준비 중</span></span>
+                    </span>
+                  )}
+                  {lesson && lesson.id === bundle && sections.length > 0 && (
+                    <ol class="toc-sections" aria-label="이 페이지에서">
+                      {sections.map((s) => <li><a href={`#${s.id}`} data-guide-link>{s.label}</a></li>)}
+                    </ol>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+        </li>
+      );
+    })}
+  </ol>
+</nav>

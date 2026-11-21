@@ -1,0 +1,31 @@
+---
+// 시험용 차시 안내 페이지: 사이트 화면 + 그림 + 인쇄물 목록(카드 줄 아래에 놀이 방법) + QR 주소
+import Base from '#src/layouts/Base.astro';
+import Media from '#src/components/Media.astro';
+import { absoluteUrl, lessonPaths, lessonRoute, loadLesson, printJobs } from '#lib/content.ts';
+import { ASSET_ROUTE } from '#lib/site.ts';
+import { mediaUses } from '#schema/lesson.ts';
+import { href } from '#src/lib/url.ts';
+
+export function getStaticPaths() { return lessonPaths(); }
+const lesson = loadLesson(Astro.props.id);
+const refs = [...new Set(mediaUses(lesson).map((u) => u.ref))];
+const cards = lesson.assets.cards;
+// 카드의 놀이 방법은 안내 페이지의 카드 줄 아래에 보여 준다. 카드 인쇄 페이지에는 찍지 않는다 (쪽수가 장수로 정해져 있다).
+const games = cards.state === 'ready' ? cards.games : [];
+---
+<Base title={lesson.title} kind="site" lesson={lesson}>
+  <main data-pagefind-body>
+    <h1>{lesson.title}</h1>
+    {refs.map((ref) => <Media lesson={lesson} id={ref} />)}
+    {/* 작은 미리보기: 사진이어도 테두리를 두르지 않는다 (frame={false}) */}
+    <div id="thumbs">{refs.map((ref) => <Media lesson={lesson} id={ref} caption={false} credit={false} frame={false} />)}</div>
+    <ul id="jobs">{printJobs(lesson).map((j) => (
+      <li>
+        <a href={href(j.route)}>{j.label}</a> <a href={href(j.file)} download={j.download}>PDF</a>
+        {j.kind === 'cards' && games.length > 0 && <dl class="games">{games.map((g) => <><dt>{g.name}</dt><dd>{g.how}</dd></>)}</dl>}
+      </li>
+    ))}</ul>
+    <p id="qr">{absoluteUrl(lessonRoute(lesson.id, ASSET_ROUTE.quiz))}</p>
+  </main>
+</Base>

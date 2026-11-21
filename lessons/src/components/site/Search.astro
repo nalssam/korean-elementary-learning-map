@@ -1,0 +1,120 @@
+---
+// 낱말로 찾기 (검색 상자). 색인은 빌드 6단계(pagefind)에서야 생기므로 가져오기 문으로 묶지 않고 브라우저에서 불러온다.
+// 불러오지 못하면(astro dev, 6단계를 돌리기 전의 dist) 상자를 숨긴 채 둔다. 검색은 사이트 밖으로 아무것도 보내지 않는다 (docs/CONTRACT.md 6절).
+// 상자를 드러내면 'site-search-ready' 이벤트를 보낸다. 머리의 찾기 단추(SiteHeader)가 그때 이 칸으로 초점을 옮긴다.
+// 모양은 find.css (첫 화면에서는 쪽수·차시로 찾기와 한 카드에 든다).
+// 칸의 보기 낱말은 이번 빌드에 실린 첫 차시의 첫 새 낱말이다 (찾으면 나오는 낱말만 보기로 든다). 실린 차시가 없으면 보기를 들지 않고,
+// 찾은 것이 없을 때도 '다른 낱말로 찾아 보세요' 대신 아직 공개한 차시가 없다고 말한다 (data-none).
+import { visibleLessons } from '#lib/content.ts';
+import './find.css';
+
+const lessons = visibleLessons();
+const example = lessons.map((l) => l.terms.new[0]?.term).find((t) => t);
+const none = lessons.length === 0;
+---
+<site-search class="lookup lookup-search" hidden data-none={none ? '' : undefined}>
+  <form class="lookup-form" role="search" aria-labelledby="search-title">
+    <h2 class="lookup-title" id="search-title">낱말로 찾기</h2>
+    <label class="lookup-field">
+      <span class="lookup-label">차시 이름이나 수업에 나오는 낱말</span>
+      <input class="lookup-input" type="search" autocomplete="off" enterkeyhint="search" placeholder={example ? `예: ${example}` : undefined} data-search-input />
+    </label>
+    <p class="lookup-hint">차시 자료실의 글에서 찾습니다. 찾는 낱말은 사이트 밖으로 나가지 않습니다.</p>
+  </form>
+  <div class="lookup-results" aria-live="polite" data-search-results></div>
+</site-search>
+
+<script>
+  import { href } from '../../lib/url.ts';
+  import { FIND_EVENT } from './finder.ts';
+
+  /** pagefind 가 주는 결과 하나. 쓰는 칸만 적었다. */
+  interface Found { url: string; excerpt: string; meta: Record<string, string | undefined> }
+  interface Pagefind {
+    options(o: { baseUrl: string }): Promise<void>;
+    init(): Promise<void>;
+    debouncedSearch(q: string): Promise<{ results: { data(): Promise<Found> }[] } | null>;
+  }
+  const SHOW = 6;
+
+  class SiteSearch extends HTMLElement {
+    async connectedCallback() {
+      const input = this.querySelector<HTMLInputElement>('[data-search-input]');
+      const results = this.querySelector<HTMLElement>('[data-search-results]');
+      const form = this.querySelector('form');
+      if (!input || !results || !form) return;
+      let pagefind: Pagefind;
+      try {
+        pagefind = await import(/* @vite-ignore */ href('/pagefind/pagefind.js'));
+        // 사이트가 하위 경로에 놓여도 결과의 주소가 맞게 나오도록
+        await pagefind.options({ baseUrl: href('/') });
+        await pagefind.init();
+      } catch {
+        return; // 색인이 없다. 상자를 숨긴 채 둔다.
+      }
+      this.hidden = false;
+      document.dispatchEvent(new CustomEvent('site-search-ready'));
+
+      const line = (text: string) => { const p = document.createElement('p'); p.className = 'lookup-msg'; p.textContent = text; return p; };
+      // 발췌 글에는 찾은 낱말을 감싼 <mark> 만 들어 있다. HTML 로 끼워 넣지 않고 글자와 <mark> 로만 다시 만든다.
+      const excerpt = (html: string) => {
+        const p = document.createElement('span');
+        p.className = 'lookup-excerpt';
+        for (const node of new DOMParser().parseFromString(html, 'text/html').body.childNodes) {
+          if (node.nodeName === 'MARK') { const mark = document.createElement('mark'); mark.textContent = node.textContent; p.append(mark); }
+          else p.append(node.textContent ?? '');
+        }
+        return p;
+      };
+
+      // 쪽수·차시로 찾기를 쓰면 이쪽 결과를 지운다. 두 결과가 한 화면에 겹쳐 서지 않게 한다.
+      document.addEventListener(FIND_EVENT, (e) => { if ((e as CustomEvent<string>).detail !== 'search') results.replaceChildren(); });
+
+      const run = async () => {
+        const q = input.value.trim();
+        if (!q) { results.replaceChildren(); return; }
+        document.dispatchEvent(new CustomEvent(FIND_EVENT, { detail: 'search' }));
+        const found = await pagefind.debouncedSearch(q);
+        if (!found) return; // 더 새로운 검색이 뒤따라왔다
+        const pages = await Promise.all(found.results.slice(0, SHOW).map((r) => r.data()));
+        if (input.value.trim() !== q) return;
+        if (pages.length === 0) {
+          results.replaceChildren(line(this.hasAttribute('data-none') ? '아직 공개한 차시가 없습니다.' : '이 낱말이 들어간 페이지가 없습니다. 다른 낱말로 찾아 보세요.'));
+          return;
+        }
+        const ul = document.createElement('ul');
+        ul.className = 'lookup-list';
+        for (const page of pages) {
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.className = 'lookup-hit lookup-hit-text';
+          a.href = page.url;
+          const where = document.createElement('span');
+          where.className = 'lookup-where';
+          where.textContent = page.meta.where ?? '';
+          const what = document.createElement('span');
+          what.className = 'lookup-what';
+          what.textContent = page.meta.title ?? '';
+          // 초안 페이지(미리 보기 빌드에만 실린다)에는 표시를 붙인다. 색인할 때 data-pagefind-meta="draft:…" 가 붙은 페이지다.
+          const head = document.createElement('span');
+          head.className = 'lookup-hit-head';
+          head.append(what);
+          if (page.meta.draft) {
+            const chip = document.createElement('span');
+            chip.className = 'lookup-chip';
+            chip.textContent = page.meta.draft;
+            head.append(chip);
+          }
+          a.append(...(page.meta.where ? [where] : []), head, excerpt(page.excerpt));
+          li.append(a);
+          ul.append(li);
+        }
+        results.replaceChildren(ul);
+        if (found.results.length > SHOW) results.append(line(`${found.results.length}곳 가운데 앞의 ${SHOW}곳입니다. 낱말을 더 적으면 줄어듭니다.`));
+      };
+      input.addEventListener('input', run);
+      form.addEventListener('submit', (e) => { e.preventDefault(); void run(); });
+    }
+  }
+  customElements.define('site-search', SiteSearch);
+</script>

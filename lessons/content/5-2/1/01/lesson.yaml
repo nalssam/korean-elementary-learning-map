@@ -1,0 +1,1237 @@
+# 5학년 2학기 1단원 1차시 (단원 도입) — 초안(draft).
+# 차시 번호·쪽수·성취기준은 차시표(content/registry.yaml)에 있습니다.
+# 이 차시는 지식보다 방법을 먼저 줍니다: 눈으로 본 것과 짐작한 것을 가르고, 짐작에는 까닭을 붙입니다.
+# 시대 이름은 2차시부터 배우므로 아이가 읽는 글에 쓰지 않습니다. 유물 이름도 아이에게는 알려 주지 않습니다.
+# 고인돌의 부분은 아이가 읽는 글에서 덮개돌과 받침돌로만 부릅니다. 다른 이름은 교사 메모에서 한 번만 밝힙니다.
+#
+# 편성표와 다른 점 (편성표를 고칠 때 참고)
+#   - 영상은 쓰지 않습니다. 사진 관찰로 대신합니다 (본 것과 짐작을 가르려면 멈춰 있는 사진이 낫습니다).
+#   - 카드에서 탁자식·바둑판식을 뺐습니다. 생김새를 나누는 말은 4~5차시에서 다룹니다.
+#   - 방탈출은 '고인돌 추론 문서 읽기' 대신 문장 가르기와 유적·유물 나누기로 잡았습니다 (아직 planned).
+#   - 사진과 페이퍼크래프트는 편성표대로 강화 부근리 고인돌(탁자식)에 맞췄습니다.
+schema_version: 1
+id: 5-2/1/01
+title: 이 큰 돌, 누가 어떻게?
+tagline: 단원의 첫 시간입니다. 고인돌과 옛 물건 두 점을 보며, 본 것과 짐작한 것을 가르고 짐작에 까닭을 붙이는 방법을 먼저 익힙니다.
+status: draft
+reviews:
+  - kind: fact
+    by: ai:사실대조
+    date: 2026-11-20
+    result: pass
+    seal: fa9635d59bc4
+    note: 사실 대조표를 끝까지 읽음. 가리킨 사실 없음 31곳 가운데 사실을 말하는 문장은 교사 메모와 오개념에 있고, 모두 적힌 사실(f1, f2, f4, f7, f8, f10, f12, f16~f19, f22~f24)이 받침. 출처에 없다고 적은 두 곳은 두 검증자가 출처를 열어 확인함
+  - kind: voice
+    by: ai:다듬기
+    date: 2026-11-20
+    result: pass
+    seal: fa9635d59bc4
+    note: 글쓰기 기준으로 명세의 모든 글과 그 글이 놓인 화면·인쇄물을 읽음. 고칠 것 없음, 낮은 지적 일곱 가지는 PR 에 적음
+  - kind: print
+    by: ai:화면인쇄
+    date: 2026-11-20
+    result: pass
+    seal: fa9635d59bc4
+    note: PDF 7쪽, 수업 화면 22장(1920·1024), PPTX(LibreOffice), 안내·퀴즈·웹 활동(390·360)을 보고 잼. PowerPoint 와 한쇼에서는 열어 보지 못함
+
+objectives:
+  - 사진이나 물건을 보고 눈으로 본 것과 짐작한 것을 가려 말한다.
+  - 본 것을 까닭으로 들어 옛사람이 무엇을 했는지 짐작해 쓴다.
+  - 유적과 유물을 예를 들어 구분한다.
+
+prepare:
+  - item: 종이 고인돌 (덮개돌, 받침돌 두 개, 흙 비탈, 바닥판, 차례 카드 네 장)
+    qty: 모둠마다 1벌. 수업 전에 만들어 둡니다. 한 벌에 15분쯤, 6모둠이면 1시간 30분쯤으로 어림합니다. 시간이 없으면 차례 카드만 오려도 됩니다.
+  - item: 붙임쪽지
+    qty: 한 사람에 1장
+  - item: 30cm 자
+    qty: 1개 (교사)
+
+sensitivity:
+  level: none
+
+terms:
+  new:
+    - term: 고인돌
+      meaning: 큰 덮개돌을 얹어 만든 옛사람의 무덤. 받침돌이 있는 것도 있고 없는 것도 있다.
+      facts: [f1, f2]
+    - term: 덮개돌
+      meaning: 고인돌에서 가장 위에 얹은 큰 돌.
+      facts: [f3]
+    - term: 받침돌
+      meaning: 고인돌에서 덮개돌을 아래에서 받치는 돌.
+      facts: [f1]
+    - term: 추론
+      meaning: 본 것과 아는 것을 바탕으로 모르는 것을 짐작하는 일.
+      facts: [f15]
+    - term: 유적
+      meaning: 옛사람의 자취가 남아 있는 곳. 무덤이나 집터 같은 곳.
+      facts: [f13, f2, f8]
+    - term: 유물
+      meaning: 옛사람이 남긴 물건. 그릇이나 도구 같은 것.
+      facts: [f14]
+
+facts:
+  - id: f1
+    claim: 고인돌(한자로 지석묘)은 덮개돌 아래에 받침돌(고임돌이나 굄돌이라고도 한다)을 고이거나 주검을 묻은 시설을 둔 무덤이고, 두 사전은 받침돌 없이 덮개돌이 땅속 무덤방을 바로 덮은 것을 가장 보편적인 형식으로 적는다.
+    sources:
+      - name: 국립광주박물관 (국립중앙박물관 누리집 보도자료, 2007)
+        title: "[광주]‘사진으로 본 고인돌의 세계’ 특별전시 개최"
+        url: https://www.museum.go.kr/MUSEUM/contents/M0701040000.do?schM=view&catCustomType=post&catId=93&arcId=2872
+        quote: 고인돌은 큰 바위 아래에 받침돌이 있는 것으로 한자로는 ‘지석묘支石墓’라 한다.
+        accessed: "2026-11-19"
+      - name: 한국민족문화대백과사전 (한국학중앙연구원)
+        title: 고인돌
+        url: https://encykorea.aks.ac.kr/Article/E0003901
+        quote: 받침돌은 덮개돌을 웅장하게 보이게 하거나 무덤방을 보호하는 역할을 한다. 고임돌이나 굄돌이라고도 한다.
+        accessed: "2026-11-19"
+      - name: 한국고고학사전 (국립문화유산연구원)
+        title: 고인돌[支石墓]
+        url: https://dka.nrich.go.kr/wiki/index.php/600-0162
+        quote: 덮개식 고인돌은 덮개돌과 무덤방 사이에 받침돌이 없는 구조이다.
+        accessed: "2026-11-19"
+      - name: 한국고고학사전 (국립문화유산연구원)
+        title: 고인돌[支石墓]
+        url: https://dka.nrich.go.kr/wiki/index.php/600-0162
+        quote: 덮개식 고인돌(蓋石式支石墓)은 지하에 있는 무덤방을 덮고 있는 형태로, 가장 보편적인 형태이다.
+        accessed: "2026-11-19"
+      - name: 한국민족문화대백과사전 (한국학중앙연구원)
+        title: 고인돌
+        url: https://encykorea.aks.ac.kr/Article/E0003901
+        quote: 개석식 고인돌은 덮개돌이 지하에 있는 무덤방을 뚜껑처럼 직접 덮고 있는 형태이며, 무덤으로 축조된 가장 보편적인 형식이다.
+        accessed: "2026-11-19"
+      - name: 한국민족문화대백과사전 (한국학중앙연구원)
+        title: 고인돌
+        url: https://encykorea.aks.ac.kr/Article/E0003901
+        quote: 지상에 드러나 있는 덮개돌 밑에 받침돌로 널돌이나 자연석을 고이거나, 주검을 안치한 매장 시설이 있는 청동기시대의 대표적인 무덤이자 기념물.
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 53550e9a3306
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 53550e9a3306
+  - id: f2
+    claim: 고인돌은 무덤방에서 사람뼈와 껴묻거리가 나와 무덤으로 알려져 왔고, 크고 홀로 서 있어 기념물로 보는 고인돌도 있다.
+    sources:
+      - name: 국립중앙박물관
+        title: "[순회전시] 한국의 청동기문화 특별전"
+        url: https://www.museum.go.kr/MUSEUM/contents/M0202010000.do?schM=view&menuId=specialGallery&listType=list&exhiSpThemId=3802
+        quote: 고인돌은 한국의 요녕식동검문화에서만 볼 수 있는 특징적인 무덤이다.
+        accessed: "2026-11-19"
+      - name: 표준국어대사전 (국립국어원)
+        title: 고인-돌
+        url: https://stdict.korean.go.kr/search/searchResult.do?searchKeyword=%EA%B3%A0%EC%9D%B8%EB%8F%8C
+        quote: 큰 돌을 몇 개 둘러 세우고 그 위에 넓적한 돌을 덮어 놓은 선사 시대의 무덤.
+        accessed: "2026-11-19"
+      - name: 한국민족문화대백과사전 (한국학중앙연구원)
+        title: 고인돌
+        url: https://encykorea.aks.ac.kr/Article/E0003901
+        quote: 기념 고인돌은 무덤 고인돌에 비해 덮개돌이 웅장한 규모이고 차별화된 형태이면서 1기씩만 단독으로 있는 입지적 우월성을 가진 고인돌이다.
+        accessed: "2026-11-19"
+      - name: 한국민족문화대백과사전 (한국학중앙연구원)
+        title: 고인돌
+        url: https://encykorea.aks.ac.kr/Article/E0003901
+        quote: 일찍부터 고인돌은 널(棺) 형태의 장방형 무덤방에서 사람뼈와 껴묻거리가 발견되어 무덤으로 알려져 왔다.
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 0bdccd0b9287
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 0bdccd0b9287
+  - id: f3
+    claim: 고인돌에서 받침돌 위, 가장 위에 올려진 큰 돌을 덮개돌이라고 부른다.
+    sources:
+      - name: 표준국어대사전 (국립국어원)
+        title: 덮개-돌
+        url: https://stdict.korean.go.kr/search/searchResult.do?searchKeyword=%EB%8D%AE%EA%B0%9C%EB%8F%8C
+        quote: 고인돌에서 굄돌이나 받침돌 위에 올려진 큰 돌.
+        accessed: "2026-11-19"
+      - name: 한국고고학사전 (국립문화유산연구원)
+        title: 고인돌[支石墓]
+        url: https://dka.nrich.go.kr/wiki/index.php/600-0162
+        quote: 덮개돌(上石)은 고인돌의 가장 큰 특징이며, 한자로 윗돌 의미의 상석(上石)이라 한다.
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 56af727e7bfa
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 56af727e7bfa
+  - id: f4
+    claim: 우리나라에서 확인된 고인돌은 3만 기가 넘고, 한국민족문화대백과사전은 한반도 전체에 4만여 기가 있다고 추산한다.
+    sources:
+      - name: 국립광주박물관 (국립중앙박물관 누리집 보도자료, 2007)
+        title: "[광주]‘사진으로 본 고인돌의 세계’ 특별전시 개최"
+        url: https://www.museum.go.kr/MUSEUM/contents/M0701040000.do?schM=view&catCustomType=post&catId=93&arcId=2872
+        quote: 약 3만기 이상이 확인되고 있으며, 형태와 구조가 매우 다양한 편이다.
+        accessed: "2026-11-19"
+      - name: 한국민족문화대백과사전 (한국학중앙연구원)
+        title: 고인돌
+        url: https://encykorea.aks.ac.kr/Article/E0003901
+        quote: 우리나라 고인돌은 한반도 전 지역에서 발견되며, 약 4만여 기가 분포한 것으로 추산되고 있다.
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: a6477d1d222a
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: a6477d1d222a
+  - id: f5
+    claim: 고인돌이 여러 기씩 무리 지어 있는 것을 보고 핏줄로 이어진 집단의 공동 무덤으로 보는 견해도 있다.
+    sources:
+      - name: 한국민족문화대백과사전 (한국학중앙연구원)
+        title: 고인돌
+        url: https://encykorea.aks.ac.kr/Article/E0003901
+        quote: 또한, 대부분의 고인돌이 무리를 이루고 수 기씩 줄지어 있는 점에서 혈연 집단의 공동 무덤으로 보기도 한다.
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 491288d22efa
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 491288d22efa
+  - id: f6
+    claim: 국립중앙박물관 전시 설명은 농경이 발달하며 생긴 갈등을 조정할 우두머리가 필요해졌고, 권위와 권력을 갖게 된 우두머리를 기억하려고 사람들이 고인돌 같은 큰 기념물을 만들었다고 본다.
+    sources:
+      - name: 국립중앙박물관
+        title: 선사·고대관 청동기 전시실 소개
+        url: https://www.museum.go.kr/MUSEUM/contents/M0201030300.do?showHallId=760&showroomCode=DM0004
+        quote: 농경의 발달은 공동체 안팎으로 여러 갈등을 유발했고, 이를 조정하는 우두머리가 필요했다. 우두머리의 역할은 점점 더 중요해져 권위와 권력을 갖게 되었다. 사람들은 그들을 기억하기 위해 고인돌과 같은 큰 기념물을 만들었다.
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 703044d8dfb7
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 703044d8dfb7
+  - id: f7
+    claim: 덮개돌을 올린 방법으로 흙을 비탈지게 쌓아 그 위로 끌어 올린 뒤 흙을 걷어 냈다는 짐작이 있고, 두 사전은 이 방법을 받침돌이 없거나 낮은 고인돌에 짝지어 설명한다.
+    sources:
+      - name: 한국민족문화대백과사전 (한국학중앙연구원)
+        title: 고인돌
+        url: https://encykorea.aks.ac.kr/Article/E0003901
+        quote: 둘째, 끌어올리는 방법은 개석식 고인돌이나 받침돌이 낮은 바둑판식 고인돌에서 흙이나 잡석을 쌓고 끌어올리는 방법이다.
+        accessed: "2026-11-19"
+      - name: 한국고고학사전 (국립문화유산연구원)
+        title: 고인돌[支石墓]
+        url: https://dka.nrich.go.kr/wiki/index.php/600-0162
+        quote: 운반되어 온 덮개돌을 올리는 방법은 받침돌이 낮은 바둑판식이나 덮개식 고인돌의 경우 흙을 경사지게 돋우고 끌어 올린 후 흙을 제거하였다고 추정된다.
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 825cb7d46084
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 825cb7d46084
+  - id: f22
+    claim: 고창 세계유산 고인돌박물관은 받침돌을 세운 뒤 흙을 경사지게 쌓고, 그 위로 덮개돌을 끌어 올린 다음 흙을 걷어 냈다고 짐작해 고인돌을 만든 차례를 설명한다.
+    sources:
+      - name: 고창 세계유산 고인돌박물관 (고창군)
+        title: 고인돌 수수께끼
+        url: https://www.gochang.go.kr/gcdolmen/index.gochang?menuCd=DOM_000001206003000000
+        quote: 무덤방이 만들어지면 주위에 받침돌을 세우고 납작한 돌을 깔아 묘역을 구획합니다. 그 다음 덮개돌을 끌어올리기 쉽도록 흙으로 경사지게 쌓아 올립니다.
+        accessed: "2026-11-19"
+      - name: 고창 세계유산 고인돌박물관 (고창군)
+        title: 고인돌 수수께끼
+        url: https://www.gochang.go.kr/gcdolmen/index.gochang?menuCd=DOM_000001206003000000
+        quote: 운반되어 온 덮개돌은 경사지게 쌓은 흙 위로 끌어올린 후 흙을 제거하였다고 추정됩니다.
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: f4b59ed62243
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: f4b59ed62243
+  - id: f19
+    claim: 흙을 쌓아 끌어 올렸다는 짐작은 덮개돌과 받침돌 사이에 눌려 있는 흙 같은 흔적에서 나온다.
+    sources:
+      - name: 한국민족문화대백과사전 (한국학중앙연구원)
+        title: 고인돌
+        url: https://encykorea.aks.ac.kr/Article/E0003901
+        quote: 이 방법은 한쪽으로 기울어진 무덤방 벽석과 밀려나 있는 받침돌, 덮개돌과 받침돌 사이에 압착된 흙으로 짐작할 수 있다.
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: d18ad8ea5eb5
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: d18ad8ea5eb5
+  - id: f16
+    claim: 받침돌이 높은 탁자식 고인돌은 통나무를 井자 모양으로 겹쳐 쌓아 덮개돌을 들어 올렸다는 짐작이 있다.
+    sources:
+      - name: 한국민족문화대백과사전 (한국학중앙연구원)
+        title: 고인돌
+        url: https://encykorea.aks.ac.kr/Article/E0003901
+        quote: 셋째, 덮개돌을 들어올리는 방법은 통나무를 정(井)자 모양으로 중첩해 끼워 넣어서 들어 올린 후 무덤방 위로 끌어옮기는 방법이다.
+        accessed: "2026-11-19"
+      - name: 한국민족문화대백과사전 (한국학중앙연구원)
+        title: 고인돌
+        url: https://encykorea.aks.ac.kr/Article/E0003901
+        quote: 탁자식이나 받침돌이 높은 바둑판식 고인돌 축조에 사용된 이 방법은
+        accessed: "2026-11-19"
+      - name: 한국고고학사전 (국립문화유산연구원)
+        title: 고인돌[支石墓]
+        url: https://dka.nrich.go.kr/wiki/index.php/600-0162
+        quote: 탁자식이나 받침돌이 높은 바둑판식 고인돌의 경우 인도네시아 숨바섬 사례처럼 통나무를 정井자 모양으로 쌓은 후에 무덤방 위로 끌어 옮기는 방법이다.
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 913d27e55a74
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 913d27e55a74
+  - id: f17
+    claim: 옛 그림과 기록, 인도네시아 숨바 섬의 고인돌 축조 사례 등으로 덮개돌을 옮긴 방법을 복원하면, 바닥에 통나무 굴림목을 깔고 덮개돌을 밧줄로 묶어 여러 사람이 끄는 모습이다.
+    sources:
+      - name: 한국민족문화대백과사전 (한국학중앙연구원)
+        title: 고인돌
+        url: https://encykorea.aks.ac.kr/Article/E0003901
+        quote: 운반하는 장면은 바닥에 통나무 굴림목이 깔려 있고, 나무끌개에 가로로 걸친 통나무 위에 올려진 덮개돌이 밧줄로 결박되어 있으며, 나무끌개 앞쪽에 4개의 밧줄을 연결하여 사람들이 끄는 모습이다.
+        accessed: "2026-11-19"
+      - name: 한국민족문화대백과사전 (한국학중앙연구원)
+        title: 고인돌
+        url: https://encykorea.aks.ac.kr/Article/E0003901
+        quote: 하지만 이집트의 석상을 운반하는 부조상이나 1607년에 제작된 일본 슨푸성〔駿府城〕 축성도, 1796년 『화성성역의궤(華城城役儀軌)』의 구판(駒板), 인도네시아 숨바(Sumba) 섬의 고인돌 축조 사례 등을 통해 운반하는 방법을 복원할 수 있다.
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: f4fa1fbe69b4
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: f4fa1fbe69b4
+  - id: f23
+    claim: 한국민족문화대백과사전은 덮개돌을 무덤방 위에 올린 방법을 세 가지로 추정하며, 그 가운데 하나로 통나무를 무덤방 위까지 레일처럼 비스듬히 걸쳐 덮개돌을 끌어 올리는 방법을 들고 인도네시아 숨바 섬에서 쓰인 사례라고 적는다.
+    sources:
+      - name: 한국민족문화대백과사전 (한국학중앙연구원)
+        title: 고인돌
+        url: https://encykorea.aks.ac.kr/Article/E0003901
+        quote: 이 방법은 무덤방 위까지 비스듬히 통나무를 이용해 레일처럼 설치해서 덮개돌을 끌어올리는 방법으로 인도네시아 숨바 섬에서 활용된 사례이다.
+        accessed: "2026-11-19"
+      - name: 한국민족문화대백과사전 (한국학중앙연구원)
+        title: 고인돌
+        url: https://encykorea.aks.ac.kr/Article/E0003901
+        quote: 운반되어 온 덮개돌을 무덤방 위에 올리는 방법은 세 가지로 추정된다.
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: e46b09f3ff15
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: e46b09f3ff15
+  - id: f18
+    claim: 논밭 정리와 길 내기 같은 개발 과정에서 많은 고인돌이 중장비로 옮겨지거나 부서졌다.
+    sources:
+      - name: 국립광주박물관 (국립중앙박물관 누리집 보도자료, 2007)
+        title: "[광주]‘사진으로 본 고인돌의 세계’ 특별전시 개최"
+        url: https://www.museum.go.kr/MUSEUM/contents/M0701040000.do?schM=view&catCustomType=post&catId=93&arcId=2872
+        quote: 경지정리와 도로건설 등 근대화 과정에서 수많은 고인돌이 중장비에 의해 옮겨지거나, 심지어 산산이 부서지고 없어지는 비운을 겪기도 한다.
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 67fc0008b687
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 67fc0008b687
+  - id: f21
+    claim: 강화 부근리 고인돌은 땅에서 높이가 2.6m이고, 덮개돌은 길이 7.1m, 너비 5.5m이다.
+    sources:
+      - name: 한국민족문화대백과사전 (한국학중앙연구원)
+        title: 강화 부근리 지석묘
+        url: https://encykorea.aks.ac.kr/Article/E0001531
+        quote: 지상에서의 높이 2.6m, 덮개돌의 크기는 길이 7.1m, 너비 5.5m이며
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 448ebec36e5e
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 448ebec36e5e
+  - id: f8
+    claim: 국립중앙박물관의 빗살무늬토기(신수22891)는 서울 암사동 집터 유적에서 나왔고, 겉면을 세 부분으로 나누어 부분마다 다른 무늬로 꾸몄다.
+    sources:
+      - name: 국립중앙박물관
+        title: 빗살무늬토기 (신수22891)
+        url: https://www.museum.go.kr/MUSEUM/contents/M0502000000.do?schM=view&searchId=search&relicId=4328
+        quote: 이 토기는 서울시 암사동 집터유적에서 출토된 것으로 겉면을 삼등분하고 각각 다른 무늬로 장식하였다.
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: cd6cd963df44
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: cd6cd963df44
+  - id: f9
+    claim: 국립중앙박물관은 이 토기 아래쪽에 뚫린 구멍이 깨진 토기를 임시로 고쳐 쓴 흔적이라고 짐작한다 (소장품 설명은 구멍을 두 개라고 쓴다).
+    sources:
+      - name: 국립중앙박물관
+        title: 빗살무늬토기 (신수22891)
+        url: https://www.museum.go.kr/MUSEUM/contents/M0502000000.do?schM=view&searchId=search&relicId=4328
+        quote: 토기 아래쪽에 뚫린 두 개의 구멍은 깨진 토기를 임시로 수리하여 사용했던 흔적으로 추정된다.
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: cc283a761eb4
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: cc283a761eb4
+  - id: f10
+    claim: 국립중앙박물관은 주먹도끼가 대개 양면이 대칭을 이룬 타원형이나 삼각형이고, 가장자리에 날이 있으며 끝이 뾰족하다고 설명한다.
+    sources:
+      - name: 국립중앙박물관
+        title: 주먹도끼 (신수19143)
+        url: https://www.museum.go.kr/MUSEUM/contents/M0502000000.do?schM=view&searchId=search&relicId=2486
+        quote: 양면이 대칭을 이룬 타원형이거나 삼각형을 하고 있으며, 단면은 볼록렌즈처럼 두툼하다. 가장자리 전체에 날카로운 날이 마련되어 있고, ‘도끼’라는 명칭과는 달리 끝부분이 뾰족하며
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 215275828d74
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 215275828d74
+  - id: f11
+    claim: 국립중앙박물관은 주먹도끼가 여러 가지 일에 쓰인 도구였다고 설명하고, 주된 쓰임은 큰 동물을 잡아 가르는 일이었을 것으로 추정한다.
+    sources:
+      - name: 국립중앙박물관
+        title: 주먹도끼 (신수19143)
+        url: https://www.museum.go.kr/MUSEUM/contents/M0502000000.do?schM=view&searchId=search&relicId=2486
+        quote: 실제로는 여러 가지 기능을 수행한 ‘다기능연모’였다. 주된 용도는 대형동물의 도살 및 해체용으로 추정되고 있다.
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: d6c3d87710ce
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: d6c3d87710ce
+  - id: f12
+    claim: 국립중앙박물관의 주먹도끼(신수19143)는 경기도 파주에서 나왔고 길이가 17.8cm이다.
+    sources:
+      - name: 국립중앙박물관
+        title: 주먹도끼 (신수19143)
+        url: https://www.museum.go.kr/MUSEUM/contents/M0502000000.do?schM=view&searchId=search&relicId=2486
+        quote: 출토지 경기도 - 파주시
+        accessed: "2026-11-19"
+      - name: 국립중앙박물관
+        title: 주먹도끼 (신수19143)
+        url: https://www.museum.go.kr/MUSEUM/contents/M0502000000.do?schM=view&searchId=search&relicId=2486
+        quote: 길이 17.8cm, 너비 10.2cm, 두께 6.4cm
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 017602bba85d
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 017602bba85d
+  - id: f13
+    claim: 표준국어대사전은 유적을 ‘남아 있는 자취’로 풀고, 건축물, 싸움터, 역사적인 사건이 벌어졌던 곳, 패총, 고분 따위를 예로 든다.
+    sources:
+      - name: 표준국어대사전 (국립국어원)
+        title: 유적8 (遺跡)
+        url: https://stdict.korean.go.kr/search/searchResult.do?searchKeyword=%EC%9C%A0%EC%A0%81
+        quote: 남아 있는 자취. 건축물이나 싸움터 또는 역사적인 사건이 벌어졌던 곳이나 패총, 고분 따위를 이른다.
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 7dd97afe204a
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 7dd97afe204a
+  - id: f20
+    claim: 조개더미(패총)는 옛사람이 먹고 버린 조개껍데기가 쌓인 무더기이고, 사전은 패총을 유적의 예로 든다.
+    sources:
+      - name: 표준국어대사전 (국립국어원)
+        title: 조개-더미
+        url: https://stdict.korean.go.kr/search/searchResult.do?searchKeyword=%EC%A1%B0%EA%B0%9C%EB%8D%94%EB%AF%B8
+        quote: 원시인이 먹고 버린 조개껍데기가 쌓여 이루어진 무더기.
+        accessed: "2026-11-19"
+      - name: 표준국어대사전 (국립국어원)
+        title: 조개-더미
+        url: https://stdict.korean.go.kr/search/searchResult.do?searchKeyword=%EC%A1%B0%EA%B0%9C%EB%8D%94%EB%AF%B8
+        quote: ≒조개무덤, 조개무지, 패총.
+        accessed: "2026-11-19"
+      - name: 표준국어대사전 (국립국어원)
+        title: 유적8 (遺跡)
+        url: https://stdict.korean.go.kr/search/searchResult.do?searchKeyword=%EC%9C%A0%EC%A0%81
+        quote: 역사적인 사건이 벌어졌던 곳이나 패총, 고분 따위를 이른다.
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 6d8604f58a1c
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 6d8604f58a1c
+  - id: f14
+    claim: 유물은 앞선 시대 사람들이 뒷사람에게 남긴 물건이다.
+    sources:
+      - name: 표준국어대사전 (국립국어원)
+        title: 유물4 (遺物)
+        url: https://stdict.korean.go.kr/search/searchResult.do?searchKeyword=%EC%9C%A0%EB%AC%BC
+        quote: 「1」 선대의 인류가 후대에 남긴 물건.
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 0d2749467aae
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 0d2749467aae
+  - id: f15
+    claim: 추론은 미루어 생각하는 일이고, 여기서 ‘미루다’는 이미 알려진 것으로 다른 것을 비추어 헤아린다는 뜻이다.
+    sources:
+      - name: 표준국어대사전 (국립국어원)
+        title: 추론2 (推論)
+        url: https://stdict.korean.go.kr/search/searchResult.do?searchKeyword=%EC%B6%94%EB%A1%A0
+        quote: 「1」 미루어 생각하여 논함.
+        accessed: "2026-11-19"
+      - name: 표준국어대사전 (국립국어원)
+        title: 미루다「3」
+        url: https://stdict.korean.go.kr/search/searchView.do?wordNo=428858&searchKeywordTo=3
+        quote: 이미 알려진 것으로써 다른 것을 비추어 헤아리다.
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 8c33520d60d8
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 8c33520d60d8
+  - id: f24
+    claim: 이 차시에서 보는 세 가지는 서로 다른 시대의 것으로, 강화 부근리 고인돌은 청동기시대, 암사동 빗살무늬토기는 신석기시대, 파주 주먹도끼는 구석기시대의 것이다.
+    sources:
+      - name: 한국민족문화대백과사전 (한국학중앙연구원)
+        title: 강화 부근리 지석묘
+        url: https://encykorea.aks.ac.kr/Article/E0001531
+        quote: 인천광역시 강화군 하점면에 있는 청동기시대 화강암으로 된 북방식 고인돌.
+        accessed: "2026-11-19"
+      - name: 국립중앙박물관
+        title: 빗살무늬토기 (신수22891)
+        url: https://www.museum.go.kr/MUSEUM/contents/M0502000000.do?schM=view&searchId=search&relicId=4328
+        quote: 덧무늬토기 이후에 등장한 것으로, 우리나라 신석기시대를 대표하는 유물이다.
+        accessed: "2026-11-19"
+      - name: 국립중앙박물관
+        title: 주먹도끼 (신수19143)
+        url: https://www.museum.go.kr/MUSEUM/contents/M0502000000.do?schM=view&searchId=search&relicId=2486
+        quote: 국적/시대 한국 - 구석기
+        accessed: "2026-11-19"
+    checks:
+      - by: ai:검증자A
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 6a86e4d323d5
+      - by: ai:검증자B
+        date: 2026-11-20
+        verdict: confirmed
+        seal: 6a86e4d323d5
+
+media:
+  - id: dolmen-bugeun
+    kind: photo
+    file: media/dolmen-bugeun.jpg
+    alt: 잔디밭에 넓적한 돌 두 개가 양쪽에 서 있고, 그 위에 아주 크고 넓적한 돌이 얹혀 있다. 둘레에 낮은 울타리가 있다.
+    credit:
+      holder: Mansegmj
+      title: 강화 부근리 지석묘
+      source_url: https://commons.wikimedia.org/wiki/File:GMJ_0154.jpg
+      licence: CC-BY-SA
+      licence_url: https://creativecommons.org/licenses/by-sa/4.0/
+      checked: "2026-11-19"
+      note: 위키미디어 공용에 찍은 이가 직접 올린 사진(2007년 11월 17일, 파일 이름 GMJ_0154.jpg)으로 CC BY-SA 4.0 이다. 공용의 1280px 판을 폭 1200px 로 줄이기만 했다. 사람은 나오지 않는다. 한국민족문화대백과사전의 같은 고인돌 정면 사진(공공누리 제1유형)은 누리집에 보이는 원본 크기 파일의 아래쪽에 사전 로고와 저작권 글자가 찍혀 있어 쓰지 않았다 (2026-11-19 확인).
+    facts: [f1]
+  - id: dolmen-parts
+    kind: diagram
+    file: media/dolmen-parts.svg
+    alt: 고인돌을 옆에서 본 그림. 받침돌 두 개가 서 있고 그 위에 넓은 덮개돌이 얹혀 있다.
+    caption: 고인돌의 생김새
+    credit:
+      holder: 몽당분필 날쌤
+      licence: original
+    facts: [f1, f3]
+  - id: dolmen-step1
+    kind: diagram
+    file: media/dolmen-step1.svg
+    alt: 옆에서 본 그림. 땅 위에 받침돌 두 개가 사이를 두고 서 있다.
+    credit:
+      holder: 몽당분필 날쌤
+      licence: original
+    facts: [f1, f22]
+  - id: dolmen-step2
+    kind: diagram
+    file: media/dolmen-step2.svg
+    alt: 옆에서 본 그림. 받침돌 꼭대기 높이까지 흙을 쌓아 왼쪽이 완만하게 비탈진 흙 비탈을 만들었다. 흙에 가린 받침돌은 점선으로 그렸다.
+    credit:
+      holder: 몽당분필 날쌤
+      licence: original
+    facts: [f7, f22]
+  - id: dolmen-step3
+    kind: diagram
+    file: media/dolmen-step3.svg
+    alt: 옆에서 본 그림. 덮개돌이 흙 비탈 위에 비스듬히 놓여 있고, 화살표가 비탈 꼭대기 쪽을 가리킨다. 흙에 가린 받침돌은 점선으로 그렸다.
+    credit:
+      holder: 몽당분필 날쌤
+      licence: original
+    facts: [f7, f22]
+  - id: dolmen-step4
+    kind: diagram
+    file: media/dolmen-step4.svg
+    alt: 옆에서 본 그림. 흙을 걷어 내자 받침돌 두 개 위에 덮개돌이 얹힌 모습이 드러났다. 걷어 낸 흙의 자리는 점선으로 그렸다.
+    credit:
+      holder: 몽당분필 날쌤
+      licence: original
+    facts: [f7, f22]
+  - id: dolmen-soil
+    kind: diagram
+    file: media/dolmen-soil.svg
+    alt: 덮개돌이 받침돌 위에 얹힌 곳을 가까이에서 본 그림. 위의 덮개돌과 아래의 받침돌 사이에 얇게 눌린 흙이 끼어 있다.
+    caption: 덮개돌과 받침돌 사이를 가까이
+    credit:
+      holder: 몽당분필 날쌤
+      licence: original
+    facts: [f19]
+  - id: paper-dolmen
+    kind: diagram
+    file: media/paper-dolmen.svg
+    alt: 종이 고인돌을 비스듬히 위에서 본 그림. 바닥판에 점선으로 찍힌 자리에 받침돌 두 개가 서 있고, 그 위에서 덮개돌을 내려 얹으려 한다. 아래를 가리키는 화살표가 있다.
+    caption: 종이 고인돌 세우기
+    credit:
+      holder: 몽당분필 날쌤
+      licence: original
+    facts: [f1, f3]
+  - id: pottery-amsa
+    kind: photo
+    file: media/pottery-amsa.jpg
+    alt: 흙으로 만든 키 큰 그릇. 위는 넓고 아래로 갈수록 좁아져 바닥이 뾰족하다. 겉면에 빗금으로 된 무늬가 가득하고, 아래쪽에 작은 구멍 두 개가 보인다.
+    caption: 흙으로 만든 그릇
+    credit:
+      holder: 국립중앙박물관
+      title: 빗살무늬토기 (신수22891)
+      source_url: https://www.museum.go.kr/MUSEUM/contents/M0502000000.do?schM=view&searchId=search&relicId=4328
+      licence: KOGL-1
+      checked: "2026-11-19"
+      note: 소장품 페이지에 공공누리 제1유형(출처표시) 표시가 있다. 박물관이 올린 두 번째 사진(ssu022891-000-90100.jpg)의 원본에서 배경을 잘라 냄 (그릇 둘레에 8%쯤 여백을 남김). 높이 1200px 로 줄이고 파일 속 정보는 지웠다.
+    change: cropped
+    facts: [f8]
+  - id: pottery-holes
+    kind: photo
+    file: media/pottery-holes.jpg
+    alt: 앞의 그릇 아래쪽을 크게 본 사진. 빗금 무늬 사이에 작고 둥근 구멍 두 개가 나란히 뚫려 있고, 겉면에 조각을 이어 붙인 듯한 금이 여러 줄 보인다.
+    caption: 그릇 아래쪽을 크게
+    credit:
+      holder: 국립중앙박물관
+      title: 빗살무늬토기 (신수22891)
+      source_url: https://www.museum.go.kr/MUSEUM/contents/M0502000000.do?schM=view&searchId=search&relicId=4328
+      licence: KOGL-1
+      checked: "2026-11-19"
+      note: 소장품 페이지에 공공누리 제1유형(출처표시) 표시가 있다. pottery-amsa 와 같은 원본에서 아래쪽을 잘라 크게 함. 폭 1200px 로 줄이고 파일 속 정보는 지웠다.
+    change: cropped
+    facts: [f8]
+  - id: hand-axe
+    kind: photo
+    file: media/hand-axe.jpg
+    alt: 돌을 깨뜨려 다듬은 도구. 아래는 둥글고 넓으며 위로 갈수록 좁아져 끝이 뾰족하다. 가장자리가 울퉁불퉁하게 떨어져 나간 자국이 있다.
+    caption: 돌로 만든 도구 · 길이 17.8cm
+    credit:
+      holder: 국립중앙박물관
+      title: 주먹도끼 (신수19143)
+      source_url: https://www.museum.go.kr/MUSEUM/contents/M0502000000.do?schM=view&searchId=search&relicId=2486
+      licence: KOGL-1
+      checked: "2026-11-19"
+      note: 소장품 페이지에 공공누리 제1유형(출처표시) 표시가 있다. 박물관이 올린 첫 번째 사진(ssu019143-000-90000.jpg)의 원본에서 배경을 잘라 냄 (도구 둘레에 8%쯤 여백을 남김). 높이 1200px 로 줄이고 파일 속 정보는 지웠다.
+    change: cropped
+    facts: [f12]
+
+flow:
+  - phase: 도입
+    minutes: 5
+    title: 큰 돌 사진을 보고 첫 생각 붙이기
+    do:
+      - 고인돌 사진을 띄우고 30초 동안 말없이 보게 합니다.
+      - 보이는 것을 세 명에게 묻고 칠판 한쪽에 그대로 적습니다.
+      - "‘누가, 왜, 어떻게 놓았을까?’ 하고 떠오른 생각을 붙임쪽지에 한 줄씩 적게 합니다."
+      - 모둠 기록이가 붙임쪽지를 모아 칠판 다른 쪽에 붙이고, 수업 끝까지 둡니다.
+    ask:
+      - q: 사진에서 무엇이 보이나요?
+        listen_for: 돌의 모양, 크기, 놓인 자리처럼 사진에 있는 것을 말하는지 듣습니다. 짐작이 섞여 나와도 이때는 고치지 않습니다.
+    uses: [slides]
+    slides: [1, 3]
+    facts: [f1, f21]
+  - phase: 전개
+    minutes: 6
+    title: 본 것과 짐작한 것 가르기
+    do:
+      - 고인돌 그림에서 덮개돌과 받침돌의 이름을 알려 줍니다.
+      - 학습지 1쪽 첫 표의 네 문장을 ‘눈으로 본 것’과 ‘짐작한 것’으로 가르게 합니다.
+      - 칠판에 적어 둔 아이들의 말도 같은 기준으로 둘로 나눕니다.
+    ask:
+      - q: 그건 사진에 보이나요, 머릿속으로 생각한 것인가요?
+        listen_for: 사진에서 손가락으로 가리킬 수 있으면 본 것이고, 가리킬 수 없으면 짐작이라는 기준을 아이들이 스스로 쓰는지 봅니다.
+    uses: [slides, worksheet]
+    slides: [4, 6]
+    facts: [f1, f3]
+  - phase: 전개
+    minutes: 13
+    title: 종이 고인돌을 세우며 차례 짐작하기
+    do:
+      - 무거운 덮개돌을 어떻게 올렸을지 먼저 묻고, 나온 생각을 칠판에 적은 뒤 미리 만들어 둔 조각과 차례 카드를 나누어 줍니다.
+      - 바닥판의 받침돌 자리에 받침돌 두 개를 세우고 덮개돌을 얹게 합니다 (2분). 조각은 바닥판에 붙이지 않습니다.
+      - 차례 카드 네 장을 모둠이 정한 차례로 놓고, 그 차례대로 조각을 움직여 보게 합니다. 차례와 까닭은 학습지 1쪽 표에 적게 합니다 (4분). 카드에 없는 방법이 떠오르면 표 아래 줄에 적게 합니다.
+      - 한 모둠에게 차례와 까닭을 발표하게 하고, 한 가지 짐작을 그림으로 보여 주어 모둠의 차례와 견주게 합니다.
+      - 그 짐작이 무엇을 보고 나왔는지 짚고, 박물관 설명으로 ‘누가, 왜’의 짐작을 하나 보여 줍니다.
+      - 오늘 한 일에 추론이라는 이름을 붙여 줍니다.
+    ask:
+      - q: 무거운 덮개돌을 받침돌 위로 올리려면 무엇이 있어야 했을까요?
+        listen_for: 카드를 나누어 주기 전에 묻습니다. 흙, 통나무, 많은 사람 같은 말이 나오면 “왜 그렇게 생각했나요?”를 한 번 더 묻습니다.
+      - q: 이 차례를 그때 곁에서 지켜본 사람이 지금 있을까요?
+        listen_for: 아무도 보지 못했으니 짐작이라는 말이 나오는지 듣습니다. 사전도 다른 나라의 사례와 고인돌에 남은 흔적으로 방법을 짐작한다고 덧붙입니다.
+    uses: [papercraft, worksheet, slides]
+    slides: [7, 13]
+    tip: 덮개돌, 받침돌 두 개, 흙 비탈은 수업 전에 오리고 접어 붙여 두어야 이 단계가 시간 안에 끝날 수 있습니다. 모둠 안에서 받침돌 잡기, 조각 움직이기, 기록을 한 사람씩 맡게 합니다.
+    facts: [f2, f4, f5, f6, f7, f15, f16, f17, f19, f22, f23]
+  - phase: 전개
+    minutes: 11
+    title: 옛 물건 두 점에게 묻기
+    do:
+      - 그릇 사진과 돌 도구 사진을 차례로 띄웁니다.
+      - 홀수 모둠은 그릇, 짝수 모둠은 돌 도구를 맡아 학습지 2쪽의 표를 채우게 합니다.
+      - 그릇 모둠과 돌 도구 모둠이 찾은 것을 한 가지씩 발표하게 합니다.
+      - 박물관의 짐작을 보여 주고 자기 짐작과 견주게 합니다.
+    ask:
+      - q: 그릇 아래쪽의 구멍은 왜 뚫었을까요?
+        listen_for: 매달려고, 물을 빼려고, 고치려고 같은 여러 짐작이 나올 수 있습니다. 어느 것이든 까닭을 붙였는지만 봅니다.
+    uses: [worksheet, slides]
+    slides: [14, 17]
+    facts: [f8, f9, f10, f11, f12]
+  - phase: 정리
+    minutes: 5
+    title: 유적과 유물, 그리고 이 단원에서 물을 것
+    do:
+      - 유적과 유물의 뜻을 오늘 본 것에 하나씩 붙여 봅니다.
+      - 확인 퀴즈 한 문항을 함께 풉니다.
+      - 단원에서 함께 물어볼 질문을 보여 줍니다.
+      - 칠판의 붙임쪽지 가운데 하나를 골라 지금 생각과 견주게 합니다.
+    uses: [slides, quiz]
+    slides: [18, 22]
+    facts: [f13, f14, f18, f24]
+
+slides:
+  - layout: title
+    title: 이 큰 돌, 누가 어떻게?
+    subtitle: 옛사람이 남긴 것에게 물어봅시다
+    notes: 오늘은 답을 알려 주는 시간이 아니라 묻는 방법을 익히는 시간이라고 먼저 말합니다.
+  - layout: picture
+    title: 무엇이 보이나요?
+    media: dolmen-bugeun
+    notes: 30초 동안 말없이 보게 합니다. 이 돌의 이름은 아직 말하지 않습니다.
+    facts: [f1]
+  - layout: question
+    kicker: 첫 생각
+    title: 이 큰 돌은 누가, 왜, 어떻게 놓았을까요?
+    hint: 떠오른 생각을 붙임쪽지에 한 줄로 적어 봅시다.
+    media: dolmen-bugeun
+    notes: 붙임쪽지는 모둠 기록이가 모아 칠판에 붙이고 정리 때 다시 봅니다. 맞고 틀림을 말하지 않습니다. 크기를 물으면 덮개돌의 길이가 7.1m, 너비가 5.5m이고 땅에서 꼭대기까지 2.6m라고 알려 줍니다. 교실 벽을 따라 걸음으로 7.1m를 재어 보게 해도 됩니다.
+    facts: [f21]
+  - layout: picture
+    title: 이 돌의 이름은 고인돌입니다
+    media: dolmen-parts
+    caption: 위의 큰 돌은 덮개돌, 아래 돌은 받침돌
+    notes: 사진과 그림을 견주어 보고, 덮개돌과 받침돌을 손으로 가리키며 읽게 합니다. 무덤이라는 것은 뒤에서 박물관 설명으로 보여 줍니다.
+    facts: [f1, f3]
+  - layout: points
+    title: 눈으로 본 것일까요, 짐작한 것일까요?
+    points:
+      - 덮개돌이 받침돌 위에 얹혀 있다.
+      - 여러 사람이 함께 돌을 옮겼다.
+      - 덮개돌이 받침돌 밖으로 길게 나와 있다.
+      - 중요한 사람을 위해 만들었다.
+    media: dolmen-bugeun
+    notes: 한 문장씩 읽고 눈으로 본 것이면 손바닥, 짐작한 것이면 주먹을 들게 합니다. 사진에서 손가락으로 가리켜 보게 합니다. 학습지 1쪽 첫 표와 같은 문장입니다.
+    facts: [f1]
+  - layout: compare
+    title: 사진에서 가리킬 수 있나요?
+    left:
+      label: 눈으로 본 것
+      points:
+        - 덮개돌이 받침돌 위에 얹혀 있다.
+        - 덮개돌이 받침돌 밖으로 길게 나와 있다.
+    right:
+      label: 짐작한 것
+      points:
+        - 여러 사람이 함께 돌을 옮겼다.
+        - 중요한 사람을 위해 만들었다.
+    media: dolmen-bugeun
+    notes: 왼쪽 두 문장은 사진에서 손가락으로 짚게 합니다. 가리킬 수 있으면 눈으로 본 것, 가리킬 수 없으면 짐작한 것이라는 기준을 정리합니다. 짐작이 나쁜 것이 아니라 까닭이 있어야 한다는 말을 덧붙입니다.
+    facts: [f1]
+  - layout: points
+    title: 종이 고인돌을 세워 봅시다
+    points:
+      - 바닥판의 받침돌 자리에 받침돌 두 개를 세웁니다.
+      - 덮개돌을 그 위에 얹습니다.
+    media: paper-dolmen
+    notes: 이 장에는 2분쯤 잡았습니다. 조각은 바닥판에 붙이지 않고 찍힌 자리에 세우기만 합니다. 덮개돌을 손으로 얹는 것과 진짜 큰 돌을 얹는 것이 어떻게 다를지 묻습니다.
+    facts: [f1, f3]
+  - layout: activity
+    title: 덮개돌을 올린 차례를 짐작해 봅시다
+    instructions:
+      - 차례 카드 네 장을 모둠이 정한 차례로 놓습니다.
+      - 카드를 놓은 차례대로 조각을 움직여 봅니다.
+      - 차례와 그 까닭을 학습지 1쪽에 적습니다.
+    minutes: 4
+    notes: 받침돌이 쓰러지지 않게 한 사람이 잡아 주게 합니다. 흙 비탈은 카드에 따라 놓았다가 치울 수 있는 조각입니다. 차례 카드는 정답을 맞히는 놀이가 아니라 까닭을 말하는 연습입니다. 흙 비탈 위에 연필이나 통나무를 깔자는 모둠이 있으면 ‘카드에 없는 방법’으로 받아 학습지에 적게 합니다. 이 차시가 근거로 삼은 한국민족문화대백과사전, 한국고고학사전, 고창 세계유산 고인돌박물관의 설명에는 없는 방법입니다.
+  - layout: question
+    kicker: 모둠 발표
+    title: 무거운 덮개돌을 어떻게 올렸을까요?
+    hint: 모둠이 정한 차례와 그 까닭을 말해 봅시다.
+    notes: 한 모둠만 발표합니다. 다른 모둠은 발표를 듣고 “그 까닭이 사진이나 모형에서 보이나요?”를 묻게 합니다. 카드에 없는 방법을 적은 모둠이 있으면 하나 들어 봅니다.
+  - layout: steps
+    title: 이렇게 올렸다는 짐작이 있습니다
+    steps:
+      - label: 하나
+        text: 받침돌을 세웁니다.
+        media: dolmen-step1
+      - label: 둘
+        text: 흙을 쌓아 비탈을 만듭니다.
+        media: dolmen-step2
+      - label: 셋
+        text: 덮개돌을 비탈 위로 끌어 올립니다.
+        media: dolmen-step3
+      - label: 넷
+        text: 흙을 걷어 냅니다.
+        media: dolmen-step4
+    notes: 제목의 ‘짐작’을 꼭 읽어 줍니다. 고창 세계유산 고인돌박물관이 이 차례로 설명하면서 ‘추정됩니다’라고 적었습니다. 받침돌이 높은 탁자식 고인돌은 통나무를 井자로 쌓아 들어 올렸다는 짐작도 있습니다. 화면의 그림은 받침돌 둘레를 흙으로 모두 덮었지만, 종이 고인돌의 흙 비탈은 받침돌 한쪽에만 놓입니다. 모둠의 차례와 같은지, 모둠이 따로 적은 방법은 어디에 들어갈지 묻습니다.
+    facts: [f22, f7, f16]
+  - layout: points
+    title: 무엇을 보고 이렇게 짐작했을까요?
+    points:
+      - 어떤 고인돌에서는 덮개돌과 받침돌 사이에 눌린 흙이 나왔습니다.
+      - 그래서 흙을 쌓았다고 짐작합니다.
+    media: dolmen-soil
+    notes: 고인돌에 남은 흔적이라고 읽어 주고, 그림에서 덮개돌과 받침돌 사이의 눌린 흙을 가리킵니다. 본 것(눌려 있는 흙)에서 짐작(흙을 쌓았다)이 나왔다는 것을 6번 장에서 정한 기준(가리킬 수 있으면 본 것)으로 다시 짚습니다.
+    facts: [f19]
+  - layout: points
+    title: 박물관의 설명을 봅시다
+    points:
+      - 고인돌은 옛사람의 무덤으로 알려져 있습니다.
+      - 우두머리를 기억하려고 만들었다고 봅니다.
+      - 우리나라에서 찾은 고인돌은 3만 기가 넘습니다.
+    notes: 첫 생각의 ‘누가, 왜’와 견주게 합니다. 둘째 줄은 박물관의 설명이고 셋째 줄은 찾아서 센 기록입니다. ‘기’는 고인돌을 셀 때 쓰는 말입니다 (박물관 자료도 ‘3만기’라고 셉니다). 시간이 남으면 이렇게 많으니 모두 우두머리의 것이었을지 물어봅니다. 여러 기씩 무리 지어 있어 핏줄로 이어진 사람들의 공동 무덤으로 보는 학자도 있습니다. 크고 홀로 선 고인돌은 기념물로 세웠다고 보기도 합니다.
+    facts: [f2, f4, f5, f6]
+  - layout: term
+    term: 추론
+    example: 큰 덮개돌(눈으로 본 것) + 혼자 들 수 없다(아는 것) → 여러 사람이 함께 옮겼다(짐작한 것)
+    notes: 오늘 한 일에 이름을 붙여 줍니다. 본 것에 아는 것을 이어 짐작을 끌어내는 것이 추론입니다.
+    facts: [f15]
+  - layout: compare
+    title: 이 그릇을 살펴봅시다
+    left:
+      label: 그릇 전체
+      points:
+        - 바닥 모양과 겉면의 무늬를 봅시다.
+      media: pottery-amsa
+    right:
+      label: 아래쪽을 크게
+      points:
+        - 구멍을 찾아봅시다.
+      media: pottery-holes
+    notes: 바닥의 모양, 겉면의 무늬, 아래쪽 구멍을 차례로 가리킵니다. 박물관 설명은 구멍을 두 개라고 씁니다. 사진에 따라 더 보일 수도 있으니 아이가 센 대로 말하게 합니다. 겉면의 금은 박물관 설명에 나오지 않습니다. 박물관이 고쳐 쓴 흔적이라고 본 것은 구멍입니다. 금을 까닭으로 들면 “그 금이 옛날에 생긴 것인지 어떻게 알 수 있을까요?”를 되묻습니다. 3차시에서 다시 만나는 물건입니다.
+    facts: [f8]
+  - layout: points
+    title: 이 돌 도구를 살펴봅시다
+    points:
+      - 전체 모양을 봅시다.
+      - 가장자리와 끝을 봅시다.
+      - 길이는 17.8cm입니다.
+    media: hand-axe
+    notes: 전체 모양, 가장자리, 끝을 차례로 가리킵니다. 30cm 자로 17.8cm를 재어 보여 주면 크기를 짐작하기 쉽습니다. 이름이 나오면 “그 이름은 다음 시간부터 배워요. 지금은 무엇을 보고 알았나요?”로 받습니다.
+    facts: [f10, f12]
+  - layout: activity
+    title: 옛 물건에게 물어봅시다
+    instructions:
+      - 홀수 모둠은 그릇, 짝수 모둠은 돌 도구를 봅니다.
+      - 살펴볼 곳마다 눈으로 본 것을 먼저 적습니다.
+      - 눈으로 본 것과 짐작한 것 사이에 아는 것을 ‘~하니까’로 적습니다.
+    minutes: 6
+    notes: 두 물건의 이름은 알려 주지 않습니다. 이름이 나오면 “그 이름은 다음 시간부터 배워요. 지금은 무엇을 보고 알았나요?”로 받습니다.
+  - layout: compare
+    title: 박물관의 짐작과 견주어 봅시다
+    left:
+      label: 그릇
+      points:
+        - "눈으로 본 것: 아래쪽에 작은 구멍이 있다."
+        - "짐작한 것: 깨진 곳을 고쳐 쓴 흔적으로 본다."
+      media: pottery-amsa
+    right:
+      label: 돌 도구
+      points:
+        - "눈으로 본 것: 끝이 뾰족하고 가장자리에 날이 있다."
+        - "짐작한 것: 주로 큰 동물을 가르는 데 썼다고 본다."
+      media: hand-axe
+    notes: 아이들의 짐작과 같아도, 달라도 괜찮습니다. 박물관도 ‘추정된다’고 적었다는 점을 짚습니다.
+    facts: [f9, f10, f11]
+  - layout: term
+    term: 유적
+    example: 고인돌은 옛사람이 만든 무덤 자리이니 유적입니다.
+    notes: 오늘 본 고인돌에 낱말을 붙여 줍니다. 논밭을 정리하고 길을 내면서 중장비로 옮겨지거나 부서진 고인돌도 많으니 ‘옮길 수 있나’보다 ‘옛사람의 자취가 남은 곳인가, 옛사람이 남긴 물건인가’로 가리게 합니다.
+    facts: [f2, f13, f18]
+  - layout: term
+    term: 유물
+    example: 오늘 본 그릇과 돌 도구는 옛사람이 남긴 물건이니 유물입니다.
+    notes: 오늘 본 두 물건에 낱말을 붙여 줍니다. 오늘 본 세 가지는 서로 아주 다른 때에 남긴 것이라고 한마디 덧붙입니다.
+    facts: [f14, f24]
+  - layout: quiz
+    item: 3
+    notes: 손을 들어 답하게 합니다. 유물을 고른 아이에게는 “고인돌은 손에 들고 쓰던 물건인가요, 옛사람의 자취가 남은 곳인가요?”를 묻습니다. 덮개돌을 고르면 고인돌의 한 부분 이름이라고 짚어 줍니다.
+  - layout: points
+    title: 이 단원에서 함께 물어볼 것
+    points:
+      - 옛사람은 무엇을 먹고 어디에서 살았을까요?
+      - 쓰던 도구는 어떻게 바뀌었을까요?
+      - 사람들은 어떻게 모여 나라를 세웠을까요?
+      - 무엇을 보고 그렇게 짐작할 수 있을까요?
+    notes: 이 단원에서는 유적과 유물을 보고 옛사람의 생활을 짐작해 간다고 소개합니다. 질문만 보여 주고 답은 말하지 않습니다. 시간이 모자라면 이 장은 다음 시간 시작으로 미루고, 마지막 장의 붙임쪽지 돌아보기를 먼저 합니다.
+  - layout: closing
+    title: 처음 생각이 달라졌나요?
+    points:
+      - 눈으로 본 것과 짐작한 것을 가릅니다.
+      - 짐작에는 본 것을 까닭으로 붙입니다.
+    notes: 칠판의 붙임쪽지 가운데 하나를 골라 지금이라면 어떻게 고쳐 쓰고 싶은지 듣고 마칩니다.
+
+worksheet:
+  title: 옛사람이 남긴 것에게 묻기
+  subtitle: 눈으로 본 것 · 아는 것 · 짐작한 것
+  print:
+    per: student
+    sides: duplex
+  pages:
+    - heading: 돌에게 묻기
+      blocks:
+        - type: figure
+          media: dolmen-bugeun
+          width: half
+        - type: prompt
+          text: 고인돌 사진을 보고 한 말입니다. 눈으로 본 것인지, 짐작한 것인지 ○표 해 봅시다.
+        - type: table
+          columns: [말, 눈으로 본 것, 짐작한 것]
+          rows:
+            - [덮개돌이 받침돌 위에 얹혀 있다., "", ""]
+            - [여러 사람이 함께 돌을 옮겼다., "", ""]
+            - [덮개돌이 받침돌 밖으로 길게 나와 있다., "", ""]
+            - [중요한 사람을 위해 만들었다., "", ""]
+        - type: prompt
+          text: 우리 모둠이 카드를 놓은 차례와 그렇게 놓은 까닭을 적어 봅시다.
+        - type: table
+          columns: [차례, 카드에 적힌 일, 그렇게 놓은 까닭]
+          rows:
+            - ["1", "", ""]
+            - ["2", "", ""]
+            - ["3", "", ""]
+            - ["4", "", ""]
+        - type: prompt
+          text: 카드에 없는 방법이 떠올랐다면 적어 봅시다.
+        - type: lines
+          count: 2
+    - heading: 물건에게 묻기
+      blocks:
+        - type: columns
+          columns:
+            - - type: figure
+                media: pottery-amsa
+                width: full
+            - - type: figure
+                media: pottery-holes
+                width: full
+            - - type: figure
+                media: hand-axe
+                width: full
+        - type: prompt
+          text: 맡은 물건의 표를 채워 봅시다.
+        - type: example
+          parts:
+            - label: 눈으로 본 것
+              text: 덮개돌이 아주 크다.
+            - label: 아는 것
+              text: 큰 돌은 혼자서는 들 수 없으니까
+            - label: 짐작한 것
+              text: 여러 사람이 함께 옮겼다.
+        - type: prompt
+          number: false
+          text: 그릇 (홀수 모둠)
+        - type: table
+          columns: [살펴볼 곳, 눈으로 본 것, 아는 것 (~하니까), 짐작한 것]
+          rows:
+            - [바닥 모양, "", "", ""]
+            - [아래쪽 구멍, "", "", ""]
+        - type: prompt
+          number: false
+          text: 돌 도구 (짝수 모둠)
+        - type: table
+          columns: [살펴볼 곳, 눈으로 본 것, 아는 것 (~하니까), 짐작한 것]
+          rows:
+            - [전체 모양, "", "", ""]
+            - [가장자리와 끝, "", "", ""]
+  guide:
+    - where: 1쪽 첫 표
+      text: 첫째와 셋째 문장은 사진에서 가리킬 수 있으니 눈으로 본 것이고, 둘째와 넷째는 짐작한 것입니다.
+    - where: 1쪽 차례와 까닭 표
+      text: 정해진 답이 없습니다. 차례마다 까닭이 붙어 있는지 봅니다.
+    - where: 1쪽 카드에 없는 방법
+      text: 비워 두어도 됩니다. 흙 비탈 위에 통나무를 깐다는 생각처럼 카드에 없는 방법을 적었으면 까닭이 붙어 있는지 보고 받아 줍니다.
+    - where: 2쪽 표
+      text: "정해진 답이 없습니다. 아는 것 칸에 눈으로 본 것과 짐작한 것을 잇는 말(예: 날카로운 가장자리는 자르는 데 좋으니까)이 들어가면 추론을 한 것입니다."
+    - where: 2쪽 그릇의 바닥 모양
+      text: 정해진 답이 없습니다. 까닭이 붙었는지만 봅니다.
+    - where: 2쪽 그릇의 구멍
+      text: 박물관은 이 구멍이 깨진 그릇을 임시로 고쳐 쓴 흔적이라고 짐작합니다. 아이의 짐작이 달라도 까닭이 있으면 받아 줍니다.
+    - where: 2쪽 돌 도구
+      text: 박물관은 여러 가지 일에 쓰인 도구였다고 설명하고, 주로 큰 동물을 잡아 가르는 데 썼다고 짐작합니다. 적을 수 있는 한 가지 예는 눈으로 본 것 ‘끝이 뾰족하고 가장자리가 날카롭다’, 아는 것 ‘날카로운 것은 고기를 자를 수 있으니까’, 짐작한 것 ‘동물을 가르는 데 썼다’입니다.
+  facts: [f1, f3, f9, f10, f11, f15]
+
+quiz:
+  items:
+    - type: choice
+      q: 옛 그릇을 보고 한 말 가운데 ‘눈으로 본 것’은 무엇인가요?
+      choices:
+        - 아래쪽에 작은 구멍이 있다.
+        - 깨진 곳을 고쳐 썼을 것이다.
+        - 물을 담아 두었을 것이다.
+      answer: 1
+      explain: 구멍은 그릇에서 손가락으로 가리킬 수 있습니다. 나머지 둘은 본 것을 바탕으로 짐작한 말입니다.
+      facts: [f9]
+    - type: ox
+      q: 추론은 까닭 없이 마음대로 상상하는 것이다.
+      answer: false
+      explain: 추론은 본 것과 아는 것을 바탕으로 모르는 것을 짐작하는 일입니다. 그래서 까닭을 함께 말합니다.
+      facts: [f15]
+    - type: choice
+      q: 고인돌이나 집터처럼 옛사람의 자취가 남아 있는 곳을 무엇이라고 하나요?
+      choices:
+        - 유물
+        - 유적
+        - 덮개돌
+      answer: 2
+      explain: 무덤이나 집터처럼 옛사람의 자취가 남아 있는 곳은 유적입니다.
+      facts: [f13, f2, f8]
+    - type: short
+      q: 그릇이나 도구처럼 옛사람이 남긴 물건을 무엇이라고 하나요?
+      answer: 유물
+      explain: 그릇·도구 같은 물건은 유물, 무덤·집터처럼 옛사람의 자취가 남아 있는 곳은 유적입니다.
+      facts: [f13, f14]
+    - type: ox
+      q: "“덮개돌이 받침돌 밖으로 길게 나와 있다”는 사진을 보고 짐작한 것이다."
+      answer: false
+      explain: 덮개돌이 받침돌 밖으로 나온 곳을 사진에서 손가락으로 가리킬 수 있으니 눈으로 본 것입니다.
+      facts: [f1, f3]
+
+assets:
+  papercraft:
+    state: ready
+    title: 종이 고인돌 세우기
+    module: dolmen-table
+    pages: 3
+    print:
+      per: group
+      paper: A4 180g 이상 두꺼운 종이 (1·2쪽)
+      materials: [가위, 풀, 자, 볼펜]
+      note: 실제 크기(100%)로 인쇄합니다. 페이지에 맞추기를 켜면 조각 크기가 서로 맞지 않습니다. 1·2쪽은 두꺼운 종이에 뽑고, 3쪽은 보통 용지에 뽑아도 됩니다. 프린터에 두꺼운 종이가 들어가지 않으면 보통 용지에 뽑아 두꺼운 종이에 붙인 뒤 오립니다. 차례 카드 네 장은 2쪽 아래에 있습니다.
+    steps:
+      - 자르는 선을 따라 조각과 차례 카드를 오립니다.
+      - 자를 대고 볼펜으로 접는 선을 꾹 눌러 금을 긋습니다.
+      - 그림이 찍힌 쪽이 바깥으로 오게 접는 선을 접습니다.
+      - 빗금 친 풀칠 칸에 풀을 바릅니다. 풀칠 칸을 안으로 접어 넣고, 같은 글자가 찍힌 면의 뒤쪽에 붙입니다.
+      - 조각은 바닥판에 붙이지 않습니다. 수업 때 바닥판에 찍힌 자리에 올려놓습니다.
+    # 도안의 차례 카드 네 장에 찍는 문장 (수업 화면 10번 장의 단계 글과 글자까지 같게)
+    texts:
+      - 받침돌을 세웁니다.
+      - 흙을 쌓아 비탈을 만듭니다.
+      - 덮개돌을 비탈 위로 끌어 올립니다.
+      - 흙을 걷어 냅니다.
+    try_it:
+      - 바닥판의 받침돌 자리에 받침돌 두 개를 세우고 덮개돌을 얹어 봅시다.
+      - 차례 카드 네 장을 섞은 뒤 모둠이 생각한 차례로 놓아 봅시다.
+      - 카드를 놓은 차례대로 조각을 움직여 봅시다. 받침돌이 쓰러지지 않게 한 사람이 잡아 줍시다.
+      - 그 차례로 놓은 까닭을 한 문장으로 말해 봅시다.
+    reflect:
+      - 고인돌을 세우는 모습을 지켜본 사람이 지금 있을까요? 없다면 우리는 무엇을 보고 짐작했나요?
+    facts: [f1, f7, f22]
+  coloring:
+    state: planned
+    idea: 우리가 그린 고인돌 그림(dolmen-parts)을 바탕으로 선 그림을 그리고, 찾아볼 것에 덮개돌과 받침돌을 넣는다. 부근리 사진은 CC BY-SA 라 본떠 그리지 않는다.
+  making_kit:
+    state: skip
+    reason: 도입 차시라 본 것과 짐작을 가르는 쓰기가 중심이고, 만들기는 페이퍼크래프트로 이미 합니다.
+  escape:
+    state: planned
+    idea: "한 방: 문장을 본 것과 짐작으로 가르고, 유적과 유물을 나누어야 문이 열린다."
+  virtual3d:
+    state: skip
+    reason: 고인돌의 생김새는 페이퍼크래프트로 손에 쥐어 볼 수 있습니다. 이 단원의 3D 는 다른 차시에 둡니다.
+  web_activity:
+    state: ready
+    title: 유적일까, 유물일까
+    instructions: 카드를 알맞은 상자에 넣고, 까닭을 읽어 봅시다.
+    activity:
+      kind: sort
+      bins:
+        - id: site
+          label: 유적
+        - id: object
+          label: 유물
+      items:
+        - text: 고인돌
+          media: dolmen-bugeun
+          bin: site
+          why: 옛사람이 만든 무덤 자리입니다.
+        - text: 흙으로 만든 그릇
+          media: pottery-amsa
+          bin: object
+          why: 옛사람이 쓰던 물건입니다.
+        - text: 돌로 만든 도구
+          media: hand-axe
+          bin: object
+          why: 옛사람이 쓰던 돌 도구입니다.
+        - text: 옛사람이 살던 집터
+          bin: site
+          why: 땅에 남은 집의 자리입니다.
+        - text: 조개껍데기가 쌓인 조개더미
+          bin: site
+          why: 옛사람이 먹고 버린 조개껍데기가 남은 자리입니다.
+        - text: 옛사람이 쓰던 그릇 조각
+          bin: object
+          why: 옛사람이 쓰던 물건의 조각입니다.
+      facts: [f2, f8, f11, f13, f14, f20]
+  cards:
+    state: ready
+    title: 낱말 카드
+    print:
+      per: group
+      paper: A4 120g 이상 (양면 인쇄가 되는 두께)
+      materials: [가위]
+    cards:
+      - front: 고인돌
+        facts: [f1, f2]
+      - front: 덮개돌
+        facts: [f3]
+      - front: 받침돌
+        facts: [f1]
+      - front: 추론
+        facts: [f15]
+      - front: 유적
+        facts: [f13, f2, f8]
+      - front: 유물
+        facts: [f14]
+    games:
+      - name: 뜻 듣고 낱말 맞히기
+        how: 한 사람이 뒷면의 풀이를 읽으면 나머지가 앞면의 낱말을 맞힙니다.
+      - name: 유적과 유물 가르기
+        how: 유적 카드와 유물 카드를 책상에 놓습니다. 한 사람씩 옛사람이 남긴 것을 하나 떠올려 말하고, 유적 카드와 유물 카드 가운데 어느 쪽인지 까닭과 함께 짚습니다.
+
+misconceptions:
+  - belief: 짐작은 정답이 없으니 아무렇게나 말해도 된다.
+    response: 짐작에도 까닭이 있어야 한다고 말해 줍니다. “그건 무엇을 보고 그렇게 생각했나요?”를 묻고, 본 것을 대면 받아 줍니다.
+  - belief: 박물관 설명은 그때 사람이 직접 보고 남긴 기록이다.
+    response: 박물관도 남은 것을 보고 짐작했다고 말해 줍니다. 소장품 설명의 ‘추정된다’라는 말을 보여 주면 됩니다.
+  - belief: 큰 돌이 놓여 있으면 모두 고인돌이다.
+    response: 덮개돌 아래에 받침돌이나 땅속 무덤방 같은 짜임이 있는지 살펴 가린다고 말해 줍니다. 받침돌 없이 덮개돌이 땅속 무덤방을 바로 덮은 고인돌도 있고, 한국민족문화대백과사전과 한국고고학사전은 이런 고인돌을 가장 흔한 형식으로 적습니다. 생김새가 여러 가지라는 것은 4~5차시에서 다시 다룹니다.
+  - belief: 유적은 커서 옮길 수 없는 것이고, 유물은 옮길 수 있는 것이다.
+    response: 논밭을 정리하고 길을 내면서 중장비로 옮겨지거나 부서진 고인돌도 많다고 말해 줍니다. 옮겼는지가 아니라, 옛사람의 자취가 남은 곳인지 옛사람이 남긴 물건인지로 가립니다.
+
+assessment:
+  look_for: "① 눈으로 본 것 칸에 사진에서 가리킬 수 있는 것만 적었는가 ② 짐작한 것 칸이 본 것과 이어지는가 ③ 아는 것 칸에 본 것과 짐작을 잇는 말(~하니까)이 있는가. ①②③이 모두 되면 잘함, ①과 ② 가운데 하나 이상이 되면 보통, ①과 ② 둘 다 되지 않으면 노력 요함으로 봅니다. 노력 요함인 아이에게는 다음 시간 시작에 “그건 무엇을 보고 알았나요?”를 다시 묻습니다. 유적과 유물을 가르는 것은 확인 퀴즈 3·4번으로 봅니다."
+  where: 학습지 2쪽의 표
+
+teacher_notes:
+  - title: 오늘 쓰는 사진과 유물 (교사만)
+    body:
+      - 첫 사진은 강화 부근리 고인돌입니다 (위키미디어 공용, CC BY-SA 4.0). 페이퍼크래프트 도안도 같은 생김새입니다.
+      - 그릇은 서울 암사동에서 나온 빗살무늬토기, 돌 도구는 경기도 파주에서 나온 주먹도끼입니다. 둘 다 국립중앙박물관 소장품입니다.
+      - 세 가지는 서로 아주 다른 때의 것입니다. 아이가 고인돌을 만든 사람이 이 도구를 썼느냐고 물으면 “서로 다른 때의 것이고, 언제인지는 다음 시간부터 알아봅니다”라고 답합니다.
+      - 시대 이름과 유물 이름은 2차시부터 배웁니다. 오늘은 아이에게 이름을 말하지 않습니다.
+  - title: 고인돌의 생김새와 이름
+    body:
+      - 아이들이 굄돌이라고 말하면 받침돌과 같은 말이라고 한 번 알려 줍니다.
+      - 오늘 사진처럼 받침돌이 덮개돌을 받친 고인돌만 있는 것은 아닙니다. 받침돌 없이 덮개돌이 땅속 무덤방을 바로 덮은 고인돌도 있고, 두 사전(한국민족문화대백과사전, 한국고고학사전)은 이런 고인돌을 가장 흔한 형식으로 적습니다. 탁자식, 바둑판식처럼 생김새를 나누는 말은 4~5차시에서 다룹니다.
+      - 한국민족문화대백과사전은 한반도 전체의 고인돌을 4만여 기로 추산합니다. 수업 화면의 ‘3만 기가 넘습니다’는 확인된 수를 적은 박물관 자료를 따른 것입니다.
+  - title: 덮개돌을 올린 차례
+    body:
+      - 한국민족문화대백과사전은 덮개돌을 올린 방법을 세 가지로 짐작합니다. 통나무를 무덤방 위까지 레일처럼 비스듬히 걸쳐 끌어 올리기, 흙이나 돌을 쌓아 끌어 올리기, 통나무를 井자로 쌓아 들어 올리기입니다.
+      - 고창 세계유산 고인돌박물관은 받침돌을 세운 뒤 흙을 경사지게 쌓고, 그 위로 덮개돌을 끌어 올린 다음 흙을 걷어 냈다고 짐작합니다. 수업 화면 10번 장과 차례 카드는 이 차례를 따릅니다. 두 사전(한국민족문화대백과사전, 한국고고학사전)은 흙을 쌓아 올리는 방법을 받침돌이 없거나 낮은 고인돌에, 통나무를 井자로 쌓는 방법을 탁자식이나 받침돌이 높은 바둑판식 고인돌에 짝지어 설명합니다. 어느 쪽이든 지켜본 사람이 없는 짐작이고, 화면의 차례는 여러 짐작 가운데 하나입니다.
+      - 한국민족문화대백과사전은 덮개돌과 받침돌 사이에 눌려 있는 흙을, 흙더미를 쌓았던 흔적으로 봅니다. 한국고고학사전은 끌어 올린 뒤 흙을 걷어 냈다고 짐작합니다. 차례 그림의 넷째 그림(흙을 걷어 낸다)이 이것입니다.
+      - 통나무 굴림목은 덮개돌을 무덤 자리까지 끌고 오는 방법에 나옵니다. 한국민족문화대백과사전은 인도네시아 숨바 섬의 사례 등으로, 바닥에 통나무 굴림목을 깔고 덮개돌을 밧줄로 묶어 여러 사람이 끄는 모습을 복원합니다. 보여 주고 싶으면 책상 위에 연필 세 자루를 나란히 놓고 그 위에 덮개돌 조각을 얹어 굴려 보게 합니다.
+      - 이 차시가 근거로 삼은 두 사전과 고창 세계유산 고인돌박물관의 설명에는 흙 비탈 위에 통나무를 깔았다는 말이 없습니다. 맨 위에 적은 통나무 레일은 흙 비탈이 아니라 통나무를 무덤방 위까지 비스듬히 걸치는 방법입니다. 그래서 차례 카드와 그림에 넣지 않았습니다. 모둠이 그렇게 하자고 하면 ‘카드에 없는 방법’으로 받아 주고, 다른 차례를 내놓은 모둠도 까닭이 있으면 받아 줍니다.
+  - title: 아이가 무덤을 물을 때
+    body:
+      - “지금도 사람이 묻혀 있나요?”라고 물으면 “무덤방에서 사람뼈가 나온 고인돌도 있습니다. 옛사람의 무덤이니 함부로 올라가지 않습니다”라고 답합니다.
+  - title: 미리 할 일
+    body:
+      - 페이퍼크래프트는 모둠마다 덮개돌, 받침돌 두 개, 흙 비탈을 오리고 접어 붙여 두고, 바닥판과 차례 카드 네 장을 오려 둡니다. 걸리는 시간은 준비물에 적었습니다. 앞 시간에 모둠이 함께 만들어 둘 수도 있습니다. 조각은 바닥판에 붙이지 않습니다.
+      - 차례를 짐작하는 활동에는 차례 카드 네 장만 있어도 됩니다. 카드는 페이퍼크래프트 도안 2쪽 아래에 있습니다.
+  - title: 시간이 모자랄 때
+    body:
+      - 종이 고인돌을 세우지 않고 차례 카드 네 장만 모둠에 나누어 줍니다. 모둠은 카드를 늘어놓으며 차례를 짐작하고 까닭을 학습지에 적습니다. 10번 장은 그다음에 띄웁니다.
+      - 웹 활동 ‘유적일까, 유물일까’는 다음 시간 시작에 쓰거나 과제로 낼 수 있습니다.

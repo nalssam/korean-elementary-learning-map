@@ -1,0 +1,32 @@
+/* 인쇄물의 뼈대. 치수는 docs/CONTRACT.md 7절과 tokens.css 의 값이다.
+   뼈대는 계약과 함께 들어왔고 인쇄물 담당이 이어서 채운다 (글자·줄·칸의 모양).
+   아래 class 이름과 치수는 페이퍼크래프트 담당도 기대고 있으므로 바꾸지 않는다. */
+@page portrait { size: 210mm 297mm; margin: 0; }
+@page landscape { size: 297mm 210mm; margin: 0; }
+
+body[data-kind='print'] { background: var(--line); }
+
+/* 한 쪽. 크기가 고정된 상자다. 넘친 내용을 overflow: hidden 으로 가리지 않는다 (render-pdf 가 넘침을 잡는다). */
+.sheet {
+  display: flex; flex-direction: column;
+  width: 210mm; height: 297mm; padding: var(--page-margin);
+  margin: var(--s5) auto; background: #fff; color: var(--ink);
+  page: portrait; break-after: page;
+}
+.sheet[data-orientation='landscape'] { width: 297mm; height: 210mm; page: landscape; }
+.sheet-head { flex: none; height: var(--sheet-head); }
+.sheet-body { flex: none; position: relative; height: calc(297mm - 2 * var(--page-margin) - var(--sheet-head) - var(--sheet-foot)); }
+.sheet[data-orientation='landscape'] .sheet-body { height: calc(210mm - 2 * var(--page-margin) - var(--sheet-head) - var(--sheet-foot)); }
+/* 바닥글은 틀의 글이라 8pt 이상이다 (9pt 는 아이가 읽고 쓰는 글의 하한). 공개된 차시의 바닥글(주소가 든 긴 한 줄)은 두 줄로 접히므로
+   두 줄이 6mm 안에 들도록 줄 간격을 좁게 둔다 (8pt × 1.05 × 2 = 5.9mm). */
+.sheet-foot { flex: none; height: var(--sheet-foot); font-size: 8pt; line-height: 1.05; color: var(--ink-dim); }
+
+/* HTML 상자에 쓰는 선. 전개도 SVG 의 선은 모듈이 SVG 안에 직접 그린다 (SVG 안에서는 mm 가 아니라 SVG 단위로 굵기를 적는다). */
+.cut { border: 2px solid var(--ink); } /* 0.53mm. Chromium 은 테두리를 px 아래로 버려 그린다 (0.5mm 는 1px) */
+.fold { border: 1px dashed var(--ink); }
+
+@media print {
+  body[data-kind='print'] { background: none; }
+  .sheet { margin: 0; }
+  .no-print { display: none !important; }
+}

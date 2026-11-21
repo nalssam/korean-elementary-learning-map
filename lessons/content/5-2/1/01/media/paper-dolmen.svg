@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 460" role="img" aria-labelledby="t">
+  <title id="t">종이 고인돌을 세우는 그림. 바닥판에 찍힌 자리에 받침돌 두 개가 서 있고, 그 위로 덮개돌을 내려 얹는다.</title>
+  <defs><marker id="ah" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#18766b"/></marker></defs>
+  <rect x="1.5" y="1.5" width="597" height="457" rx="16" fill="#fbfaf6" stroke="#e4dfd3" stroke-width="3"/>
+  <polygon points="52.0,402.8 448.8,402.8 448.8,398.0 52.0,398.0" fill="#e4dfd3" stroke="#132c3d" stroke-width="3" stroke-linejoin="round"/>
+  <polygon points="52.0,398.0 448.8,398.0 545.8,342.0 149.0,342.0" fill="#ffffff" stroke="#132c3d" stroke-width="3" stroke-linejoin="round"/>
+  <polygon points="448.8,402.8 545.8,346.8 545.8,342.0 448.8,398.0" fill="#e4dfd3" stroke="#132c3d" stroke-width="3" stroke-linejoin="round"/>
+  <polygon points="149.2,384.4 206.8,384.4 256.6,355.6 199.0,355.6" fill="none" stroke="#132c3d" stroke-width="2" stroke-linejoin="round" stroke-dasharray="6 5"/>
+  <polygon points="341.2,384.4 398.8,384.4 448.6,355.6 391.0,355.6" fill="none" stroke="#132c3d" stroke-width="2" stroke-linejoin="round" stroke-dasharray="6 5"/>
+  <polygon points="162.9,382.0 201.3,382.0 201.3,266.8 162.9,266.8" fill="#d8d2c4" stroke="#132c3d" stroke-width="3" stroke-linejoin="round"/>
+  <polygon points="162.9,266.8 201.3,266.8 242.9,242.8 204.5,242.8" fill="#d8d2c4" stroke="#132c3d" stroke-width="3" stroke-linejoin="round"/>
+  <polygon points="201.3,382.0 242.9,358.0 242.9,242.8 201.3,266.8" fill="#c4bcaa" stroke="#132c3d" stroke-width="3" stroke-linejoin="round"/>
+  <polygon points="354.9,382.0 393.3,382.0 393.3,266.8 354.9,266.8" fill="#d8d2c4" stroke="#132c3d" stroke-width="3" stroke-linejoin="round"/>
+  <polygon points="354.9,266.8 393.3,266.8 434.9,242.8 396.5,242.8" fill="#d8d2c4" stroke="#132c3d" stroke-width="3" stroke-linejoin="round"/>
+  <polygon points="393.3,382.0 434.9,358.0 434.9,242.8 393.3,266.8" fill="#c4bcaa" stroke="#132c3d" stroke-width="3" stroke-linejoin="round"/>
+  <polygon points="103.7,182.8 410.9,182.8 410.9,150.8 103.7,150.8" fill="#c4bcaa" stroke="#132c3d" stroke-width="3" stroke-linejoin="round"/>
+  <polygon points="103.7,150.8 410.9,150.8 494.1,102.8 186.9,102.8" fill="#d8d2c4" stroke="#132c3d" stroke-width="3" stroke-linejoin="round"/>
+  <polygon points="410.9,182.8 494.1,134.8 494.1,102.8 410.9,150.8" fill="#c4bcaa" stroke="#132c3d" stroke-width="3" stroke-linejoin="round"/>
+  <line x1="298.9" y1="171.6" x2="298.9" y2="235.6" stroke="#18766b" stroke-width="6" stroke-linecap="round" marker-end="url(#ah)"/>
+  <text x="34" y="62" font-family="Pretendard, 'Noto Sans KR', sans-serif" font-size="27" font-weight="700" fill="#132c3d" text-anchor="start">덮개돌</text>
+  <line x1="80.0" y1="72.0" x2="222.9" y2="106.8" stroke="#18766b" stroke-width="2.5" stroke-linecap="round"/>
+  <text x="278" y="448" font-family="Pretendard, 'Noto Sans KR', sans-serif" font-size="27" font-weight="700" fill="#132c3d" text-anchor="middle">받침돌</text>
+  <line x1="248.1" y1="420.0" x2="184.1" y2="371.2" stroke="#18766b" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="308.1" y1="420.0" x2="372.1" y2="371.2" stroke="#18766b" stroke-width="2.5" stroke-linecap="round"/>
+  <text x="566" y="300" font-family="Pretendard, 'Noto Sans KR', sans-serif" font-size="27" font-weight="700" fill="#132c3d" text-anchor="end">바닥판</text>
+  <line x1="530.0" y1="312.0" x2="478.6" y2="366.0" stroke="#18766b" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,58 @@
+---
+// 첫 화면의 자료 유형 타일 (R43). KIND_ORDER 차례로 열 가지, 이번 빌드에 실린 자료의 수(catalog() 에서 센다).
+// 실린 자료가 있는 종류는 자료 유형별 페이지의 그 묶음(/types/#<kind>)으로 가고, 없는 종류는 링크 없이 '준비 중'이라고만 쓴다
+// (학기 타일과 같은 규칙: 누를 수 있는 것만 링크로 그린다).
+import { catalog } from '#lib/content.ts';
+import { ASSET_LABEL, KIND_ORDER } from '#lib/site.ts';
+import { href } from '#src/lib/url.ts';
+import TypeIcon from './ui/TypeIcon.astro';
+
+const items = catalog();
+const kinds = KIND_ORDER.map((kind) => ({ kind, label: ASSET_LABEL[kind], count: items.filter((i) => i.kind === kind).length }));
+---
+<ul class="kt-list">
+  {kinds.map((k) => (
+    <li>
+      {k.count > 0 ? (
+        <a class="kt" href={href(`/types/#${k.kind}`)} data-kind={k.kind}>
+          <span class="kt-icon"><TypeIcon kind={k.kind} size={24} /></span>
+          <span class="kt-text"><span class="kt-name">{k.label}</span><span class="kt-count">{k.count}개</span></span>
+        </a>
+      ) : (
+        <div class="kt is-off" data-kind={k.kind}>
+          <span class="kt-icon"><TypeIcon kind={k.kind} size={24} /></span>
+          <span class="kt-text"><span class="kt-name">{k.label}</span><span class="kt-count">준비 중</span></span>
+        </div>
+      )}
+    </li>
+  ))}
+</ul>
+
+<style>
+  .kt-list { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--s3); }
+  .kt {
+    display: flex; align-items: center; gap: var(--s3); height: 100%; min-height: 4.5rem; padding: var(--s3) var(--s4);
+    border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); color: var(--navy); text-decoration: none;
+  }
+  a.kt:hover { border-color: var(--teal); }
+  a.kt:hover .kt-name { color: var(--teal); }
+  .kt-icon { display: grid; flex: none; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: var(--radius-sm); background: var(--teal-soft); color: var(--teal); }
+  .kt-text { display: grid; min-width: 0; }
+  .kt-name { font-weight: 800; line-height: 1.3; }
+  .kt-count { font-size: var(--fs-sm); font-weight: 700; color: var(--teal); font-variant-numeric: tabular-nums; }
+  .kt.is-off { border-style: dashed; background: none; }
+  .kt.is-off .kt-icon { background: var(--paper); color: var(--gray); }
+  .kt.is-off .kt-name { color: var(--gray); font-weight: 700; }
+  .kt.is-off .kt-count { color: var(--gray); font-weight: 400; }
+
+  @media (max-width: 999.98px) {
+    .kt-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  @media (max-width: 760px) {
+    .kt-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s2); }
+    .kt { min-height: 3.75rem; gap: var(--s2); padding: var(--s2) var(--s3); }
+    .kt-icon { width: 2.25rem; height: 2.25rem; }
+    .kt-name { font-size: var(--fs-sm); }
+    .kt-count { font-size: var(--fs-xs); }
+  }
+</style>

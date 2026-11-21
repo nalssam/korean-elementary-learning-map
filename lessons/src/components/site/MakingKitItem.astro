@@ -1,0 +1,26 @@
+---
+// 만들기 세트 한 줄. 인쇄 페이지가 따로 없어서 재료·순서·안전 안내를 차시 안내 페이지 안에 그린다 (docs/CONTRACT.md 3절).
+import { ASSET_LABEL } from '#lib/site.ts';
+import type { Lesson } from '#schema/lesson.ts';
+
+interface Props { lesson: Lesson }
+const kit = Astro.props.lesson.assets.making_kit;
+---
+{kit.state === 'ready' && (
+  <li class="mat" id="making-kit">
+    <div class="mat-main">
+      <p class="mat-name">
+        <span class="mat-kind">{ASSET_LABEL.making_kit}</span>
+        <span class="mat-title">{kit.title}</span>
+      </p>
+      <p class="mat-line">
+        {kit.when === 'in_class'
+          ? `수업 시간 안에 만듭니다${kit.minutes ? ` (${kit.minutes}분)` : ''}.`
+          : '수업 시간 밖에서 만듭니다. 창의적 체험활동이나 다른 교과 시간에 이어서 할 수 있습니다.'}
+      </p>
+      <p class="mat-line">재료: {kit.materials.join(', ')}</p>
+      <ol class="mat-steps">{kit.steps.map((s) => <li>{s}</li>)}</ol>
+      {kit.safety && <p class="mat-line"><strong>안전</strong> {kit.safety}</p>}
+    </div>
+  </li>
+)}

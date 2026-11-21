@@ -1,0 +1,242 @@
+---
+// 학습지 블록들을 차례로 그린다. schema/lesson.ts 의 블록 종류마다 꼴이 하나씩 있다.
+// 번호와 섞는 순서는 layout.ts 가 정해 준 값(Placed)을 그대로 쓴다. 여기에서는 그리기만 한다.
+// data-part 는 render-pdf 가 넘친 자리를 알려 줄 때 읽는 이름이다 ("3번째 블록(줄 쓰기 칸)").
+// 풀이(worksheetKey)는 찍지 않는다. 연표의 빈칸(blank)과 문항의 정답·풀이는 HTML 에도 싣지 않는다.
+// 아이가 읽는 명세의 글은 모두 keepParticle() 을 거쳐 찍는다. 닫는 따옴표와 뒤의 조사(‘본 것’은)가 줄 끝에서 갈리지 않는다.
+// 맞고 틀림의 표시(○ ×)는 lib 의 MARK 를 쓴다. 손으로 O·X 를 적지 않는다.
+import Media from '#src/components/Media.astro';
+import { creditShort, getMedia, getPassage, mediaFile } from '#lib/content.ts';
+import { fileImageSize } from '../../../checks/files.mjs';
+import { keepParticle as k, MARK } from '#lib/site.ts';
+import type { Lesson } from '#schema/lesson.ts';
+import { choiceColumns, frameParts, keepParts, matchOrder, tableWidths } from './layout.ts';
+import type { Placed } from './layout.ts';
+
+interface Props {
+  lesson: Lesson;
+  items: Placed[];
+  /** 블록이 놓이는 폭(mm). 표의 칸 폭을 셀 때 쓴다. 세로 종이 190, 가로 277, 단 안은 그 단의 폭. */
+  width?: number;
+}
+const { lesson, items, width = 190 } = Astro.props;
+const count = (n: number) => Array.from({ length: n }, (_, i) => i);
+const percent = (weights: number[]) => { const sum = weights.reduce((a, b) => a + b, 0); return weights.map((w) => `width:${((w / sum) * 100).toFixed(2)}%`); };
+// 단(columns) 사이 틈(mm). worksheet.css 의 .ws-columns column-gap 과 같은 값이다.
+const COL_GAP = 5;
+// 머리 칸이 같은 표가 한 쪽에 여럿이면 모든 줄을 모아 칸 폭을 정한다. 위아래로 놓인 표의 세로줄이 맞는다.
+const rowsByHead = new Map<string, string[][]>();
+for (const it of items) if (it.block.type === 'table') {
+  const k = it.block.columns.join('\u0001');
+  rowsByHead.set(k, [...(rowsByHead.get(k) ?? []), ...it.block.rows]);
+}
+// 글을 쓰는 표가 바라는 높이: 머리 줄(한 줄짜리 어림)과 22mm 칸 (worksheet.css 의 .ws-table-write)
+const WRITE_HEAD_MM = 10;
+const WRITE_ROW_MM = 22;
+// 괄호로 묶은 말과 "~낱말"은 줄을 바꾸지 않는 덩어리(.ws-keep)로 찍는다
+const kept = (text: string) => keepParts(k(text));
+// 단마다 그림 한 장만 든 나란히 놓기는 '그림 줄'이다. 그림 높이·설명·출처 표시를 줄 단위로 맞춘다.
+const figureRow = (cols: Placed[][] | undefined) => !!cols && cols.every((col) => col.length === 1 && col[0].block.type === 'figure');
+// 줄 아래에 한 번 찍는 출처 표시는 몇 장의 것인지 밝힌다: "사진: 국립중앙박물관 · …" → "사진 3장: 국립중앙박물관 · …"
+// (줄의 왼쪽 끝에 찍고 장수를 밝혀, 어느 한 그림의 출처로 읽히지 않게 한다)
+const rowCredit = (credit: string, n: number) => credit.replace(/^([^:]+):/, `$1 ${n}장:`);
+---
+{items.map((it) => {
+  const b = it.block;
+  switch (b.type) {
+    case 'prompt':
+      // 번호 없는 지시문은 그 아래 표·칸의 이름표다. 물음처럼 보이지 않게 작은 제목으로 찍는다.
+      if (it.no === undefined) return <p class="ws-block ws-sub" data-part={it.where}>{k(b.text)}</p>;
+      return (
+        <p class="ws-block ws-prompt" data-part={it.where}>
+          {it.no !== undefined && <span class="ws-no">{it.no}</span>}
+          <span class="ws-prompt-text">{k(b.text)}</span>
+        </p>
+      );
+    case 'lines':
+      return (
+        <div class="ws-block ws-lines" data-part={it.where}>
+          {b.label && <p class="ws-label">{k(b.label)}</p>}
+          {count(b.count).map(() => <div class="ws-rule"></div>)}
+          <div class="ws-more" aria-hidden="true"></div>
+        </div>
+      );
+    case 'box':
+      return (
+        <div class="ws-block ws-box" data-part={it.where} style={`height:${b.height_mm}mm`}>
+          {b.label && <p class="ws-label">{k(b.label)}</p>}
+        </div>
+      );
+    case 'figure':
+      return (
+        <div class="ws-block ws-figure" data-part={it.where} data-width={b.width}>
+          <div class="ws-figcell">
+            <Media lesson={lesson} id={b.media} caption={false} />
+            {b.show_caption && getMedia(lesson, b.media).caption && <p class="ws-fig-caption">{k(getMedia(lesson, b.media).caption!)}</p>}
+          </div>
+        </div>
+      );
+    case 'example':
+      // 풀어 놓은 보기: "예" 표시가 붙은 조용한 상자. 번호도 굵은 글도 없다 (이름표만 조금 굵다).
+      // 칸(parts)은 한 줄에 화살표로 잇고, 단이 좁으면 위에서 아래로 잇는다 (worksheet.css 의 @container).
+      return (
+        <div class="ws-block ws-example" data-part={it.where}>
+          <span class="ws-example-tag">예</span>
+          {b.text !== undefined && <p class="ws-example-text">{k(b.text)}</p>}
+          {b.parts && (
+            <ol class="ws-example-parts">
+              {b.parts.map((part, pi) => (
+                <>
+                  {pi > 0 && <li class="ws-example-arrow" aria-hidden="true"><svg viewBox="0 0 12 12" width="12" height="12"><path d="M1 6h9M6.5 2.5 10 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" /></svg></li>}
+                  <li class="ws-example-part"><span class="ws-example-label">{k(part.label)}</span><span class="ws-example-said">{k(part.text)}</span></li>
+                </>
+              ))}
+            </ol>
+          )}
+        </div>
+      );
+    case 'observe_infer':
+      return (
+        <div class="ws-block ws-oi" data-part={it.where}>
+          <div class="ws-oi-in">
+            {b.media && <Media lesson={lesson} id={b.media} caption={false} class="ws-oi-media" />}
+            <div class="ws-oi-main">
+              <p class="ws-oi-target">{k(b.target)}</p>
+              <div class="ws-oi-cols">
+                {[b.observe_label, b.infer_label, b.reason_label].map((label) => (
+                  <div class="ws-oi-col">
+                    <p class="ws-oi-label">{k(label)}</p>
+                    <div class="ws-oi-lines">{count(b.lines).map(() => <div class="ws-rule"></div>)}<div class="ws-more" aria-hidden="true"></div></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    case 'table': {
+      const widths = percent(tableWidths(b.columns, rowsByHead.get(b.columns.join('\u0001')) ?? b.rows, { width, marks: it.marks }));
+      // 표시(○·×)만 받는 표는 칸이 한 줄 높이, 글을 쓰는 표는 쓰는 줄이 그어진 두 줄 높이다
+      return (
+        <table class:list={['ws-block', 'ws-table', it.marks ? 'ws-table-marks' : 'ws-table-write']} data-part={it.where} style={it.marks ? undefined : `--want:calc(${WRITE_HEAD_MM}mm + ${b.rows.length} * ${WRITE_ROW_MM}mm)`}>
+          <colgroup>{widths.map((w) => <col style={w} />)}</colgroup>
+          <thead><tr>{b.columns.map((c) => <th scope="col">{kept(c).map((p) => (p.keep ? <span class="ws-keep">{p.text}</span> : p.text))}</th>)}</tr></thead>
+          <tbody>
+            {b.rows.map((row) => <tr>{row.map((cell) => <td class:list={[cell === '' && 'ws-fill']}>{kept(cell).map((p) => (p.keep ? <span class="ws-keep">{p.text}</span> : p.text))}</td>)}</tr>)}
+          </tbody>
+        </table>
+      );
+    }
+    case 'match': {
+      const order = matchOrder(lesson.id, it.key, b.pairs.length);
+      return (
+        <div class="ws-block ws-match" data-part={it.where}>
+          {b.pairs.map((pair, i) => (
+            <>
+              <div class="ws-match-item ws-match-left"><span>{k(pair.left)}</span><i class="ws-dot"></i></div>
+              <div class="ws-match-item ws-match-right"><i class="ws-dot"></i><span>{k(b.pairs[order[i]].right)}</span></div>
+            </>
+          ))}
+        </div>
+      );
+    }
+    case 'quiz':
+      return (
+        <div class="ws-block ws-quiz" data-part={it.where}>
+          {b.items.map((n, i) => {
+            const q = lesson.quiz.items[n - 1];
+            return (
+              <div class="ws-q" data-type={q.type}>
+                <p class="ws-prompt">
+                  <span class="ws-no">{it.quizNos?.[i]}</span>
+                  <span class="ws-prompt-text">{k(q.q)}</span>
+                  {q.type === 'ox' && <span class="ws-ox"><span>{MARK.yes}</span><span>{MARK.no}</span></span>}
+                </p>
+                {q.type === 'choice' && (
+                  <ol class="ws-choices" data-columns={choiceColumns(q.choices)}>
+                    {q.choices.map((c, ci) => <li><span class="ws-choice-no">{ci + 1})</span><span>{k(c)}</span></li>)}
+                  </ol>
+                )}
+                {q.type === 'short' && <div class="ws-answer"></div>}
+              </div>
+            );
+          })}
+        </div>
+      );
+    case 'sentence_frame':
+      return (
+        <p class="ws-block ws-frame" data-part={it.where}>
+          {frameParts(b.frame).map((part) => part.kind === 'text'
+            ? <span class="ws-frame-text">{k(part.text)}</span>
+            : part.kind === 'blank' ? <span class="ws-frame-blank"></span> : <span class="ws-frame-break"></span>)}
+        </p>
+      );
+    case 'timeline':
+      return (
+        <ol class="ws-block ws-timeline" data-part={it.where}>
+          {b.points.map((p) => (
+            <li class:list={[p.blank && 'ws-timeline-blank']}>
+              <span class="ws-timeline-when">{p.when}</span>
+              <span class="ws-timeline-mark"></span>
+              <span class="ws-timeline-what">{p.blank ? '' : k(p.what)}</span>
+            </li>
+          ))}
+        </ol>
+      );
+    case 'note':
+      return (
+        <div class="ws-block ws-note" data-part={it.where}>
+          {b.title && <p class="ws-note-title">{k(b.title)}</p>}
+          {b.text.map((t) => <p>{k(t)}</p>)}
+          {b.source && <p class="ws-source">{b.source}</p>}
+        </div>
+      );
+    case 'passage': {
+      const passage = getPassage(lesson, b.passage);
+      return (
+        <article class="ws-block ws-passage" data-part={it.where}>
+          <h3>{k(passage.title)}</h3>
+          {passage.text.map((t) => <p>{k(t)}</p>)}
+          <p class="ws-source">{passage.source}</p>
+        </article>
+      );
+    }
+    case 'columns': {
+      if (figureRow(it.columns)) {
+        // 그림 줄: 그림 상자의 높이가 같고(자르지 않고 줄여 넣는다), 설명은 한 줄에, 출처 표시는 그 아래 줄에 맞춘다.
+        // 줄의 출처 표시가 모두 같으면 그림마다 찍지 않고 줄 아래에 한 번 찍는다.
+        const figs = it.columns!.map((col) => col[0]);
+        const credits = figs.map((f) => creditShort(getMedia(lesson, (f.block as { media: string }).media)));
+        const shared = credits.every((c) => c === credits[0]);
+        // 단의 폭을 그림의 가로세로 비에 비례해 나눈다: 그러면 모든 그림이 같은 높이로 그려져 위끝과 아래끝이 맞는다 (R15, C3-08).
+        // 크기를 읽지 못한 그림은 정사각형으로 친다. 학습지 페이지(worksheet.astro)의 <script> 가 설명의 폭을 재어 단의 폭과 그림 높이를 다시 정한다 (R34).
+        // 이 비율은 스크립트가 돌지 않을 때의 꼴이다.
+        const ratios = figs.map((f) => {
+          const size = fileImageSize(mediaFile(lesson, (f.block as { media: string }).media)) as { w: number; h: number } | undefined;
+          return size && size.w > 0 && size.h > 0 ? size.w / size.h : 1;
+        });
+        return (
+          <div class="ws-block ws-figrow" data-part={it.where} data-count={figs.length} data-shared-credit={shared ? '' : undefined} style={`grid-template-columns:${ratios.map((r) => `minmax(0,${r.toFixed(3)}fr)`).join(' ')}`}>
+            {figs.map((f) => {
+              const fb = f.block as { media: string; show_caption: boolean };
+              const caption = fb.show_caption ? getMedia(lesson, fb.media).caption : undefined;
+              return (
+                <div class="ws-figcell" data-part={f.where} data-ratio={ratios[figs.indexOf(f)].toFixed(4)}>
+                  <Media lesson={lesson} id={fb.media} caption={false} />
+                  <p class="ws-fig-caption">{caption ? k(caption) : ''}</p>
+                </div>
+              );
+            })}
+            {shared && <p class="ws-figrow-credit">{rowCredit(credits[0], figs.length)}</p>}
+          </div>
+        );
+      }
+      return (
+        <div class="ws-block ws-columns" data-part={it.where} style={`grid-template-columns:repeat(${b.columns.length},minmax(0,1fr))`}>
+          {(it.columns ?? []).map((col) => <div class="ws-col"><Astro.self lesson={lesson} items={col} width={(width - COL_GAP * (b.columns.length - 1)) / b.columns.length} /></div>)}
+        </div>
+      );
+    }
+  }
+})}
+

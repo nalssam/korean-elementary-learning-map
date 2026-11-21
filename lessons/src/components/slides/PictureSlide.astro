@@ -1,0 +1,15 @@
+---
+// 그림 한 장을 크게. 명세의 그림 설명 대신 장의 caption 을 찍는다 (docs/CONTRACT.md 6절).
+import { keepParticle } from '#lib/site.ts';
+import Media from '#src/components/Media.astro';
+import type { SlideProps } from './types.ts';
+
+type Props = SlideProps<'picture'>;
+const { lesson, slide, phase } = Astro.props;
+---
+<div class="sl-picture">
+  {phase && <p class="sl-phase">{phase}</p>}
+  <h2 class="sl-title">{keepParticle(slide.title)}</h2>
+  <Media lesson={lesson} id={slide.media} caption={false} class="sl-media sl-media-big" />
+  {slide.caption && <p class="sl-caption">{keepParticle(slide.caption)}</p>}
+</div>

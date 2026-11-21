@@ -1,0 +1,22 @@
+---
+// 큰 질문 하나. 곁그림(지어낸 그림도 된다)이 있으면 두 칸으로 나눠 질문은 왼쪽, 그림은 오른쪽에 둔다 (R12, copy.ts 의 STAGE_SIDE).
+// 그림 칸의 폭과 질문 글자 크기(STAGE_FIT.questionMedia)는 Stage.astro 의 스크립트가 sideCandidates() 의 차례대로 해 보고 고른다.
+import { keepParticle } from '#lib/site.ts';
+import Media from '#src/components/Media.astro';
+import { STAGE_FIT, STAGE_SIDE, sideCandidates } from './copy.ts';
+import type { SlideProps } from './types.ts';
+
+type Props = SlideProps<'question'>;
+const { lesson, slide } = Astro.props;
+const fit = STAGE_FIT.questionMedia;
+const side = slide.media ? sideCandidates(fit) : undefined;
+---
+<div class:list={['sl-question', slide.media && 'has-media sl-side']} data-fit={side ? fit.join(' ') : undefined}
+  data-side={side ? JSON.stringify(side) : undefined} data-max-lines={side ? STAGE_SIDE.maxLines.question : undefined} style={side ? `--fit: ${fit.at(-1)}; --pic: ${STAGE_SIDE.picture.at(-1)}` : undefined}>
+  <div class="sl-question-text">
+    {slide.kicker && <p class="sl-kicker sl-kicker-accent">{keepParticle(slide.kicker)}</p>}
+    <h2 class:list={['sl-question-title', side && 'sl-fit']}>{keepParticle(slide.title)}</h2>
+    {slide.hint && <p class="sl-hint">{keepParticle(slide.hint)}</p>}
+  </div>
+  {slide.media && <Media lesson={lesson} id={slide.media} caption={false} class="sl-media sl-side-media" />}
+</div>

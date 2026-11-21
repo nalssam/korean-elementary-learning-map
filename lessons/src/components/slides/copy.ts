@@ -1,0 +1,208 @@
+// 수업 화면과 PPTX 가 같이 쓰는 문구와 글자 크기.
+// 웹 무대(Stage.astro 와 장 컴포넌트)와 PPTX 생성기(generators/pptx/build.mjs → .cache/lessons.json → Python)가 이 파일 하나에서 가져간다.
+// Python 쪽에 문구를 다시 적지 않으려는 것이다 (docs/CONTRACT.md 8절).
+import { ASSET_LABEL, MARK, MARK_LABEL } from '#lib/site.ts';
+
+/** 장 안에 찍히는 이름표 */
+export const SLIDE_COPY = {
+  /** 낱말 장의 머리 */
+  term: '새 낱말',
+  /** 낱말 장의 쓰임 예 앞 */
+  example: '이렇게 써요',
+  /** 퀴즈 장의 머리 */
+  quiz: ASSET_LABEL.quiz,
+  /** ○× 문항의 두 칸. 기호와 읽는 말은 lib 의 것을 쓴다 (R17) */
+  ox: MARK,
+  /** ○× 칸을 화면 읽기 프로그램이 읽는 말 */
+  oxLabel: MARK_LABEL,
+  /** 단답 문항의 빈칸 앞 */
+  shortAnswer: '답',
+  /** 드러난 정답에 붙는 표 */
+  correct: '정답',
+  /** 활동 장의 시간 칸 */
+  minutes: '시간',
+  /** 분 단위. 예: "15분" */
+  minuteUnit: '분',
+  /** 활동 장의 준비물 칸 */
+  materials: '준비물',
+} as const;
+
+/** 교사 메모(발표 화면의 메모, PPTX 메모란)에 붙는 머리 */
+export const NOTE_COPY = {
+  heading: '교사 메모',
+  empty: '이 장에는 메모가 없습니다.',
+  answer: '정답',
+  explain: '풀이',
+} as const;
+
+/** PPTX 마지막 장 */
+export const CREDIT_COPY = {
+  heading: '그림 출처',
+  /** 수업 화면에 실린 그림이 없을 때 */
+  empty: '이 수업 화면에는 그림이 실리지 않았습니다.',
+  /** 출처 장의 메모란 (교사가 읽는다). 출처가 있을 때와 없을 때 */
+  notes: '수업 화면에 실린 그림의 출처와 이용 조건입니다. 수업 중에는 띄우지 않아도 됩니다. 파일을 다른 사람과 나눌 때는 이 장을 지우지 마세요.',
+  notesEmpty: '수업 화면에 그림이 없어 적을 출처가 없습니다. 수업 중에는 띄우지 않아도 됩니다.',
+  /** 출처가 여러 장으로 나뉠 때 제목 뒤에 붙는다. {n}·{total} 을 채운다. 예: "그림 출처 (2/3)" */
+  more: '({n}/{total})',
+} as const;
+
+/** 웹 무대의 조작 단추와 안내 */
+export const STAGE_COPY = {
+  prev: '이전 장',
+  next: '다음 장',
+  fullscreen: '전체 화면',
+  notes: '교사 메모',
+  exit: '차시 자료실로',
+  /** 차시 자료실의 접힌 '그림 출처'로 가는 링크 */
+  credits: '그림 출처',
+  /** 학생 페이지(확인 퀴즈, 웹 활동)의 QR 창을 여는 단추 (R25) */
+  qr: 'QR',
+  /** 단추 옆 글쇠 안내 */
+  keys: { prev: '←', next: '→', fullscreen: 'F', notes: 'N', qr: 'Q', exit: 'Esc' },
+  /** 퀴즈 장에서 정답이 아직 가려져 있을 때 메모 칸에 보이는 한 줄 */
+  revealHint: '다음 장 키(→, 스페이스 바)를 누르면 화면에 정답이 나옵니다.',
+  /** 그림 파일을 불러오지 못했을 때 그림 자리에 보이는 글 */
+  missing: '그림을 불러오지 못했습니다',
+  /** 화면 가리기(B, .)를 켰을 때 화면 읽기 프로그램에 알리는 글 */
+  blank: '화면을 가렸습니다. 다음 장이나 이전 장 키를 누르면 다시 보입니다.',
+  /** 화면 읽기 프로그램용 */
+  slideLabel: (no: number, total: number) => `${total}장 가운데 ${no}번 장`,
+  region: '수업 화면',
+} as const;
+
+/** 수업 화면의 QR 창 (R25). 이 차시에 준비된 학생 페이지의 QR 과 주소만 싣는다. */
+export const QR_COPY = {
+  /** 창의 머리 한 줄 (아이들이 읽는다) */
+  heading: '휴대폰이나 태블릿으로 찍어 봅시다',
+  /** 화면 읽기 프로그램이 읽는 창 이름 */
+  label: '학생 페이지 QR 코드',
+  /** 닫기 단추 */
+  close: '닫기',
+  /** QR 그림의 읽는 말. 예: "확인 퀴즈 QR 코드" */
+  code: (name: string) => `${name} QR 코드`,
+} as const;
+
+/**
+ * 차시 안내 페이지에서 그림 출처를 접어 둔 상자의 id. 수업 화면의 '그림 출처' 링크가 `<안내 페이지>#credits` 로 연다.
+ * 안내 페이지(사이트 담당의 KitTeacher.astro)의 그림 출처 상자가 이 id 를 쓴다.
+ */
+export const CREDITS_ANCHOR = 'credits';
+
+/**
+ * 글자 크기 (1920 × 1080 무대의 px). PPTX 는 이 값의 절반을 pt 로 쓴다 (13.333in × 72 = 960pt ↔ 1920px).
+ * 아이가 읽는 글은 제목 72px, 본문 44px 를 기본으로 쓴다 (docs/CONTRACT.md 8절).
+ * 그림 출처, 장 번호, 바닥글 줄 말고는 그림 안의 글까지 어떤 글도 min(28px)보다 작게 그리지 않는다.
+ * 표지의 차시표·읽기 자료의 출처 한 줄은 아이가 읽는 본문이 아니라서 meta(30px)로 쓴다.
+ */
+export const STAGE_TYPE = {
+  cover: 104,
+  coverSub: 52,
+  title: 72,
+  question: 80,
+  term: 128,
+  meaning: 56,
+  lead: 52,
+  body: 44,
+  label: 44,
+  meta: 30,
+  credit: 24,
+  /** 오른쪽 아래 장 번호 (R55. PPTX 는 Pretendard Medium) */
+  counter: 24,
+  /** 모든 장의 왼쪽 아래 바닥글 줄 stageFooter() (R55). 장 번호와 같은 크기 */
+  footer: 24,
+  /** 제 머리말이 없는 장의 제목 위에 찍는 흐름 단계 머리말 "01 도입" (R55. 청록 굵게) */
+  phase: 30,
+  /** 그림 출처·장 번호·바닥글 줄을 뺀 모든 글의 바닥 (그림 안의 글 포함) */
+  min: 28,
+} as const;
+
+/**
+ * 단계 머리말이 있는 장의 머리 (R55, 무대 px). 머리말은 장의 위 여백(80) 안에 놓는다: top 에서 시작해 한 줄(phase × lineHeight)을 쓰고,
+ * gap 을 띄우면 제목이 머리말이 없는 장과 같은 80 에서 시작한다 (40 + 30 × 1.2 + 4 = 80).
+ * 그래서 머리말이 있어도 제목과 본문의 자리가 그대로이고, 장을 넘겨도 제목이 같은 높이에 선다. 웹 무대(stage.css)와 build_pptx.py 가 같은 값을 쓴다.
+ */
+export const STAGE_PHASE = {
+  top: 40,
+  lineHeight: 1.2,
+  gap: 4,
+} as const;
+
+/**
+ * 글이 장에 맞게 줄어드는 자리. 앞의 크기부터 해 보고, 넘치거나 그림 틀이 pictureMin 보다 낮아지면 다음 크기로 내린다.
+ * 웹 무대는 Stage.astro 의 스크립트가 재 보고 고르고, PPTX 는 build_pptx.py 가 글꼴 폭으로 셈해 고른다.
+ * 스크립트가 없으면 마지막(가장 작은) 크기로 그린다.
+ */
+export const STAGE_FIT = {
+  /** 그림 없는 항목 장의 항목 (항목 사이 48px, 위아래 가운데) */
+  points: [56, 52, 48, 44],
+  /** 그림 없는 견주기 장의 항목 */
+  compare: [52, 48, 44],
+  /** 그림 있는 견주기 장의 항목. 그림 틀이 pictureMin 보다 낮아지지 않게 글을 먼저 줄인다 */
+  compareMedia: [44, 40, 36, 32],
+  /** 활동 장의 할 일 */
+  activity: [52, 48, 44],
+  /** 그림 있는 단계 장의 글 (한 줄로 놓을 때) */
+  stepsMedia: [44, 40, 36],
+  /** 함께 보는 그림 하나가 있는 견주기 장(R23a)의 항목. 44 아래 크기는 그림 칸을 가장 좁게 해도 넘칠 때만 쓴다 */
+  compareShared: [48, 44, 40, 36],
+  /** 그림 곁의 항목 (STAGE_SIDE). 44 아래 크기는 그림 칸을 가장 좁게 해도 글이 넘칠 때만 쓴다 */
+  pointsMedia: [48, 44, 40, 36],
+  /** 그림 곁의 큰 질문 (제목이라 72 아래로는 내리지 않는다) */
+  questionMedia: [80, 72],
+} as const;
+
+/**
+ * 글 곁에 그림 하나를 두는 장 (질문·항목). 제목 아래를 두 칸으로 나눠 글은 왼쪽, 그림은 오른쪽에 둔다 (R12).
+ * 그림 칸은 무대 폭의 42% 보다 넓고, 그림은 칸에 들어가는 만큼 크게 그린다. 글 덩어리와 그림은 위아래 가운데를 맞춘다.
+ */
+export const STAGE_SIDE = {
+  /** 그림 칸의 폭 후보 (무대 px). 넓은 것부터 해 보고 글이 들어가는 가장 넓은 칸을 쓴다. 가장 좁은 것도 무대 폭의 42% 를 넘는다 */
+  picture: [1120, 1008, 936, 864],
+  /** 글 칸과 그림 칸 사이 */
+  gap: 72,
+  /** 그림 칸이 지켜야 하는 무대 폭의 몫 (tests/slides 가 본다) */
+  minShare: 0.42,
+  /** 이 크기보다 작은 글은 그림 칸을 가장 좁게 해도 넘칠 때만 쓴다 */
+  body: 44,
+  /**
+   * 먼저 이 줄 수를 넘지 않는 짜임을 찾는다 (항목 하나, 질문 제목). 좁은 칸에서 항목이 세 줄로 쪼개지면 읽기 어렵다.
+   * 이때 그림 칸은 가장 좁은 후보까지 줄이지 않는다. 어느 짜임도 이것을 지킬 수 없으면 줄 수를 보지 않고 다시 고른다.
+   */
+  maxLines: { points: 2, question: 3, compare: 2 },
+} as const;
+
+/**
+ * 글 곁에 그림을 두는 장에서 해 볼 [그림 칸 폭, 글 크기] 차례. 웹 무대의 스크립트와 build_pptx.py 가 같은 차례로 해 보고 처음 들어가는 것을 쓴다.
+ * 그림을 먼저 크게 하고(넓은 칸부터), 그 칸에서 글을 큰 것부터 줄인다. 본문 크기(44)까지 줄여도 안 들어가면 가장 좁은 칸에서 더 줄인다.
+ * 가장 넓은 칸(무대의 58%)은 글이 아주 짧을 때만 쓴다: 가장 큰 글 크기로만 해 보고, 글 한 덩이가 maxLines 보다 한 줄 적게 들어갈 때만 고른다.
+ */
+export function sideCandidates(sizes: readonly number[]): [number, number][] {
+  const big = sizes.filter((z) => z >= STAGE_SIDE.body);
+  const small = sizes.filter((z) => z < STAGE_SIDE.body);
+  const [widest, ...rest] = STAGE_SIDE.picture;
+  return [
+    [widest, sizes[0]],
+    ...rest.flatMap((pic) => big.map((z): [number, number] => [pic, z])),
+    ...small.map((z): [number, number] => [STAGE_SIDE.picture.at(-1)!, z]),
+  ];
+}
+
+/**
+ * 그림 넷을 2 × 2 로 놓는 단계 장 (R22). 칸마다 위에 머리 한 줄(단계 표와 단계 글), 그 아래에 그림을 둔다 (그림 상자는 그려진 그림에 꼭 맞고 폭 500px 이상, R36).
+ * 머리 글의 크기 후보(무대 px, 40 이상)를 큰 것부터 해 보고, 네 머리가 모두 한 줄에 들어가는 크기를 먼저 고른다.
+ * 어느 크기에서도 한 줄이 안 되면 maxLines 줄까지 받는다. 그래도 안 되거나 그림 상자의 짧은 변이 STAGE_PICTURE.shortSide 보다 작아지면
+ * 2 × 2 를 버리고 한 줄(4칸)로 놓는다 (형식이 허락하는 가장 긴 글).
+ */
+export const STAGE_STEPS = {
+  gridFit: [44, 40],
+  maxLines: 2,
+} as const;
+
+/** 그림 틀의 크기 (무대 px) */
+export const STAGE_PICTURE = {
+  /** 견주기 장의 그림 틀이 지키려는 높이. 글을 다 줄여도 안 되면 이보다 낮아진다 */
+  compareMin: 360,
+  /** 어느 장에서든 그림 틀의 짧은 변이 이보다 작으면 너무 작다 (tests/slides 와 build_pptx.py 가 본다) */
+  shortSide: 200,
+} as const;

@@ -1,0 +1,9 @@
+---
+// 수업 화면 /<id>/slides/ (전체 화면 발표). #4 처럼 장 번호를 붙이면 그 장에서 시작한다.
+import Stage from '#src/components/slides/Stage.astro';
+import { lessonPaths, loadLesson } from '#lib/content.ts';
+
+export function getStaticPaths() { return lessonPaths(); }
+const lesson = loadLesson(Astro.props.id);
+---
+<Stage lesson={lesson} />

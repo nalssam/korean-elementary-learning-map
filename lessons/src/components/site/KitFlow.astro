@@ -1,0 +1,73 @@
+---
+// 수업 흐름: 차시마다 도입·전개·정리 시간표를 따로 그린다 (flowByLesson).
+// 두 차시 묶음은 차시 사이에 '쉬는 시간' 줄을 긋고(명세에는 없다), 차시마다 그 차시의 첫 장에서 여는 링크를 둔다 (/<id>/slides/#5).
+// 단계 이름 앞의 번호("01 도입")는 그 단계가 제 차시의 흐름에서 몇 번째인가다. 수업 화면의 단계 머리말(slidePhase)과 같은 번호다 (R55).
+import { flowByLesson, lessonRoute } from '#lib/content.ts';
+import { ASSET_LABEL, ASSET_ROUTE } from '#lib/site.ts';
+import type { FlowStep, Lesson } from '#schema/lesson.ts';
+import { PERIOD_MINUTES } from '#schema/lesson.ts';
+import { href } from '#src/lib/url.ts';
+import { usesLabel } from './data.ts';
+
+interface Props { lesson: Lesson }
+const { lesson } = Astro.props;
+const flows = flowByLesson(lesson);
+const multi = flows.length > 1;
+const slides = href(lessonRoute(lesson.id, ASSET_ROUTE.slides));
+const slidesLabel = (s: FlowStep) => (s.slides ? (s.slides[0] === s.slides[1] ? `${s.slides[0]}번 장` : `${s.slides[0]}~${s.slides[1]}번 장`) : '');
+// 검색 색인에는 단계의 제목과 할 일만 넣는다. 시간표·분·장 번호는 발췌 글에 '도입5분전개6분'처럼 붙어 나오기만 해서 뺀다 (data-pagefind-ignore).
+// 한 차시 묶음은 단계 이름이 h3, 두 차시 묶음은 차시 이름이 h3 이고 단계 이름이 h4 다
+const StepTitle = multi ? 'h4' : 'h3';
+---
+<section class="sec guide-sec" id="flow" aria-labelledby="flow-title">
+  <h2 class="sec-title" id="flow-title">수업 흐름</h2>
+  {flows.map((flow, i) => (
+    <>
+      {i > 0 && <p class="break"><span>쉬는 시간</span></p>}
+      <section class="period" aria-label={`${flow.lesson}차시 시간표`}>
+        <div class="period-head" data-pagefind-ignore>
+          {multi ? <h3 class="period-title">{flow.lesson}차시</h3> : <p class="period-title">{flow.lesson}차시</p>}
+          <span class="period-min">{PERIOD_MINUTES}분</span>
+          {multi && flow.firstSlide && (
+            <a class="period-open" href={`${slides}#${flow.firstSlide}`} data-pagefind-ignore>{flow.lesson}차시부터 띄우기</a>
+          )}
+        </div>
+        {/* 도입·전개·정리가 40분을 어떻게 나누는지 한눈에. 같은 값이 아래 단계마다 글자로 적혀 있어서 화면 낭독기에는 읽어 주지 않는다. */}
+        <ol class="timebar" aria-hidden="true" data-pagefind-ignore>
+          {flow.steps.map((s) => <li style={`flex-grow:${s.minutes}`}><span>{s.phase}</span><span>{s.minutes}분</span></li>)}
+        </ol>
+        <ol class="steps">
+          {flow.steps.map((s, no) => (
+            <li class="step">
+              <p class="step-time" data-pagefind-ignore><span class="step-phase"><span class="step-phase-no">{String(no + 1).padStart(2, '0')}</span>{s.phase}</span><span class="step-min">{s.minutes}분</span></p>
+              <div class:list={['step-body', s.ask.length > 0 && 'has-ask']}>
+                <div class="step-main">
+                  <StepTitle class="step-title">{s.title}</StepTitle>
+                  <ol class="step-do">{s.do.map((d) => <li>{d}</li>)}</ol>
+                  {s.tip && <p class="step-tip"><strong>도움말</strong> {s.tip}</p>}
+                  {(s.slides || s.uses.length > 0) && (
+                    <p class="step-uses" data-pagefind-ignore>
+                      {s.slides && <a href={`${slides}#${s.slides[0]}`}>{ASSET_LABEL.slides} {slidesLabel(s)}</a>}
+                      {s.uses.filter((u) => u !== 'slides').length > 0 && <span>{usesLabel(s.uses.filter((u) => u !== 'slides'))}</span>}
+                    </p>
+                  )}
+                </div>
+                {s.ask.length > 0 && (
+                  <div class="step-ask">
+                    <p class="step-label">물어볼 것</p>
+                    {s.ask.map((a) => (
+                      <div class="ask">
+                        <p class="ask-q">{a.q}</p>
+                        {a.listen_for && <p class="ask-listen"><strong>귀 기울일 것</strong> {a.listen_for}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+    </>
+  ))}
+</section>

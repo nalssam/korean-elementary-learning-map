@@ -1,0 +1,60 @@
+---
+// 차시 자료실 (/<id>/, R46). 교사가 수업 전에 한 번 읽고, 수업 중에 자료를 띄우고 인쇄하는 페이지다.
+// 차례: 현재 위치 → 머리(학기·단원·차시, 이름, 교과서 쪽·수업 시간·상태, 접힌 성취기준, 다룰 때 살필 것) → 자료(자료 카드와 거르기 탭)
+//       → 교사용 안내(목표, 준비물, 수업 흐름, 확인 퀴즈와 문항·정답, 더 해 볼 자료, 접어 둔 교사용 자료) → 앞뒤 차시.
+// 넓은 화면에서는 왼쪽에 교과서 목차가 따라오고, 지금 차시 아래에 이 페이지의 길잡이가 달린다 (BookFrame, BookToc).
+// 교사용 안내의 글은 네 번의 검수를 거친 명세의 글이다. 모양만 바꾸고 글은 다시 쓰지 않는다.
+// 명세에 없는 내용을 여기에 적지 않는다. 다음 차시의 명세만 넣으면 같은 페이지가 나온다 (docs/CONTRACT.md 4절).
+import { bundleOf, lessonPaths, lessonsLabel, loadLesson, semesterLabel } from '#lib/content.ts';
+import type { Lesson } from '#schema/lesson.ts';
+import SiteLayout from '#src/layouts/SiteLayout.astro';
+import { href } from '#src/lib/url.ts';
+import BookFrame from '#src/components/site/BookFrame.astro';
+import KitFlow from '#src/components/site/KitFlow.astro';
+import KitGuideHead from '#src/components/site/KitGuideHead.astro';
+import KitHead from '#src/components/site/KitHead.astro';
+import KitMaterials from '#src/components/site/KitMaterials.astro';
+import KitMore from '#src/components/site/KitMore.astro';
+import KitPrepare from '#src/components/site/KitPrepare.astro';
+import KitStudent from '#src/components/site/KitStudent.astro';
+import KitTeacher from '#src/components/site/KitTeacher.astro';
+import LessonPager from '#src/components/site/LessonPager.astro';
+import { guideSections } from '#src/components/site/book.ts';
+
+export function getStaticPaths() { return lessonPaths(); }
+// props 로는 id 만 받고 여기에서 읽는다. astro dev 에서 명세를 고치면 바로 바뀐다.
+const lesson: Lesson = loadLesson(Astro.props.id);
+const ref = bundleOf(lesson);
+const semester = semesterLabel(ref.semester.id);
+const sections = guideSections(lesson);
+const crumbs = [
+  { label: '처음', href: href('/') },
+  { label: semester, href: href(`/${ref.semester.id}/`) },
+  { label: `${ref.unit.no}단원`, rest: ref.unit.title, href: href(`/${ref.semester.id}/${ref.unit.no}/`) },
+  { label: lessonsLabel(ref.lessons) },
+];
+---
+<SiteLayout title={`${lesson.title} · ${semester} ${ref.unit.no}단원 ${lessonsLabel(ref.lessons)}`} description={lesson.tagline} lesson={lesson} crumbs={crumbs}>
+  <BookFrame
+    semester={ref.semester.id}
+    unit={ref.unit.no}
+    bundle={lesson.id}
+    sections={[{ id: 'materials', label: '자료' }, ...sections]}
+    where={`${ref.unit.no}단원 ${lessonsLabel(ref.lessons)}`}
+  >
+    <article class="kit">
+      <KitHead lesson={lesson} />
+      <KitMaterials lesson={lesson} />
+      <div class="guide">
+        <KitGuideHead lesson={lesson} sections={sections} />
+        <KitPrepare lesson={lesson} />
+        <KitFlow lesson={lesson} />
+        <KitStudent lesson={lesson} />
+        <KitMore lesson={lesson} />
+        <KitTeacher lesson={lesson} />
+      </div>
+    </article>
+    <LessonPager id={lesson.id} unit={ref.unit.no} />
+    <p class="kit-report" data-pagefind-ignore>틀린 곳이나 고칠 곳을 찾으면 <a href={`${href('/report/')}?id=${lesson.id}`}>오류 제보</a>로 알려 주세요.</p>
+  </BookFrame>
+</SiteLayout>
