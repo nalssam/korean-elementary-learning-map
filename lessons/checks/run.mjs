@@ -14,6 +14,7 @@ import * as c from '#lib/content.ts';
 import { factIssues, sourceIssues } from '#lib/checks.ts';
 import { factSeal } from '#lib/seal.ts';
 import { Lesson } from '#schema/lesson.ts';
+import { Updates } from '#schema/updates.ts';
 import { UsageError, gitRoot, parseArgs, rel } from './lib.mjs';
 import { fileImageSize } from './files.mjs';
 import { REVIEW_LABEL } from '#lib/site.ts';
@@ -154,6 +155,39 @@ function checkWords({ lesson, sec, loc }) {
       if (w) sec.note('표현', at(loc, s.path, `무게가 있는 차시의 놀이 자료에 피해 낱말("${w[0]}")이 나옵니다. 학습지의 읽기와 생각 쓰기로 옮길 수 있는지 봅니다`));
     }
   }
+}
+
+/**
+ * 업데이트 소식(content/updates.yaml, R49)이 형식에 맞는가, 그 글(title, body)에 15절의 금지 표현이 없는가.
+ * 소식은 첫 화면과 /updates/ 에 그대로 찍히는 글이라 명세의 글과 같은 '표현' 검사를 받는다.
+ */
+function checkUpdates(out) {
+  const file = c.updatesFile();
+  const sec = new Section('updates', `업데이트 소식 (${rel(file)})`);
+  out.push(sec);
+  try {
+    c.loadUpdates();
+  } catch (e) {
+    if (!(e instanceof c.SpecError)) throw e;
+    for (const i of e.issues) sec.fail('형식', i);
+    return;
+  }
+  if (!fs.existsSync(file)) return;
+  // 형식은 위에서 보았다. 여기서는 줄 번호를 얻으려고 적은 차례 그대로 다시 읽는다 (loadUpdates() 는 날짜순으로 다시 늘어놓는다).
+  const { data, lineOf } = c.parseSpecText(Updates, fs.readFileSync(file, 'utf8'), file);
+  data.forEach((u, i) => {
+    for (const field of ['title', 'body']) {
+      const text = u[field];
+      if (!text) continue;
+      const where = `${lineOf([i, field])}번째 줄 · ${i + 1}번째 소식(${u.date}) · ${field}`;
+      for (const b of BANNED) if (b.re.test(text)) sec.fail('표현', `${where}: ${b.say}`);
+      const svc = SERVICES.exec(text);
+      if (svc) sec.fail('표현', `${where}: 다른 회사의 서비스 이름("${svc[0]}")을 쓰지 않습니다. 무엇을 하는지로 바꿔 씁니다`);
+      if (EMOJI.test(text)) sec.note('표현', `${where}: 이모지를 쓰지 않습니다 (14절)`);
+      const q = straightQuotes(text);
+      if (q) sec.note('표현', `${where}: 곧은 따옴표(${q.marks.join(' ')})를 ${q.marks.map((m) => (m === '"' ? '“ ”' : '‘ ’')).join(', ')} 로 바꿉니다: ${excerpt(q.fixed, q.at)}`);
+    }
+  });
 }
 
 /** 단계 장의 그림 상자는 가로로 넓다 (R22, 2 × 2 칸에 폭 전체). 이 비율보다 좁은 우리 그림은 상자 안에서 작게 놓인다. */
@@ -374,14 +408,14 @@ function print(out, push) {
   let fails = 0, notes = 0;
   lines.push(`차시 명세 검사${push ? ' (--push: 베끼기 검사 기록이 없으면 실패)' : ''}`);
   for (const s of out) {
-    if (s.key === 'registry' && !s.fails.length && !s.notes.length) continue;
+    if ((s.key === 'registry' || s.key === 'updates') && !s.fails.length && !s.notes.length) continue;
     fails += s.fails.length; notes += s.notes.length;
     lines.push('', s.title);
     if (!s.fails.length && !s.notes.length) { lines.push('  통과'); continue; }
     for (const [cat, text] of s.fails) lines.push(`  ${pad('고칠 것', 8)} ${pad(cat, 10)} ${text}`);
     for (const [cat, text] of s.notes) lines.push(`  ${pad('알림', 8)} ${pad(cat, 10)} ${text}`);
   }
-  const count = out.filter((s) => s.key !== 'registry').length;
+  const count = out.filter((s) => s.key !== 'registry' && s.key !== 'updates').length;
   lines.push('', `명세 ${count}개 · 고칠 것 ${fails}건 · 알림 ${notes}건`);
   if (fails) lines.push('고칠 것이 있어 통과하지 못했습니다. 위의 줄을 고친 뒤 다시 npm run check 를 돌립니다.');
   else if (notes) lines.push('통과했습니다. 알림은 고치지 않아도 되지만 한 번 읽어 봅니다.');
@@ -406,6 +440,8 @@ async function main() {
   const push = args.bools.has('--push');
   const out = [];
   const { reg, lessons } = loadAll(out);
+  // 소식이 가리키는 묶음 id 는 차시표로 확인하므로 차시표가 읽힐 때만 본다
+  if (!reg.fails.length) checkUpdates(out);
   for (const l of lessons) {
     checkFacts(l);
     checkWords(l);

@@ -1,0 +1,137 @@
+---
+// 자료 유형별 (/types/, R48). 이번 빌드에 실리는 자료 전부를 KIND_ORDER 차례의 묶음으로 늘어놓는다 (묶음마다 id 는 자료 종류: #worksheet).
+// 위의 종류 단추와 학기 고르기는 덧붙이는 기능이다. 스크립트가 없으면 단추 줄이 숨은 채로 남고 모든 묶음이 보인다.
+// 카드 목록은 검색 색인에서 뺀다 (같은 자료가 차시 자료실에서 이미 색인된다. docs/CONTRACT.md 3절).
+import { catalog, semesterLabel } from '#lib/content.ts';
+import { ASSET_LABEL, KIND_ORDER } from '#lib/site.ts';
+import SiteLayout from '#src/layouts/SiteLayout.astro';
+import CatHead from '#src/components/site/catalog/CatHead.astro';
+import ResourceCard from '#src/components/site/ui/ResourceCard.astro';
+import StatusChip from '#src/components/site/ui/StatusChip.astro';
+import TypeIcon from '#src/components/site/ui/TypeIcon.astro';
+import '#src/components/site/catalog/catalog.css';
+
+const items = catalog();
+const groups = KIND_ORDER.map((kind) => ({ kind, label: ASSET_LABEL[kind], items: items.filter((i) => i.kind === kind) }));
+const filled = groups.filter((g) => g.items.length > 0);
+// 학기 고르기에는 자료가 있는 학기만 (차시표 차례)
+const semesters = [...new Set(items.map((i) => i.semester))];
+---
+<SiteLayout title="자료 유형별" description="실린 수업 자료를 수업 화면, 학습지, 확인 퀴즈처럼 종류별로 모아 봅니다." current="types">
+  <CatHead kicker="모아 보기" title="자료 유형별">
+    {items.length > 0
+      ? <>지금 실린 자료 <span class="cat-num">{items.length}</span>개를 종류별로 모았습니다. 학습지만 모아 뽑거나 웹 활동만 찾을 때 씁니다.</>
+      : <>아직 실린 자료가 없습니다. 차시가 공개되면 종류별로 여기에 모입니다.</>}
+  </CatHead>
+
+  {filled.length > 0 && (
+    <div class="ty-tools" id="ty-tools" data-ty-tools hidden data-pagefind-ignore>
+      <div class="ty-chips" role="group" aria-label="자료 종류 고르기">
+        <button class="ty-chip" type="button" data-ty-kind="" aria-pressed="true">전체<span class="ty-chip-n" data-ty-n>{items.length}</span></button>
+        {filled.map((g) => (
+          <button class="ty-chip" type="button" data-ty-kind={g.kind} aria-pressed="false"><TypeIcon kind={g.kind} size={16} />{g.label}<span class="ty-chip-n" data-ty-n>{g.items.length}</span></button>
+        ))}
+      </div>
+      <label class="ty-sem">
+        <span class="ty-sem-label">학기</span>
+        <select class="ty-sem-select" data-ty-semester>
+          <option value="">모든 학기</option>
+          {semesters.map((s) => <option value={s}>{semesterLabel(s)}</option>)}
+        </select>
+      </label>
+      <p class="visually-hidden" data-ty-status aria-live="polite"></p>
+    </div>
+  )}
+
+  {/* 종류마다 한 칸: 왼쪽에 종류의 이름, 오른쪽에 카드. 준비된 것이 없는 종류는 이름과 '준비 중' 한 줄 (R48). */}
+  <div class="ty-groups">
+    {groups.map((g) => (
+      <section class:list={['ty-group', g.items.length === 0 && 'ty-group-empty']} id={g.kind} data-ty-group={g.kind} aria-labelledby={`ty-${g.kind}`}>
+        <div class="ty-group-head">
+          <span class="ty-group-icon"><TypeIcon kind={g.kind} size={22} /></span>
+          <h2 class="ty-group-title" id={`ty-${g.kind}`}>{g.label}</h2>
+          {g.items.length > 0 && <p class="ty-group-n"><span data-ty-n>{g.items.length}</span>개</p>}
+        </div>
+        <div class="ty-group-body">
+          {g.items.length > 0 ? (
+            <>
+              <ul class="cat-cards ty-cards" data-pagefind-ignore>
+                {g.items.map((item) => (
+                  <li data-semester={item.semester}><ResourceCard item={item} withLesson level={3} /></li>
+                ))}
+              </ul>
+              <p class="ty-none" data-ty-none hidden>고른 학기에는 아직 없습니다.</p>
+            </>
+          ) : (
+            <StatusChip state="planned" />
+          )}
+        </div>
+      </section>
+    ))}
+  </div>
+  <script>
+    // 종류 단추와 학기 고르기. 카드를 숨기기만 하고 다시 그리지 않는다 (스크립트가 없으면 모든 묶음이 보인다).
+    // 주소의 #<종류> 로 들어오면(첫 화면의 자료 유형 타일) 그 종류를 고른 채로 연다. 단추를 누르면 주소의 # 도 바꿔 그대로 나눌 수 있다.
+    const tools = document.querySelector<HTMLElement>('[data-ty-tools]');
+    if (tools) {
+      const chips = [...tools.querySelectorAll<HTMLButtonElement>('[data-ty-kind]')];
+      const select = tools.querySelector<HTMLSelectElement>('[data-ty-semester]')!;
+      const status = tools.querySelector<HTMLElement>('[data-ty-status]')!;
+      const groups = [...document.querySelectorAll<HTMLElement>('[data-ty-group]')];
+      const filled = new Set(chips.map((c) => c.dataset.tyKind).filter(Boolean));
+      let kind = '';
+
+      // 학기를 고르면 단추와 묶음 머리의 수도 그 학기의 것으로 바꾼다
+      const inSemester = (g: Element, semester: string) => [...g.querySelectorAll<HTMLElement>('li[data-semester]')].filter((li) => !semester || li.dataset.semester === semester).length;
+
+      const apply = () => {
+        const semester = select.value;
+        let shown = 0;
+        let total = 0;
+        for (const c of chips) {
+          c.setAttribute('aria-pressed', String(c.dataset.tyKind === kind));
+          const g = groups.find((x) => x.dataset.tyGroup === c.dataset.tyKind);
+          const n = c.querySelector<HTMLElement>('[data-ty-n]');
+          if (g && n) { n.textContent = String(inSemester(g, semester)); total += inSemester(g, semester); }
+        }
+        const all = chips.find((c) => !c.dataset.tyKind)?.querySelector<HTMLElement>('[data-ty-n]');
+        if (all) all.textContent = String(total);
+        for (const g of groups) {
+          const cards = [...g.querySelectorAll<HTMLElement>('li[data-semester]')];
+          let visible = 0;
+          for (const li of cards) {
+            li.hidden = Boolean(semester) && li.dataset.semester !== semester;
+            if (!li.hidden) visible++;
+          }
+          shown += visible;
+          const n = g.querySelector<HTMLElement>('.ty-group-n [data-ty-n]');
+          if (n) n.textContent = String(visible);
+          const mine = !kind || g.dataset.tyGroup === kind;
+          // 종류를 고르지 않고 학기만 골랐을 때는 그 학기에 자료가 없는 묶음을 접는다 (준비 중인 종류도)
+          g.hidden = !mine || (!kind && Boolean(semester) && visible === 0);
+          const none = g.querySelector<HTMLElement>('[data-ty-none]');
+          if (none) none.hidden = !(mine && kind && visible === 0 && cards.length > 0);
+        }
+        const what = kind ? chips.find((c) => c.dataset.tyKind === kind)?.textContent?.replace(/\d+$/, '') : '자료';
+        status.textContent = `${what} ${shown}개`;
+      };
+
+      const pick = (next: string, push = true) => {
+        kind = filled.has(next) ? next : '';
+        apply();
+        if (push) history.replaceState(null, '', kind ? `#${kind}` : location.pathname + location.search);
+      };
+
+      for (const c of chips) c.addEventListener('click', () => pick(c.dataset.tyKind ?? ''));
+      select.addEventListener('change', apply);
+      addEventListener('hashchange', () => pick(decodeURIComponent(location.hash.slice(1)), false));
+
+      tools.hidden = false;
+      // #<종류> 로 들어오면 브라우저가 그 묶음으로 내려간다. 고른 묶음은 단추 줄 바로 아래에 있으므로 단추 줄까지 함께 보이게 그만큼 띄운다.
+      const room = () => document.documentElement.style.setProperty('--ty-tools-h', `${tools.offsetHeight}px`);
+      room();
+      addEventListener('resize', room);
+      pick(decodeURIComponent(location.hash.slice(1)), false);
+    }
+  </script>
+</SiteLayout>

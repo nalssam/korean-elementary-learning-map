@@ -11,15 +11,17 @@
 //   - 초안의 PDF 에 SITE.draftNotice 가 있고 SITE.aiNotice 가 없는가, 공개된 차시의 PDF 에 안내 페이지 주소가 있는가
 //   - /media/ 그림이 object-fit: contain 으로 그려지는가 (Chromium 으로 연다)
 //   - PPTX 안의 그림이 늘어나거나 잘리지 않았는가 (8절)
+//   - 준비된 자료(페이지가 있는 것)마다 미리보기 그림이 있고 폭 480px·60KB 이하의 JPEG 인가, 실리지 않는 자료의 미리보기가 없는가 (10절, R52)
 //   - 차시표의 focus 가 html 에 실리지 않았는가
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import * as c from '#lib/content.ts';
-import { SITE } from '#lib/site.ts';
+import { ASSET_LABEL, SITE } from '#lib/site.ts';
 import { CREDIT_COPY } from '#src/components/slides/copy.ts';
 import { UsageError, parseArgs, rel } from './lib.mjs';
-import { fileImageSize, readPdf, readPptx, squash } from './files.mjs';
+import { fileImageSize, imageSize, readPdf, readPptx, squash } from './files.mjs';
+import { THUMB_KINDS, THUMB_MAX } from '../scripts/thumbs.mjs';
 
 const MB = 1024 * 1024;
 /**
@@ -155,6 +157,40 @@ async function checkLesson(dist, lesson, report, publicBuild) {
   }
 }
 
+// ───────────── 미리보기 그림 (R52) ─────────────
+
+/** 이 묶음의 미리보기 그림: 준비된 자료마다 하나씩, 폭 480px·60KB 이하의 JPEG. 준비되지 않은 자료의 것은 없다. */
+function checkThumbs(dist, lesson, report) {
+  const ready = new Set(c.readyKinds(lesson));
+  const want = THUMB_KINDS.filter((k) => ready.has(k));
+  const dir = path.dirname(c.thumbFile(lesson.id, 'slides', ['--out', dist]));
+  for (const kind of want) {
+    const file = c.thumbFile(lesson.id, kind, ['--out', dist]);
+    const where = rel(file);
+    if (!fs.existsSync(file)) { report.fail(where, `${ASSET_LABEL[kind]}의 미리보기 그림이 없습니다 (빌드 3단계 scripts/render-pdf.mjs 가 찍습니다)`); continue; }
+    const buf = fs.readFileSync(file);
+    const jpeg = buf.length > 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
+    const size = jpeg ? imageSize(buf) : undefined;
+    if (!jpeg || !size) { report.fail(where, '미리보기 그림이 JPEG 이 아닙니다'); continue; }
+    if (size.w > THUMB_MAX.width) report.fail(where, `미리보기 그림의 폭이 ${size.w}px 입니다 (${THUMB_MAX.width}px 까지)`);
+    if (buf.length > THUMB_MAX.bytes) report.fail(where, `미리보기 그림이 ${Math.ceil(buf.length / 1024)}KB 입니다 (${THUMB_MAX.bytes / 1024}KB 까지)`);
+  }
+  if (!fs.existsSync(dir)) return;
+  for (const f of fs.readdirSync(dir)) {
+    const kind = f.replace(/\.jpg$/, '');
+    if (!want.includes(kind)) report.fail(rel(path.join(dir, f)), THUMB_KINDS.includes(kind) ? `준비되지 않은 자료(${ASSET_LABEL[kind]})의 미리보기 그림입니다` : '미리보기 그림의 자리에 모르는 파일이 있습니다');
+  }
+}
+
+/** 이번 빌드에 실리지 않는 묶음의 미리보기 그림 (공개 빌드의 초안 등). 묶음 폴더 검사와 따로, 미리보기 그림이라고 짚어 알린다. */
+function strayThumbs(dist, ids, report) {
+  const files = path.join(dist, 'files');
+  for (const id of bundleDirs(files)) {
+    const dir = path.join(files, id, 'thumbs');
+    if (!ids.has(id) && fs.existsSync(dir)) for (const f of fs.readdirSync(dir)) report.fail(rel(path.join(dir, f)), '이번 빌드에 실리지 않는 묶음의 미리보기 그림입니다');
+  }
+}
+
 // ───────────── html ─────────────
 
 function checkHtml(dist, report, publicBuild) {
@@ -245,6 +281,8 @@ async function main() {
     for (const id of bundleDirs(root)) if (!ids.has(id)) report.fail(rel(path.join(root, id)), `이번 빌드에 실리지 않는 묶음의 ${what}입니다 (${publicBuild ? '공개 빌드에 초안이 섞였거나 ' : ''}visibleLessons() 에 없습니다)`);
   }
   for (const lesson of visible) if (!only || lesson.id === only) await checkLesson(dist, lesson, report, publicBuild);
+  for (const lesson of visible) if (!only || lesson.id === only) checkThumbs(dist, lesson, report);
+  strayThumbs(dist, ids, report);
   const pages = checkHtml(dist, report, publicBuild);
   await checkObjectFit(dist, pages, report);
   const total = walk(dist).reduce((n, f) => n + fs.statSync(f).size, 0);
