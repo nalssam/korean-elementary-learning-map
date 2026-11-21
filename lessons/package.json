@@ -23,6 +23,7 @@
     "build": "node scripts/build.mjs",
     "build:site": "astro build",
     "sign": "node scripts/sign.mjs",
+    "new": "node scripts/new.mjs",
     "factsheet": "node scripts/factsheet.mjs"
   },
   "dependencies": {

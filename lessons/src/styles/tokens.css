@@ -11,7 +11,8 @@
   --teal: #18766b;        /* 포인트·링크·번호 */
   --teal-soft: #e3f0ec;   /* 띠·칩 바탕 */
   --coral: #b25532;       /* 강조 한 군데. --bg 위 글자 4.7:1, 흰 글자를 얹어도 4.9:1 */
-  --coral-soft: #fbeee8;
+  --coral-soft: #fbeee8;  /* 산호색 글자를 얹지 않는다 (4.4:1). 산호색 글자는 --card·--bg 위에만 */
+  --zebra: #f5f2ea;       /* 표의 줄무늬 */
   --focus: #0b5fff;       /* 키보드 초점 */
 
   /* 글자 */
@@ -22,6 +23,8 @@
   --fs-lg: 1.25rem;     /* 20 */
   --fs-xl: 1.625rem;    /* 26 */
   --fs-2xl: 2.125rem;   /* 34 */
+  --fs-kicker: 0.875rem; /* 14 머리말 위의 작은 청록 글씨 (Kicker) */
+  --fw-heading: 800;     /* 제목은 Pretendard ExtraBold */
   --lh: 1.65;
   --lh-tight: 1.3;
 
@@ -31,6 +34,9 @@
   /* 모양 */
   --radius: 12px;
   --radius-sm: 8px;
+  --radius-pill: 999px;  /* 민트 띠(Band)와 상태 표(StatusChip) */
+  --tap: 44px;           /* 휴대폰에서 누르는 것의 가장 작은 높이 */
+  --thumb-ratio: 4 / 3;  /* 자료 카드(ResourceCard)의 미리보기 틀 */
   --content: 1040px;     /* 본문 최대 폭 */
   --measure: 38em;       /* 읽기 좋은 줄 길이 */
 }

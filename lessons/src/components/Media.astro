@@ -4,6 +4,8 @@
 //
 // 사진(kind: photo)에는 가는 테두리를 두른다 (화면 1px --line, 종이 0.75pt(1px) --rule). 하늘이 옅은 사진이 바탕에 녹아 그림의 끝이 보이지 않아서다.
 // 테두리는 figure 가 아니라 그려진 그림을 감싼다 (아래 <style> 의 까닭). 도해·지도·그림(drawing)은 제 선이 있어 두르지 않는다.
+// 남의 그림(이용 조건이 original 이 아닌 것)에는 <img data-licence="CC-BY-SA"> 처럼 조건을 적는다. 미리보기 그림(썸네일)을 찍을 때
+// 이 그림들을 가린다: 줄인 쪽 그림에서는 출처 표시를 읽을 수 없고, 쪽의 윗부분만 찍으면 그림이 잘릴 수 있다 (docs/CONTRACT.md 10절, R52).
 import { creditShort, getMedia, mediaRoute } from '#lib/content.ts';
 import type { Lesson } from '#schema/lesson.ts';
 import { href } from '#src/lib/url.ts';
@@ -28,7 +30,7 @@ const m = getMedia(lesson, id);
 const framed = frame && m.kind === 'photo';
 ---
 <figure class:list={['media', cls]} data-frame={framed ? 'photo' : undefined}>
-  <img src={href(mediaRoute(lesson, id))} alt={m.alt} decoding="async" />
+  <img src={href(mediaRoute(lesson, id))} alt={m.alt} decoding="async" data-licence={m.credit.licence === 'original' ? undefined : m.credit.licence} />
   {(caption && m.caption || credit) && (
     <figcaption>
       {caption && m.caption && <span class="media-caption">{m.caption}</span>}

@@ -29,11 +29,12 @@ test('미리 보기 빌드 (SHOW_DRAFTS=1, 하위 경로 없음)', () => {
     '5-2/1/02-03/coloring/index.html', '5-2/1/02-03/index.html', '5-2/1/02-03/quiz/index.html',
     '5-2/1/04/index.html', '5-2/1/04/quiz/index.html',
     '5-2/1/05/index.html', '5-2/1/05/quiz/index.html',
-    'index.html',
+    'index.html', 'ui/index.html',
   ]);
   const home = read(out, 'index.html');
   assert.match(home, /<html lang="ko">/);
-  assert.match(home, /<title>시험용 첫 화면 · 날쌤 초등사회<\/title>/);
+  assert.ok(home.includes(`<title>시험용 첫 화면 · ${SITE.name}</title>`));
+  assert.ok(home.includes('<title>시험용 첫 화면 · nalssam의 초등사회콘텐츠 클라우드</title>'));
   assert.match(home, /<p id="bundles">5<\/p>/);
   assert.match(home, /href="\/5-2\/1\/02-03\/"/);
   // 미리 보기 빌드는 통째로 검색에서 뺀다
@@ -76,6 +77,10 @@ test('미리 보기 빌드 (SHOW_DRAFTS=1, 하위 경로 없음)', () => {
   const thumbs = rest.slice(0, rest.indexOf('</div>'));
   assert.match(main, /<figure class="media" data-frame="photo"><img src="\/media\/5-2\/1\/02-03\/sample\.png"/);
   assert.match(main, /<figure class="media"><img src="\/media\/5-2\/1\/02-03\/map\.svg"/);
+  // 남의 그림에는 이용 조건이 붙는다 (미리보기 그림을 찍을 때 가린다. 10절). 본떠 그린 그림도 원본의 조건을 따른다. 직접 그린 그림(stone.svg, map.svg)에는 붙지 않는다.
+  assert.match(main, /sample\.png" alt="[^"]*" decoding="async" data-licence="CC-BY-SA">/);
+  assert.match(main, /stone-line\.svg" alt="[^"]*" decoding="async" data-licence="KOGL-1">/);
+  assert.match(main, /map\.svg" alt="[^"]*" decoding="async">/);
   assert.ok(thumbs.includes('sample.png') && !thumbs.includes('data-frame'), '작은 미리보기에 테두리가 붙었습니다');
 
   // 인쇄 페이지: 맨 아래 문구는 Base 가 아니라 바닥글이 맡는다. 설명은 끄고 출처 표시는 남긴다.
@@ -109,7 +114,7 @@ test('미리 보기 빌드 (SHOW_DRAFTS=1, 하위 경로 없음)', () => {
 
 test('초안은 dev 명령에서만 저절로 열린다 (astro build --mode dev 로는 열리지 않는다)', () => {
   const out = build('mode-dev', { CONTENT_DIR: FIXTURES, SITE_URL: 'https://example.org' }, ['--mode', 'dev']);
-  assert.deepEqual(pages(out), ['index.html']);
+  assert.deepEqual(pages(out), ['index.html', 'ui/index.html']);
   assert.ok(!read(out, 'index.html').includes('/5-2/1/'));
   // 인쇄 페이지가 없는 빌드에는 인쇄 글꼴 파일이 하나도 없다 (공개된 차시가 아직 없는 공개 빌드가 이렇다)
   assert.ok(!fs.existsSync(path.join(out, PRINT_FONT_DIR)));
@@ -129,7 +134,7 @@ test('공개 빌드 (하위 경로, 공개된 차시만)', () => {
     });
     const out = build('public', { CONTENT_DIR: t.dir, SITE_BASE: '/korean-elementary', SITE_URL: 'https://example.org' });
     // 초안은 페이지도 링크도 없다
-    assert.deepEqual(pages(out), ['5-2/1/01/index.html', '5-2/1/01/quiz/index.html', 'index.html']);
+    assert.deepEqual(pages(out), ['5-2/1/01/index.html', '5-2/1/01/quiz/index.html', 'index.html', 'ui/index.html']);
     const home = read(out, 'index.html');
     assert.ok(!home.includes('02-03'));
     // 공개된 묶음 id 의 JSON 배열 (감싸는 칸 없이). 배포 워크플로가 지금 사이트의 것과 견준다.

@@ -13,6 +13,8 @@
 //   7. 검수와 공개            sealsOf · reviewState · publishGaps · registryOriginality · reviewedOn · footerNotice · sheetFooter
 //   8. 성취기준               standardSummary · standardsOf
 //   9. 글 뽑기 (검사용)       childStrings · teacherStrings · recordStrings
+//  10. 플랫폼 페이지          catalog · readyKinds · formatLine · semesterProgress · unitProgress · lessonNeighbours · courseLine · stageFooter
+//                            slidePhase · thumbRoute · thumbFile · loadUpdates · visibleUpdates
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -22,14 +24,17 @@ import type { PrintSpec } from '../schema/common.ts';
 import {
   BLANK, Lesson, OPTIONAL_ASSET_KINDS, REVIEW_KINDS, drawsPainProblem, factUses, leafBlocksOf, mediaUseProblem, mediaUses, painfulUseProblem,
 } from '../schema/lesson.ts';
-import type { Fact, FlowStep, Media, OptionalAssetKind, QuizItem, ReviewKind } from '../schema/lesson.ts';
+import type { AssetKind, Fact, FlowStep, Media, OptionalAssetKind, QuizItem, ReviewKind } from '../schema/lesson.ts';
 import { Registry } from '../schema/registry.ts';
 import type { RegistryBundle, RegistrySemester, RegistryUnit } from '../schema/registry.ts';
+import { Updates } from '../schema/updates.ts';
+import type { UpdateEntry } from '../schema/updates.ts';
 import { factSeal, fileSeal, lessonSeal, registrySeal as sealOfRegistry } from './seal.ts';
 import {
-  ASSET_LABEL, ASSET_ROUTE, CARDS_PER_SIDE, LICENCE_LABEL, MARK, MEDIA_KIND_LABEL, PRINT_DEFAULT, REVIEW_LABEL, SITE,
+  ACTIVITY_LABEL, ASSET_LABEL, ASSET_ROUTE, CARDS_PER_SIDE, KIND_ORDER, LICENCE_LABEL, MARK, MEDIA_KIND_LABEL, ORIENTATION_LABEL, PRINT_DEFAULT,
+  REVIEW_LABEL, SITE,
 } from './site.ts';
-import type { PagedAssetKind, PrintInfo, PrintKind } from './site.ts';
+import type { PagedAssetKind, PrintInfo, PrintKind, RoutedKind } from './site.ts';
 
 // ═════════════════════════════ 1. 뿌리와 오류 ═════════════════════════════
 
@@ -1253,5 +1258,252 @@ export function recordStrings(lesson: Lesson): Str[] {
     });
   });
   for (const m of lesson.media) if (m.credit.note) out.push({ path: `media.${m.id}.credit.note`, text: m.credit.note });
+  return out;
+}
+
+// ═════════════════════════════ 10. 플랫폼 페이지 ═════════════════════════════
+// 교과서 목차·자료 유형별·제작 현황·업데이트·내 자료함(R41~R51)이 같이 쓰는 셈. 모두 차시표와 visibleLessons() 에서 나온다.
+// 명세에 없는 것을 만들어 내지 않는다: 자료는 ready 인 것만, 차시의 이름은 명세의 title 만 쓴다 (차시표의 focus 는 쓰지 않는다).
+
+/** 이 차시에서 준비된 자료 종류 전부, KIND_ORDER 차례. 수업 화면·학습지·확인 퀴즈는 모든 차시에 있다. */
+export function readyKinds(lesson: Lesson): AssetKind[] {
+  const ready = new Set<AssetKind>(['slides', 'worksheet', 'quiz', ...readyAssets(lesson)]);
+  return KIND_ORDER.filter((k) => ready.has(k));
+}
+
+/** 미리보기 그림(썸네일)의 사이트 안 경로 (base 없음). 예: /files/5-2/1/01/thumbs/worksheet.jpg. 페이지가 있는 자료(RoutedKind)에만 있다 (R52). */
+export function thumbRoute(id: string, kind: RoutedKind): string {
+  return fileRoute(id, `thumbs/${kind}.jpg`);
+}
+/** 미리보기 그림이 빌드한 사이트(distDir())에 놓이는 자리. 빌드 3단계(render-pdf)가 쓰고 산출물 검사가 본다. */
+export function thumbFile(id: string, kind: RoutedKind, argv?: readonly string[]): string {
+  return path.join(distDir(argv), 'files', ...id.split('/'), 'thumbs', `${kind}.jpg`);
+}
+
+/** "5학년 2학기 1단원 1차시". sep 을 주면 그것으로 잇는다 (차시 자료실의 머리: "5학년 2학기 · 1단원 · 1차시"). */
+export function courseLine(id: string, sep = ' '): string {
+  const ref = bundleOf(id);
+  return [semesterLabel(ref.semester.id), `${ref.unit.no}단원`, lessonsLabel(ref.lessons)].join(sep);
+}
+
+/**
+ * 수업 화면과 PPTX 의 바닥글 줄 (R55). 사이트 이름 | 학기·단원·차시 | AI 사용 표시나 초안 표시.
+ * 예: "nalssam의 초등사회콘텐츠 클라우드  |  5학년 2학기 1단원 1차시  |  검수 전 초안입니다. 수업에 쓰지 마세요."
+ */
+export function stageFooter(lesson: Lesson): string {
+  return [SITE.name, courseLine(lesson.id), footerNotice(lesson)].join('  |  ');
+}
+
+/**
+ * no 번 장(1부터)을 쓰는 흐름 단계. 수업 화면에서 제 머리말(kicker)이 없는 장에 "01 도입" 꼴로 찍는다 (R55).
+ * index 는 그 단계가 제 차시의 흐름에서 몇 번째인가(1부터)다. 두 차시 묶음은 차시마다 1부터 다시 센다 (장 번호와 같다).
+ * 어느 단계의 slides 범위에도 들지 않는 장이면 undefined.
+ */
+export function slidePhase(lesson: Lesson, no: number): { index: number; label: FlowStep['phase']; title: string; kicker: string } | undefined {
+  for (const part of flowByLesson(lesson)) {
+    const i = part.steps.findIndex((s) => s.slides && s.slides[0] <= no && no <= s.slides[1]);
+    if (i < 0) continue;
+    const step = part.steps[i];
+    return { index: i + 1, label: step.phase, title: step.title, kicker: `${String(i + 1).padStart(2, '0')} ${step.phase}` };
+  }
+  return undefined;
+}
+
+/**
+ * 자료 카드의 한 줄 설명 (R47). 예: "PPTX 22장", "PDF · A4 2쪽", "PDF · A4 가로 2쪽", "휴대폰·태블릿 · 5문항", "휴대폰·태블릿 · 분류하기".
+ * 그 자료가 이 차시에서 준비되어 있지 않으면 undefined.
+ */
+export function formatLine(lesson: Lesson, kind: AssetKind): string | undefined {
+  if (!readyKinds(lesson).includes(kind)) return undefined;
+  const job = printJobs(lesson).find((j) => j.kind === kind);
+  if (job) return `PDF · A4 ${job.print.orientation === 'landscape' ? `${ORIENTATION_LABEL.landscape} ` : ''}${job.pages}쪽`;
+  const a = lesson.assets;
+  switch (kind) {
+    case 'slides': return `PPTX ${lesson.slides.length}장`;
+    case 'quiz': return `휴대폰·태블릿 · ${lesson.quiz.items.length}문항`;
+    case 'web_activity': return a.web_activity.state === 'ready' ? `휴대폰·태블릿 · ${ACTIVITY_LABEL[a.web_activity.activity.kind]}` : undefined;
+    case 'making_kit': {
+      const kit = a.making_kit;
+      if (kit.state !== 'ready') return undefined;
+      return `${kit.when === 'in_class' && kit.minutes ? `수업 안 ${kit.minutes}분` : '수업 밖 활동'} · 재료 ${kit.materials.length}가지`;
+    }
+    default: return undefined;
+  }
+}
+
+/** catalog() 의 한 줄: 이번 빌드에 실리는 자료 하나 */
+export interface CatalogItem {
+  /** "5-2/1/01#worksheet". 내 자료함(localStorage)에 이 글로 담는다 (R51). */
+  key: string;
+  lessonId: string;
+  kind: AssetKind;
+  /** 자료 종류의 이름 (ASSET_LABEL). 예: "학습지" */
+  label: string;
+  /** 자료의 이름: 명세에 적은 그 자료의 title, 따로 없으면(수업 화면, 확인 퀴즈) 차시의 title */
+  title: string;
+  lessonTitle: string;
+  /** "5-2" */
+  semester: string;
+  unit: number;
+  /** "1차시", "2~3차시" */
+  lessonsLabel: string;
+  /** "6~9쪽" */
+  pagesLabel: string;
+  /** "5학년 2학기 1단원 1차시" (courseLine) */
+  course: string;
+  /** 여는 곳 (base 없음). 자료 페이지, 만들기 세트는 차시 자료실 안의 자리(#making-kit) */
+  route: string;
+  /** 내려받는 파일이 있으면 그 경로(base 없음)와 한글 이름. 수업 화면은 PPTX, 인쇄물은 PDF */
+  file?: { route: string; name: string };
+  /** 한 줄 설명 (formatLine) */
+  format: string;
+  /** 미리보기 그림의 경로 (base 없음). 페이지가 있는 자료에만 있다. 파일은 빌드 3단계에서 생기므로 astro dev 에는 없다. */
+  thumb?: string;
+  /** 검수 전 초안의 자료 (미리 보기 빌드에서만 나온다) */
+  draft: boolean;
+}
+
+// 명세에 적은 그 자료의 이름. 수업 화면과 확인 퀴즈에는 따로 없다.
+function assetTitle(lesson: Lesson, kind: AssetKind): string | undefined {
+  if (kind === 'worksheet') return lesson.worksheet.title;
+  if (kind === 'slides' || kind === 'quiz') return undefined;
+  const a = lesson.assets[kind];
+  return a.state === 'ready' && 'title' in a ? a.title : undefined;
+}
+
+/** 이번 빌드에 실리는 자료 전부: visibleLessons() 의 차시마다 readyKinds() 의 자료. 차시표 차례, 그 안에서 KIND_ORDER 차례. */
+export function catalog(): CatalogItem[] {
+  const out: CatalogItem[] = [];
+  for (const lesson of visibleLessons()) {
+    const ref = bundleOf(lesson);
+    const jobs = new Map(printJobs(lesson).map((j) => [j.kind as AssetKind, j]));
+    for (const kind of readyKinds(lesson)) {
+      const own = assetTitle(lesson, kind);
+      const job = jobs.get(kind);
+      const file = kind === 'slides' ? { route: pptxFile(lesson).file, name: pptxFile(lesson).download } : job ? { route: job.file, name: job.download } : undefined;
+      const routed = kind in ASSET_ROUTE ? (kind as RoutedKind) : undefined;
+      out.push({
+        key: `${lesson.id}#${kind}`,
+        lessonId: lesson.id, kind, label: ASSET_LABEL[kind], title: own ?? lesson.title, lessonTitle: lesson.title,
+        semester: ref.semester.id, unit: ref.unit.no, lessonsLabel: lessonsLabel(ref.lessons), pagesLabel: pagesLabel(ref.pages), course: courseLine(lesson.id),
+        route: routed ? lessonRoute(lesson.id, ASSET_ROUTE[routed]) : `${lessonRoute(lesson.id)}#making-kit`,
+        ...(file ? { file } : {}),
+        format: formatLine(lesson, kind) ?? '',
+        ...(routed ? { thumb: thumbRoute(lesson.id, routed) } : {}),
+        draft: !isPublic(lesson),
+      });
+    }
+  }
+  return out;
+}
+
+/** 차시 수로 센 진행 (두 차시 묶음은 2). 첫 화면의 학기 타일, 교과서 목차, 제작 현황이 쓴다. */
+export interface Progress {
+  /** 차시표에 오른 차시 수 */
+  total: number;
+  /** 공개된 차시 수 */
+  published: number;
+  /** 이번 빌드에 실린 초안의 차시 수. 공개 빌드에서는 늘 0 이다. */
+  draft: number;
+  /** 아직 이번 빌드에 없는 차시 수 (명세가 없거나, 공개 빌드에서 초안인 것): total - published - draft */
+  planned: number;
+}
+
+function progressOf(bundles: BundleRef[]): Progress {
+  const visible = new Map(visibleLessons().map((l) => [l.id, l]));
+  const count = (list: BundleRef[]) => list.reduce((n, b) => n + b.lessons.length, 0);
+  const total = count(bundles);
+  const published = count(bundles.filter((b) => { const l = visible.get(b.id); return l !== undefined && isPublic(l); }));
+  const draft = count(bundles.filter((b) => { const l = visible.get(b.id); return l !== undefined && !isPublic(l); }));
+  return { total, published, draft, planned: total - published - draft };
+}
+
+/** 학기의 진행. 차시표가 아직 없는 학기는 모두 0 이다 ("교과서 차시표 준비 중"). */
+export function semesterProgress(semesterId: string): Progress {
+  return progressOf(allBundles().filter((b) => b.semester.id === semesterId));
+}
+/** 단원의 진행 */
+export function unitProgress(semesterId: string, unitNo: number): Progress {
+  return progressOf(allBundles().filter((b) => b.semester.id === semesterId && b.unit.no === unitNo));
+}
+
+/** lessonNeighbours() 의 한쪽 */
+export interface Neighbour {
+  id: string;
+  unit: number;
+  lessonsLabel: string;
+  pagesLabel: string;
+  /** 이번 빌드에 실리는 차시인가. 아니면 링크 없이 차시 번호와 '준비 중'만 보여 준다. */
+  ready: boolean;
+  /** 실리는 차시의 이름 (명세의 title) */
+  title?: string;
+}
+
+/** 차시표 차례로 이 묶음의 바로 앞과 뒤 묶음 (같은 학기 안에서, 단원을 건너서도). 학기의 처음과 끝에서는 그쪽이 없다. */
+export function lessonNeighbours(id: string): { prev?: Neighbour; next?: Neighbour } {
+  const all = allBundles();
+  const i = all.findIndex((b) => b.id === id);
+  if (i < 0) throw new Error(`차시표(content/registry.yaml)에 ${id} 가 없습니다`);
+  const visible = new Map(visibleLessons().map((l) => [l.id, l]));
+  const side = (b: BundleRef | undefined): Neighbour | undefined => {
+    if (!b || b.semester.id !== all[i].semester.id) return undefined;
+    const l = visible.get(b.id);
+    return { id: b.id, unit: b.unit.no, lessonsLabel: lessonsLabel(b.lessons), pagesLabel: pagesLabel(b.pages), ready: l !== undefined, ...(l ? { title: l.title } : {}) };
+  };
+  const prev = side(all[i - 1]);
+  const next = side(all[i + 1]);
+  return { ...(prev ? { prev } : {}), ...(next ? { next } : {}) };
+}
+
+// ── 업데이트 소식 (content/updates.yaml, R49) ──
+
+/** 업데이트 소식 파일의 자리. 명세처럼 CONTENT_DIR 을 따른다. */
+export function updatesFile(): string {
+  return path.join(contentDir(), 'updates.yaml');
+}
+
+/**
+ * 업데이트 소식 전부, 날짜가 늦은 것부터 (같은 날은 파일에 적은 차례). 파일이 없으면 빈 목록.
+ * 형식에 맞지 않거나 차시표에 없는 차시를 가리키면 SpecError 를 던진다 (빌드와 npm run check 가 멈춘다).
+ */
+export function loadUpdates(): UpdateEntry[] {
+  const file = updatesFile();
+  if (!fs.existsSync(file)) return [];
+  const stamp = `${mtime(file)}|${mtime(registryFile())}`;
+  const hit = cache.get(file);
+  if (hit && hit.stamp === stamp) return hit.value as UpdateEntry[];
+  const { data, lineOf } = parseSpecText<UpdateEntry[]>(Updates, fs.readFileSync(file, 'utf8'), file);
+  const known = new Set(allBundles().map((b) => b.id));
+  const issues: string[] = [];
+  data.forEach((u, i) => u.lessons?.forEach((id, j) => {
+    if (!known.has(id)) issues.push(`${lineOf([i, 'lessons', j])}번째 줄 · ${i + 1}번째 · lessons: 차시표(registry.yaml)에 없는 묶음 id 입니다: ${id}`);
+  }));
+  if (issues.length) throw new SpecError(file, issues);
+  const value = data.map((u, i) => ({ u, i })).sort((a, b) => (a.u.date < b.u.date ? 1 : a.u.date > b.u.date ? -1 : a.i - b.i)).map(({ u }) => u);
+  cache.set(file, { stamp, value });
+  return value;
+}
+
+/** visibleUpdates() 의 한 줄: 소식과, 그 소식이 가리키는 차시 (이번 빌드에 실리는 것) */
+export interface VisibleUpdate extends UpdateEntry {
+  /** 가리킨 차시의 이름과 차시 자료실 경로 (base 없음). 적힌 차례. */
+  links: { id: string; title: string; route: string; draft: boolean }[];
+  /** 가리킨 차시 가운데 초안이 있다 (미리 보기 빌드에서만). 화면에 '초안' 표를 붙인다. */
+  draft: boolean;
+}
+
+/**
+ * 이번 빌드에 보여 줄 소식, 날짜가 늦은 것부터. 차시를 가리키지 않는 소식은 늘 보이고,
+ * 차시를 가리키는 소식은 가리킨 차시가 모두 visibleLessons() 에 있을 때만 보인다 (공개 빌드에는 초안의 소식이 없다).
+ */
+export function visibleUpdates(): VisibleUpdate[] {
+  const visible = new Map(visibleLessons().map((l) => [l.id, l]));
+  const out: VisibleUpdate[] = [];
+  for (const u of loadUpdates()) {
+    const lessons = (u.lessons ?? []).map((id) => visible.get(id));
+    if (lessons.some((l) => !l)) continue;
+    const links = (lessons as Lesson[]).map((l) => ({ id: l.id, title: l.title, route: lessonRoute(l.id), draft: !isPublic(l) }));
+    out.push({ ...u, links, draft: links.some((l) => l.draft) });
+  }
   return out;
 }

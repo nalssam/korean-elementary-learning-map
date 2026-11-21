@@ -1,0 +1,19 @@
+---
+// 민트 띠 (R53): 한 줄 결론을 가운데에 굵게. 한 페이지에 하나까지만 쓴다.
+// 강조할 말은 <strong> 으로 감싸면 청록으로 찍힌다. 예: <Band>사실마다 공개 출처를 붙이고, <strong>교사가 승인한 차시만</strong> 공개합니다.</Band>
+// 함께 쓰는 컴포넌트다 (계약. docs/CONTRACT.md 6절).
+interface Props { class?: string }
+const { class: cls } = Astro.props;
+---
+<p class:list={['band', cls]}><slot /></p>
+
+<style is:global>
+  :where(.band) {
+    display: block; width: fit-content; max-width: 100%; margin: var(--s6) auto 0; padding: var(--s3) var(--s6);
+    border-radius: var(--radius-pill); background: var(--teal-soft); color: var(--navy);
+    font-size: var(--fs-md); font-weight: 700; line-height: 1.5; text-align: center; text-wrap: balance;
+  }
+  :where(.band) strong { font-weight: 800; color: var(--teal); }
+  /* 두 줄 넘게 접히는 좁은 화면에서는 알약 끝이 글을 깎아 먹지 않게 모서리만 둥글린다 */
+  @media (max-width: 600px) { :where(.band) { padding-inline: var(--s5); border-radius: var(--radius); } }
+</style>

@@ -1,0 +1,21 @@
+---
+// 머리말 위의 작은 청록 글씨 (R53). 예: <Kicker>최근 올라온 자료</Kicker>, <Kicker no={1}>도입</Kicker> → "01 도입"
+// 번호(no)는 차례가 실제로 있는 자리(수업 흐름의 단계, 만드는 순서)에만 준다. 꾸미려고 번호를 붙이지 않는다.
+// 함께 쓰는 컴포넌트다 (계약. docs/CONTRACT.md 6절). 고칠 것이 있으면 계약 담당에게 알린다.
+interface Props {
+  /** 차례 번호. 두 자리로 찍는다 (1 → "01") */
+  no?: number;
+  /** 감싸는 요소. 기본은 p */
+  as?: 'p' | 'span' | 'div';
+  id?: string;
+  class?: string;
+}
+const { no, as: Tag = 'p', id, class: cls } = Astro.props;
+---
+<Tag class:list={['kicker', cls]} id={id}>{no !== undefined && <span class="kicker-no">{String(no).padStart(2, '0')}</span>}<slot /></Tag>
+
+<style is:global>
+  /* :where() 로 무게를 0 에 두어, 부르는 페이지의 class 하나로 여백을 바꿀 수 있게 한다 */
+  :where(.kicker) { display: block; margin: 0 0 var(--s2); font-size: var(--fs-kicker); font-weight: 700; line-height: var(--lh-tight); letter-spacing: 0.02em; color: var(--teal); }
+  :where(.kicker-no) { margin-right: 0.45em; font-variant-numeric: tabular-nums; }
+</style>

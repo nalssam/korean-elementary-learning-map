@@ -35,10 +35,17 @@ export const SchemaVersion = z.literal(SCHEMA_VERSION, {
 /** 영문 소문자·숫자·하이픈으로 된 식별자 (그림 id, 읽기 자료 id, 전개도 모듈 이름) */
 export const Slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, '영문 소문자·숫자·하이픈만 씁니다. 예: dolmen-parts');
 
+// Date.parse 는 "2026-02-30" 을 3월 2일로 넘겨 읽는다. 연·월·일을 다시 꺼내 같은지 본다.
+const onCalendar = (s: string) => {
+  const [y, m, d] = s.split('-').map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d));
+  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d;
+};
+
 /** 날짜 */
 export const DateStr = z.string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, '날짜는 "2026-11-18"처럼 씁니다')
-  .refine((s) => !Number.isNaN(Date.parse(s)), { message: '달력에 없는 날짜입니다. "2026-11-18"처럼 씁니다' });
+  .refine(onCalendar, { message: '달력에 없는 날짜입니다. "2026-11-18"처럼 씁니다' });
 
 /**
  * 누르면 열리는 웹 주소. javascript:, data:, file: 같은 것을 막는다 (명세는 낯선 사람의 PR 로도 들어온다).

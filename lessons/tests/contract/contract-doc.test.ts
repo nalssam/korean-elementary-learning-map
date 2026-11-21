@@ -10,6 +10,7 @@ import * as c from '#lib/content.ts';
 import * as seal from '#lib/seal.ts';
 import * as site from '#lib/site.ts';
 import * as url from '#src/lib/url.ts';
+import { STORAGE_KEY } from '#src/components/site/collect.ts';
 
 const read = (file: string) => fs.readFileSync(path.join(c.ROOT, file), 'utf8');
 const doc = read('docs/CONTRACT.md');
@@ -122,4 +123,26 @@ test('올리기 전 검사는 비공개 자료가 없는 기여자를 막지 않
 test('고정 문구와 주소의 꼴', () => {
   assert.ok(section(12).includes(`\`SITE.previewNotice\`("${site.SITE.previewNotice}")`));
   assert.ok(section(3).includes('`["5-2/1/01","5-2/1/02-03"]`') && section(3).includes('`visibleLessons().filter(isPublic).map((l) => l.id)`'));
+});
+
+test('플랫폼으로 넓히며 정한 것(R40~R58)이 결정 기록과 계약서에 함께 있다', () => {
+  const decisions = read('docs/decisions.md');
+  assert.ok(decisions.includes('## 플랫폼으로 넓히며 정한 것 (2026-11-21)'));
+  for (let n = 40; n <= 58; n++) assert.match(decisions, new RegExp(`^\\| R${n} `, 'm'), `decisions.md 에 R${n} 줄이 없습니다`);
+  // 새 주소 (3절)
+  for (const u of ['`/types/`', '`/updates/`', '`/status/`', '`/my/`', '`/files/<id>/thumbs/<kind>.jpg`']) assert.ok(section(3).includes(u), `3절에 ${u} 가 없습니다`);
+  // 플랫폼 도우미 (4절의 표)
+  const table = section(4);
+  for (const name of ['catalog', 'readyKinds', 'formatLine', 'semesterProgress', 'unitProgress', 'lessonNeighbours', 'courseLine', 'stageFooter', 'slidePhase', 'thumbRoute', 'thumbFile', 'loadUpdates', 'visibleUpdates', 'updatesFile']) {
+    assert.ok(table.includes('`' + name + '('), `4절의 표에 ${name}() 가 없습니다`);
+  }
+  // 함께 쓰는 화면 부품과 내 자료함의 열쇠 (6절), 수업 화면의 바닥글과 단계 머리말 (8절), 미리보기 그림과 새 묶음 (10절), 산출물 검사 (11절)
+  for (const part of ['Kicker.astro', 'Band.astro', 'StatusChip.astro', 'TypeIcon.astro', 'ResourceCard.astro']) assert.ok(section(6).includes('`' + part + '`'), part);
+  assert.ok(section(6).includes('`' + STORAGE_KEY + '`'), '6절의 열쇠가 collect.ts 와 다릅니다');
+  assert.ok(section(8).includes('`stageFooter(lesson)`') && section(8).includes('`slidePhase(lesson, no).kicker`'));
+  assert.ok(section(10).includes('**미리보기 그림 (R52).**') && section(10).includes('`npm run new -- <id>`'));
+  assert.ok(section(11).includes('`thumbFile(id, kind)`'));
+  // 이름은 한 곳에서만: 계약서와 문서에 옛 임시 이름이 남지 않는다 (결정 기록의 옛 이름 이야기는 빼고)
+  for (const file of ['docs/CONTRACT.md', 'docs/ROADMAP.md', 'README.md', 'CONTRIBUTING.md', 'lib/site.ts']) assert.ok(!read(file).includes('날쌤 초등사회'), file);
+  assert.equal(site.SITE.name, 'nalssam의 초등사회콘텐츠 클라우드');
 });

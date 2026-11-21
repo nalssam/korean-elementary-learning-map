@@ -1,0 +1,31 @@
+---
+// 상태 표 (R53). 차시의 상태(공개·초안·준비 중)와 업데이트 소식의 갈래(새 자료·고침·알림).
+// 산호색은 '새 자료'에만 쓴다 (주의를 끄는 한 군데. 맞은 답에는 쓰지 않는다. docs/CONTRACT.md 14절).
+// 함께 쓰는 컴포넌트다 (계약. docs/CONTRACT.md 6절).
+import { LESSON_STATE_LABEL, UPDATE_LABEL } from '#lib/site.ts';
+
+type State = keyof typeof LESSON_STATE_LABEL | keyof typeof UPDATE_LABEL;
+interface Props {
+  state: State;
+  /** 보여 줄 말을 바꿀 때만. 예: "초안 1차시" */
+  label?: string;
+  class?: string;
+}
+const { state, label, class: cls } = Astro.props;
+const text = label ?? (state in LESSON_STATE_LABEL ? LESSON_STATE_LABEL[state as keyof typeof LESSON_STATE_LABEL] : UPDATE_LABEL[state as keyof typeof UPDATE_LABEL]);
+---
+<span class:list={['status-chip', cls]} data-state={state}>{text}</span>
+
+<style is:global>
+  :where(.status-chip) {
+    display: inline-flex; align-items: center; padding: 0 var(--s2); border: 1px solid transparent; border-radius: var(--radius-pill);
+    font-size: var(--fs-xs); font-weight: 700; line-height: 1.6; white-space: nowrap; vertical-align: 0.1em; font-variant-numeric: tabular-nums;
+  }
+  /* 글자와 바탕의 대비는 모두 4.5:1 이상이다 (청록/민트 4.7, 산호/흰 바탕 5.0, 회색/종이색 5.1) */
+  :where(.status-chip[data-state='published']) { background: var(--teal-soft); color: var(--teal); }
+  :where(.status-chip[data-state='draft']) { border-color: var(--line); background: var(--paper); color: var(--navy); }
+  :where(.status-chip[data-state='planned']) { border-color: var(--line); border-style: dashed; color: var(--gray); }
+  :where(.status-chip[data-state='new']) { border-color: var(--coral); background: var(--card); color: var(--coral); }
+  :where(.status-chip[data-state='fix']) { background: var(--teal-soft); color: var(--navy); }
+  :where(.status-chip[data-state='notice']) { border-color: var(--line); background: var(--paper); color: var(--gray); }
+</style>

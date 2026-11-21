@@ -1,17 +1,26 @@
 // 사이트 전체에서 쓰는 고정 문구와 이름표. 화면·인쇄물·PPTX 가 모두 여기에서 가져다 쓴다.
 // 같은 것을 여러 담당이 저마다 다른 말로 부르지 않게 하려고 한 파일에 모았다.
 import type { Licence, PrintSpec } from '../schema/common.ts';
-import type { AssetKind, Media, OptionalAssetKind, ReviewKind } from '../schema/lesson.ts';
+import type { AssetKind, Media, OptionalAssetKind, ReviewKind, WebActivity } from '../schema/lesson.ts';
+import type { UpdateKind } from '../schema/updates.ts';
 
 const author = '몽당분필 날쌤';
+// 사이트 이름 (R40). 머리의 이름표는 두 줄(nameLead 위에 shortName)로 찍고, 이름을 말하는 다른 자리는 모두 name 을 쓴다.
+const nameLead = 'nalssam의';
+const shortName = '초등사회콘텐츠 클라우드';
 const licence = { name: 'CC BY-NC-SA 4.0', url: 'https://creativecommons.org/licenses/by-nc-sa/4.0/deed.ko' };
 const aiNotice = 'AI 도구로 초안을 만들고 교사가 검수한 자료입니다.';
 const licenceNote = '출처를 따로 적은 사진·그림은 이 조건이 아니라 저마다 적힌 조건을 따릅니다.';
 
 export const SITE = {
-  /** 사이트 이름 (임시. 날쌤이 정하면 여기 한 곳만 고친다) */
-  name: '날쌤 초등사회',
-  tagline: '초등 사회 3~6학년, 차시마다 바로 쓰는 수업 자료',
+  /** 사이트 이름. 머리, <title> 뒷부분, 바닥글, 이용 조건의 저작자 표시, 수업 화면·PPTX 의 바닥글 줄이 이 글을 쓴다 (R40). */
+  name: `${nameLead} ${shortName}`,
+  /** 머리의 이름표 첫 줄 (청록, 작게). 둘째 줄이 shortName 이다. */
+  nameLead,
+  /** 자리가 좁아 name 을 다 쓸 수 없는 곳에서만 쓴다 */
+  shortName,
+  /** 첫 화면의 큰 제목이자, 따로 적지 않은 페이지의 설명(meta description) */
+  tagline: '교과서 차시마다 바로 쓰는 초등 사회 수업 자료',
   author,
   /** 직접 만든 글·그림의 이용 조건 */
   licence,
@@ -62,6 +71,70 @@ export const ASSET_ROUTE = {
 } as const satisfies Partial<Record<AssetKind, string>>;
 /** 페이지가 따로 있는 선택 자료 */
 export type PagedAssetKind = Extract<keyof typeof ASSET_ROUTE, OptionalAssetKind>;
+/** 페이지가 따로 있는 자료 전부 (수업 화면·학습지·확인 퀴즈 포함). 이 자료들에 미리보기 그림(썸네일)이 있다 (R52). */
+export type RoutedKind = keyof typeof ASSET_ROUTE;
+
+/**
+ * 자료 종류를 늘어놓는 차례 (R43). 첫 화면의 자료 유형 타일, /types/ 의 묶음, 차시 자료실의 카드, catalog() 가 모두 이 차례를 따른다.
+ * 수업에 띄우는 것, 인쇄하는 것, 아이가 여는 것, 만들어 보는 것, 아직 생성기가 없는 것 순서다.
+ */
+export const KIND_ORDER = [
+  'slides', 'worksheet', 'quiz', 'web_activity', 'papercraft', 'cards', 'coloring', 'making_kit', 'escape', 'virtual3d',
+] as const satisfies readonly AssetKind[];
+
+/** 차시 자료실의 거르기 탭이 자료를 나누는 갈래 (R46). 탭은 '전체'와 이 셋이다. */
+export type KindGroup = 'class' | 'print' | 'student';
+export const KIND_GROUP = {
+  slides: 'class',
+  worksheet: 'print', cards: 'print', coloring: 'print', papercraft: 'print', making_kit: 'print',
+  quiz: 'student', web_activity: 'student', escape: 'student', virtual3d: 'student',
+} as const satisfies Record<AssetKind, KindGroup>;
+export const GROUP_ORDER = ['class', 'print', 'student'] as const satisfies readonly KindGroup[];
+export const GROUP_LABEL = { class: '수업', print: '인쇄', student: '학생 활동' } as const satisfies Record<KindGroup, string>;
+
+/** 자료 카드(ResourceCard)의 큰 단추에 쓰는 말 (R47). 수업 화면은 띄우고, 인쇄물은 인쇄 페이지를 열고, 나머지는 연다. */
+export const OPEN_LABEL = {
+  slides: '띄우기',
+  worksheet: '인쇄 페이지', cards: '인쇄 페이지', coloring: '인쇄 페이지', papercraft: '인쇄 페이지',
+  quiz: '열기', web_activity: '열기', making_kit: '열기', escape: '열기', virtual3d: '열기',
+} as const satisfies Record<AssetKind, string>;
+
+/** 웹 활동 네 가지의 이름. 자료 카드의 한 줄 설명(formatLine)에 쓴다. 활동 페이지의 주석과 같은 말이다. */
+export const ACTIVITY_LABEL = {
+  sort: '분류하기', match: '짝 맞추기', order: '차례 맞추기', place: '그림에 이름표 놓기',
+} as const satisfies Record<WebActivity['kind'], string>;
+
+/** 차시의 상태를 보여 주는 말 (StatusChip). planned 는 차시표에만 있고 명세가 아직 없거나 이번 빌드에 실리지 않는 묶음이다. */
+export const LESSON_STATE_LABEL = { published: '공개', draft: '초안', planned: '준비 중' } as const;
+/** 업데이트 소식의 갈래 (content/updates.yaml 의 kind, R49) */
+export const UPDATE_LABEL = { new: '새 자료', fix: '고침', notice: '알림' } as const satisfies Record<UpdateKind, string>;
+
+/** 페이지마다 머리의 길잡이에서 aria-current 를 붙일 자리 */
+export type NavKey = 'home' | 'textbook' | 'types' | 'updates' | 'status' | 'about' | 'my' | 'licence' | 'report';
+
+/**
+ * 머리의 길잡이 (R42), 이 차례대로. route 는 base 없는 사이트 안 경로라 href() 를 씌운다.
+ * '교과서 자료'는 페이지가 아니라 학기 여덟 개(loadRegistry().semesters)를 펼치는 메뉴다.
+ */
+export const NAV = [
+  { key: 'textbook', label: '교과서 자료' },
+  { key: 'types', label: '자료 유형별', route: '/types/' },
+  { key: 'updates', label: '업데이트', route: '/updates/' },
+  { key: 'status', label: '제작 현황', route: '/status/' },
+  { key: 'about', label: '소개', route: '/about/' },
+] as const satisfies readonly { key: NavKey; label: string; route?: string }[];
+/** 머리 오른쪽의 두 단추. 찾기는 첫 화면의 찾기 자리로 가고, 내 자료함에는 담은 자료의 수가 붙는다. */
+export const NAV_TOOLS = {
+  search: { label: '찾기', route: '/#find' },
+  my: { key: 'my', label: '내 자료함', route: '/my/' },
+} as const;
+/** 바닥글 첫 줄의 링크 (R54). 이용 조건과 오류 제보는 머리가 아니라 여기에 있다. */
+export const FOOT_LINKS = [
+  { key: 'about', label: '소개', route: '/about/' },
+  { key: 'licence', label: '이용 조건', route: '/licence/' },
+  { key: 'report', label: '오류 제보', route: '/report/' },
+  { key: 'repo', label: '깃허브 저장소', url: SITE.repo },
+] as const;
 
 /** 이용 조건의 우리말 이름. CC 는 판(4.0 등)이 licence_url 에서 붙는다 (lib/content.ts 의 licenceName). */
 export const LICENCE_LABEL: Record<Licence, string> = {
