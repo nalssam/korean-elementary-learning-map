@@ -1,6 +1,7 @@
 ---
 // 수업 흐름: 차시마다 도입·전개·정리 시간표를 따로 그린다 (flowByLesson).
 // 두 차시 묶음은 차시 사이에 '쉬는 시간' 줄을 긋고(명세에는 없다), 차시마다 그 차시의 첫 장에서 여는 링크를 둔다 (/<id>/slides/#5).
+// 단계 이름 앞의 번호("01 도입")는 그 단계가 제 차시의 흐름에서 몇 번째인가다. 수업 화면의 단계 머리말(slidePhase)과 같은 번호다 (R55).
 import { flowByLesson, lessonRoute } from '#lib/content.ts';
 import { ASSET_LABEL, ASSET_ROUTE } from '#lib/site.ts';
 import type { FlowStep, Lesson } from '#schema/lesson.ts';
@@ -18,7 +19,7 @@ const slidesLabel = (s: FlowStep) => (s.slides ? (s.slides[0] === s.slides[1] ? 
 // 한 차시 묶음은 단계 이름이 h3, 두 차시 묶음은 차시 이름이 h3 이고 단계 이름이 h4 다
 const StepTitle = multi ? 'h4' : 'h3';
 ---
-<section class="sec" aria-labelledby="flow-title">
+<section class="sec guide-sec" id="flow" aria-labelledby="flow-title">
   <h2 class="sec-title" id="flow-title">수업 흐름</h2>
   {flows.map((flow, i) => (
     <>
@@ -36,9 +37,9 @@ const StepTitle = multi ? 'h4' : 'h3';
           {flow.steps.map((s) => <li style={`flex-grow:${s.minutes}`}><span>{s.phase}</span><span>{s.minutes}분</span></li>)}
         </ol>
         <ol class="steps">
-          {flow.steps.map((s) => (
+          {flow.steps.map((s, no) => (
             <li class="step">
-              <p class="step-time" data-pagefind-ignore><span class="step-phase">{s.phase}</span><span class="step-min">{s.minutes}분</span></p>
+              <p class="step-time" data-pagefind-ignore><span class="step-phase"><span class="step-phase-no">{String(no + 1).padStart(2, '0')}</span>{s.phase}</span><span class="step-min">{s.minutes}분</span></p>
               <div class:list={['step-body', s.ask.length > 0 && 'has-ask']}>
                 <div class="step-main">
                   <StepTitle class="step-title">{s.title}</StepTitle>

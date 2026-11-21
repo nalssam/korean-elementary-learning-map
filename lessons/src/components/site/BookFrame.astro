@@ -1,0 +1,35 @@
+---
+// 교과서 목차를 곁에 둔 두 칸 짜임 (R44~R46). 학기·단원·차시 자료실 페이지가 쓴다.
+// 넓은 화면(1100px 이상): 왼쪽에 목차가 따라오고(sticky) 오른쪽이 본문이다.
+// 좁은 화면: 목차는 본문 맨 위의 접힌 '목차' 상자(<details>)가 된다. 스크립트 없이 열린다.
+// 목차는 두 자리에 한 번씩 그리고 CSS 가 화면 폭에 맞는 것 하나만 보여 준다 (숨은 쪽은 display: none 이라 화면 읽기 프로그램에도 하나만 읽힌다).
+import { semesterLabel } from '#lib/content.ts';
+import type { GuideSection } from './book.ts';
+import BookToc from './BookToc.astro';
+
+interface Props {
+  semester: string;
+  unit?: number;
+  bundle?: string;
+  /** 차시 자료실의 길잡이. 넓은 화면의 목차에서만 지금 묶음 아래에 단다 (좁은 화면에서는 교사용 안내 머리에 따로 있다). */
+  sections?: GuideSection[];
+  /** '목차' 상자의 단추 옆에 적을 지금 자리. 예: "1단원 1차시" */
+  where?: string;
+}
+const { semester, unit, bundle, sections, where } = Astro.props;
+---
+<div class="book">
+  <div class="book-rail">
+    <BookToc place="rail" semester={semester} unit={unit} bundle={bundle} sections={sections} />
+  </div>
+  <div class="book-main">
+    <details class="toc-fold" data-pagefind-ignore>
+      <summary>
+        <span class="toc-fold-label">목차</span>
+        <span class="toc-fold-where">{semesterLabel(semester)}{where && ` · ${where}`}</span>
+      </summary>
+      <BookToc place="fold" semester={semester} unit={unit} bundle={bundle} />
+    </details>
+    <slot />
+  </div>
+</div>

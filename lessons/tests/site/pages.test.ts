@@ -59,23 +59,27 @@ test('학기·단원 페이지: 차시표 전체를 그리고 실리는 묶음�
   assert.ok(unit.indexOf('href="/5-2/1/05/cards/"') > kit && unit.indexOf('href="/5-2/1/05/worksheet/"') > kit);
 });
 
-test('차시 안내 페이지: 차례와 쉬는 시간, 띄우기 링크', () => {
+test('차시 자료실: 차례와 쉬는 시간, 띄우기 링크 (R46)', () => {
   process.env.CONTENT_DIR = FIXTURES;
   process.env.SHOW_DRAFTS = '1';
   try {
     for (const lesson of c.visibleLessons()) {
       const html = read(drafts, `${lesson.id}/index.html`);
-      // 머리 → 큰 버튼 → 준비물 → 수업 흐름 → 확인 퀴즈 → 교사용 자료
-      const order = ['class="kit-head"', 'class="actions"', 'id="prepare-title"', 'id="flow-title"', 'id="student-title"', 'id="teacher-title"'].map((s) => html.indexOf(s));
+      // 머리 → 자료 → 교사용 안내(준비물 → 수업 흐름 → 확인 퀴즈 → 교사용 자료) → 앞뒤 차시
+      const order = ['class="kit-head"', 'id="materials"', 'class="guide-head"', 'id="prepare-title"', 'id="flow-title"', 'id="student-title"', 'id="teacher-title"', 'aria-label="앞뒤 차시"'].map((s) => html.indexOf(s));
       assert.ok(order.every((n, i) => n > 0 && (i === 0 || n > order[i - 1])), `${lesson.id} 의 차례가 다릅니다: ${order}`);
       // 초안 표시
       assert.match(html, /<body data-kind="site" data-draft="true">/);
       assert.ok(html.includes(`<p class="site-flag">`) && html.includes(SITE.draftNotice));
-      // 큰 버튼: 페이퍼크래프트가 ready 인 묶음에만 '페이퍼크래프트 인쇄'가 붙는다. 만들기 세트와 헷갈리는 '만들기 인쇄'는 쓰지 않는다 (6절).
-      const papercraft = lesson.assets.papercraft.state === 'ready';
-      assert.equal(/<a class="btn btn-big" href="[^"]*\/papercraft\/">페이퍼크래프트 인쇄<\/a>/.test(html), papercraft, lesson.id);
+      // 큰 버튼 줄은 자료 카드로 바뀌었다. 카드는 이 차시의 catalog() 자료마다 한 장, 수업 화면이 맨 앞에서 한 줄을 다 쓴다.
+      assert.ok(!html.includes('btn-big') && !html.includes('class="actions"'), lesson.id);
+      const items = c.catalog().filter((i) => i.lessonId === lesson.id);
+      const cards = [...html.matchAll(/<article class="rc" data-kind="([a-z_0-9]+)"/g)].map((m) => m[1]);
+      assert.deepEqual(cards, items.map((i) => i.kind), lesson.id);
+      assert.match(html, /<li class="book-cards-wide"><article class="rc" data-kind="slides"/);
       assert.ok(!html.includes('만들기 인쇄'), lesson.id);
       // 페이퍼크래프트의 인쇄물 줄(준비물이나 '더 해 볼 자료')과 PDF 링크
+      const papercraft = lesson.assets.papercraft.state === 'ready';
       const job = c.printJobs(lesson).find((j) => j.kind === 'papercraft');
       assert.equal(Boolean(job), papercraft, lesson.id);
       if (job && lesson.assets.papercraft.state === 'ready') {
@@ -85,13 +89,13 @@ test('차시 안내 페이지: 차례와 쉬는 시간, 띄우기 링크', () =>
       // 쪽수는 어느 교과서의 것인지 밝힌다 (차시표의 textbook)
       const tb = c.loadRegistry().textbook;
       assert.ok(html.includes(`${tb.publisher}(${tb.author}) 교과서 ${c.pagesLabel(c.bundleOf(lesson).pages)}`), `${lesson.id} 교과서 이름`);
+      // 머리말은 학기 · 단원 · 차시
+      assert.ok(html.includes(esc(c.courseLine(lesson.id, ' · '))), `${lesson.id} 머리말`);
       // 현재 위치의 단원 이름은 좁은 화면에서 감추는 뒷부분으로 따로 싼다
       assert.ok(html.includes(`<span class="crumb-rest"> ${esc(c.bundleOf(lesson).unit.title)}</span>`), `${lesson.id} 현재 위치`);
-      // 웹 활동은 확인 퀴즈 곁의 카드에 한 번만 나온다. 제목(h3)에는 이름표가 끼지 않는다.
-      if (lesson.assets.web_activity.state === 'ready') {
-        assert.match(html, /<h3 class="qr-title">웹 활동<\/h3>/);
-        assert.ok(!html.includes('QR 코드 보기'), lesson.id);
-      }
+      // QR 은 학생 페이지의 자료 카드가 여는 작은 창에만 있다 (6절). 웹 활동 카드는 한 장이다.
+      assert.equal(html.match(/<svg class="qr"/g)?.length ?? 0, items.filter((i) => i.kind === 'quiz' || i.kind === 'web_activity').length, lesson.id);
+      assert.ok(!html.includes('class="qr-card"'), lesson.id);
       // 검색 색인: 시간표·분·장 번호는 빼고, 초안 표시를 메타로 싣는다
       assert.match(html, /<ol class="timebar" aria-hidden="true" data-pagefind-ignore>/);
       assert.ok(html.includes('data-pagefind-meta="draft:검수 전 초안"'), lesson.id);

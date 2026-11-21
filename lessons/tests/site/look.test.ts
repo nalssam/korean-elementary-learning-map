@@ -100,7 +100,7 @@ test('두 가로줄 사이에 빈 띠가 없다 (차시 안내·단원·학기 �
   }
 });
 
-test('차시 안내의 큰 버튼 줄은 본문 칸을 꽉 채운다 (1280px 에서 오른쪽 끝이 같고, 390px 에서는 한 줄에 하나씩 가득)', { skip }, async () => {
+test('차시 자료실의 자료 카드: 1280px 에서 수업 화면 카드가 한 줄을 다 쓰고, 390px 에서는 한 줄에 하나씩 가득 (R46)', { skip }, async () => {
   const { chromium } = await import('playwright');
   const server = await serve(out);
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
@@ -112,21 +112,16 @@ test('차시 안내의 큰 버튼 줄은 본문 칸을 꽉 채운다 (1280px 에
       for (const url of kits) {
         await page.goto(server.origin + url);
         const m = await page.evaluate(() => {
-          const row = document.querySelector('.actions');
-          if (!row) return null;
-          const box = row.getBoundingClientRect();
-          return { left: box.left, right: box.right, btns: [...row.querySelectorAll('.btn-big')].map((b) => { const r = b.getBoundingClientRect(); return { left: r.left, right: r.right }; }) };
+          const list = document.querySelector('.kit-cards');
+          if (!list) return null;
+          const box = list.getBoundingClientRect();
+          return { left: box.left, right: box.right, cards: [...list.children].map((li) => { const r = li.getBoundingClientRect(); return { left: r.left, right: r.right, kind: li.querySelector<HTMLElement>('.rc')?.dataset.kind }; }) };
         });
-        if (!m) continue;
-        const rows = new Map<number, number[]>();
-        m.btns.forEach((b, i) => { const k = Math.round(b.left); rows.set(k, [...(rows.get(k) ?? []), i]); });
-        if (width === 390) {
-          for (const b of m.btns) if (Math.abs(b.left - m.left) > 1 || Math.abs(b.right - m.right) > 1) problems.push(`${width}px ${url} 버튼이 칸을 채우지 않습니다`);
-        } else if (m.btns.length > 0) {
-          const last = Math.max(...m.btns.map((b) => b.right));
-          if (Math.abs(last - m.right) > 1) problems.push(`${width}px ${url} 마지막 버튼 오른쪽 끝 ${last} / 칸 ${m.right}`);
-          if (Math.abs(m.btns[0].left - m.left) > 1) problems.push(`${width}px ${url} 첫 버튼 왼쪽 끝이 칸과 다릅니다`);
-        }
+        if (!m) { problems.push(`${width}px ${url} 자료 카드가 없습니다`); continue; }
+        const full = (b: { left: number; right: number }) => Math.abs(b.left - m.left) <= 1 && Math.abs(b.right - m.right) <= 1;
+        if (m.cards[0]?.kind !== 'slides' || !full(m.cards[0])) problems.push(`${width}px ${url} 수업 화면 카드가 맨 앞에서 한 줄을 다 쓰지 않습니다`);
+        if (width === 390) for (const b of m.cards) if (!full(b)) problems.push(`${width}px ${url} ${b.kind} 카드가 칸을 채우지 않습니다`);
+        if (width === 1280 && m.cards.length > 2 && !m.cards.slice(1).some((b) => !full(b))) problems.push(`${width}px ${url} 나머지 카드가 격자로 놓이지 않습니다`);
       }
       await page.close();
     }
