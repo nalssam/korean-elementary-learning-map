@@ -1,17 +1,27 @@
 ---
-// 없는 주소를 열었을 때의 화면 (docs/CONTRACT.md 3절). 첫 화면과 오류 제보로 가는 링크만 둔다.
+// 없는 주소를 열었을 때의 화면 (docs/CONTRACT.md 3절). 첫 화면의 찾기, 오류 제보로 가는 링크를 둔다.
 // 검색 색인에는 넣지 않는다 (index={false}).
 // 빌드하면 dist/404.html 이 되고, 깃허브 페이지가 없는 주소마다 이것을 보여 준다. 주소가 어디든 같은 파일이라 링크는 href() 로 만든 절대 경로다.
+import { NAV_TOOLS } from '#lib/site.ts';
 import SiteLayout from '#src/layouts/SiteLayout.astro';
 import { href } from '#src/lib/url.ts';
+import PageHead from '#src/components/site/PageHead.astro';
 ---
 <SiteLayout title="찾는 페이지가 없습니다" index={false}>
-  <article class="prose not-found">
-    <h1 class="page-title">찾는 페이지가 없습니다</h1>
-    <p class="lead">주소가 바뀌었거나 아직 공개하지 않은 차시입니다. 첫 화면에서 쪽수나 차시로 찾아 보세요.</p>
-    <p class="not-found-links">
-      <a class="btn btn-primary" href={href('/')}>첫 화면으로 가기</a>
+  <div class="nf">
+    <PageHead kicker="404" title="찾는 페이지가 없습니다">주소가 바뀌었거나 아직 공개하지 않은 차시입니다. 첫 화면에서 쪽수나 차시로 찾아 보세요.</PageHead>
+    <p class="nf-links">
+      <a class="btn btn-primary" href={href(NAV_TOOLS.search.route)}>첫 화면에서 찾기</a>
       <a class="btn" href={href('/report/')}>오류 제보하기</a>
     </p>
-  </article>
+  </div>
 </SiteLayout>
+
+<style>
+  .nf { padding-block: var(--s5) var(--s7); }
+  .nf-links { display: flex; flex-wrap: wrap; gap: var(--s3); margin-top: var(--s6); }
+  @media (max-width: 760px) {
+    .nf { padding-block: 0 var(--s5); }
+    .nf-links :global(.btn) { flex: 1 1 100%; }
+  }
+</style>
