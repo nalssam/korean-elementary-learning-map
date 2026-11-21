@@ -6,6 +6,7 @@
 //  - 견주기 장: 함께 보는 그림 하나는 두 칸 짜임, 쪽마다 그림이면 출처 표시와 첫 항목이 같은 높이 (R23)
 //  - 교사 메모 창은 장을 가리지 않는다 (R24). QR 창 (R25). 정답 표와 머리표 (R27)
 //  - ○× 표시와 읽는 말은 lib 의 MARK·MARK_LABEL (R17), 닫는 따옴표와 조사는 한 줄에 (R18)
+//  - 장의 둘레 (R55): 모든 장의 바닥글 줄(stageFooter), 표지가 아닌 장의 두 자리 장 번호, 제 머리말이 없는 장의 단계 머리말
 //  - 조작: 글쇠·클릭·터치·주소의 #번호·퀴즈 정답 드러내기·교사 메모·화면 가리기·차시 안내로 돌아가기
 //  - 조작 단추는 가만히 있으면 숨는다 (열자마자, 단추를 마우스로 누른 뒤에도)
 import { after, before, test } from 'node:test';
@@ -14,7 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import YAML from 'yaml';
 import type { Browser, Page } from 'playwright';
-import { ROOT, answerText, footerNotice, loadLesson, slideNotes, visibleLessons } from '#lib/content.ts';
+import { ROOT, answerText, loadLesson, slideNotes, stageFooter, visibleLessons } from '#lib/content.ts';
 import { FIXTURES, buildSite, noChromium } from '../contract/helpers.ts';
 import { MARK, MARK_LABEL } from '#lib/site.ts';
 import { copyMedia, serve, sideProblems, slideProblems } from './helpers.ts';
@@ -22,7 +23,7 @@ import { DOLMEN_STEPS, QUOTED_QUESTION, SMALL_LABEL, STRESS_ID, makeStress } fro
 import { QR_COPY, SLIDE_COPY, STAGE_COPY } from '#src/components/slides/copy.ts';
 import { studentPages } from '#src/components/slides/qr.ts';
 import QRCode from 'qrcode';
-import { slideCounter } from '#src/components/slides/counter.ts';
+import { PHASE_LAYOUTS, slideCounter, slideFrame } from '#src/components/slides/counter.ts';
 import { NOTE_COPY } from '#src/components/slides/copy.ts';
 
 const OUT = path.join(ROOT, '.cache', 'tests', `slides-stage-${process.pid}`);
@@ -427,14 +428,15 @@ test('장 수·표지·교사 메모·조작', { skip }, async () => {
     // 명세의 장 하나 = 화면 한 장
     assert.equal(await page.locator('.slide').count(), one.slides.length);
     assert.equal(await cur(), 1);
-    // 표지에 footerNotice(lesson)
-    assert.equal(await page.locator('#s1 .sl-notice').textContent(), footerNotice(one));
+    // 표지에도 바닥글 줄(stageFooter: AI 사용 표시나 초안 표시가 든다)이 있고, 장 번호는 없다 (R55)
+    assert.equal(await page.locator('#s1 .sl-foot').textContent(), stageFooter(one));
+    assert.equal(await page.locator('#s1 .sl-counter').count(), 0);
     // 장마다 교사 메모가 slideNotes 와 같다
     for (let i = 1; i <= one.slides.length; i++) {
       assert.deepEqual(await page.locator(`#s${i} .slide-notes li`).allTextContents(), slideNotes(one, i), `${i}번 장 메모`);
     }
-    // 장 번호: 한 차시 묶음은 "2 / 20"
-    assert.equal(await page.locator('#s2 .sl-counter').textContent(), `2 / ${one.slides.length}`);
+    // 장 번호: 한 차시 묶음은 두 자리로 "02 / 05"
+    assert.equal(await page.locator('#s2 .sl-counter').textContent(), `02 / ${String(one.slides.length).padStart(2, '0')}`);
     // 다음·이전: → Space PageDown / ← PageUp
     await page.keyboard.press('ArrowRight'); assert.equal(await cur(), 2);
     assert.equal(new URL(page.url()).hash, '#2');
@@ -488,18 +490,19 @@ test('장 수·표지·교사 메모·조작', { skip }, async () => {
     // 두 차시 묶음: 3차시는 5번 장에서 시작한다 (flowByLesson 의 firstSlide)
     await open(page, `${s.url}/5-2/1/02-03/slides/#5`);
     assert.equal(await cur(), 5);
-    assert.equal(await page.locator('#s5 .sl-notice').count(), 0, '둘째 표지에는 초안 표시를 다시 찍지 않는다');
-    // 두 차시 묶음의 장 번호는 차시마다 따로 센다. Home 은 지금 차시의 첫 장으로 간다.
+    assert.equal(await page.locator('#s5 .sl-cover-meta').count(), 0, '둘째 표지에는 차시표 값을 다시 찍지 않는다');
+    // 두 차시 묶음의 장 번호는 차시마다 따로 센다. 둘째 표지에도 장 번호가 없고, 조작 단추의 번호는 있다. Home 은 지금 차시의 첫 장으로 간다.
     const two = loadLesson('5-2/1/02-03');
-    assert.equal(slideCounter(two, 5).text, '3차시 1 / 4');
-    assert.equal(await page.locator('#s5 .sl-counter').textContent(), '3차시 1 / 4');
-    assert.equal(await page.locator('.hud-count').textContent(), '3차시 1 / 4');
-    assert.equal(await page.locator('#s1 .sl-counter').textContent(), '2차시 1 / 4');
+    assert.equal(slideCounter(two, 5).text, '3차시 01 / 04');
+    assert.equal(await page.locator('#s5 .sl-counter').count(), 0);
+    assert.equal(await page.locator('.hud-count').textContent(), '3차시 01 / 04');
+    assert.equal(await page.locator('#s6 .sl-counter').textContent(), '3차시 02 / 04');
+    assert.equal(await page.locator('#s2 .sl-counter').textContent(), '2차시 02 / 04');
     await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight');
     assert.equal(await cur(), 7);
     await page.keyboard.press('Home'); assert.equal(await cur(), 5);
-    // 초안은 장마다 왼쪽 아래에 초안 표시를 찍는다 (1번 장은 표지 아래에 있다)
-    for (let i = 2; i <= two.slides.length; i++) assert.equal(await page.locator(`#s${i} .sl-draft`).textContent(), footerNotice(two));
+    // 모든 장(표지 포함)의 왼쪽 아래에 바닥글 줄. 초안은 그 끝에 초안 표시가 든다 (R55)
+    for (let i = 1; i <= two.slides.length; i++) assert.equal(await page.locator(`#s${i} .sl-foot`).textContent(), stageFooter(two));
     // 범위 밖의 번호는 끝 장으로
     await open(page, `${s.url}/5-2/1/02-03/slides/#99`);
     assert.equal(await cur(), 8);
@@ -507,6 +510,55 @@ test('장 수·표지·교사 메모·조작', { skip }, async () => {
     assert.deepEqual(await page.evaluate(slideProblems), []);
     await page.evaluate(() => { document.querySelector('#s8 h2')!.textContent = '아주 긴 제목을 '.repeat(40); });
     assert.ok((await page.evaluate(slideProblems)).some((p) => p.startsWith('장 밖으로 나감')));
+  } finally { await page.close(); await s.close(); }
+});
+
+test('장의 둘레 (R55): 바닥글 줄, 두 자리 장 번호, 단계 머리말', { skip }, async () => {
+  const s = await site('frame', FIXTURES);
+  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  try {
+    let phased = 0;
+    for (const lesson of visibleLessons()) {
+      for (let no = 1; no <= lesson.slides.length; no++) {
+        const slide = lesson.slides[no - 1];
+        const want = slideFrame(lesson, no);
+        await open(page, `${s.url}/${lesson.id}/slides/#${no}`);
+        const at = `${lesson.id} ${no}번 장(${slide.layout})`;
+        const m = await page.evaluate((n) => {
+          const sl = document.querySelector<HTMLElement>(`#s${n}`)!;
+          const u = sl.getBoundingClientRect().width / 1920;
+          const top = sl.getBoundingClientRect().top;
+          const box = (sel: string) => { const e = sl.querySelector<HTMLElement>(sel); if (!e) return null; const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); return { text: e.textContent, top: (r.top - top) / u, bottom: (r.bottom - top) / u, left: r.left / u, right: r.right / u, size: Number.parseFloat(cs.fontSize) / u, weight: cs.fontWeight, color: cs.color }; };
+          const probe = document.createElement('i'); probe.style.color = 'var(--teal)'; document.body.append(probe);
+          const teal = getComputedStyle(probe).color; probe.remove();
+          return { foot: box('.sl-foot'), counter: box('.sl-counter'), phase: box('.sl-phase'), title: box('.sl-title'), teal };
+        }, no);
+        // 바닥글 줄: 모든 장, 장 번호와 같은 크기
+        assert.equal(m.foot?.text, want.footer, `${at}: 바닥글 줄`);
+        assert.ok(Math.abs(m.foot!.size - 24) < 0.5, `${at}: 바닥글 줄 ${m.foot!.size}px`);
+        // 장 번호: 표지에는 없고, 그 밖에는 두 자리 ("05 / 22", "3차시 01 / 04"), 바닥글 줄과 같은 줄에 겹치지 않게
+        if (slide.layout === 'title') assert.equal(m.counter, null, `${at}: 표지에 장 번호가 있습니다`);
+        else {
+          assert.equal(m.counter?.text, slideCounter(lesson, no).text);
+          assert.match(m.counter!.text!, /^(\d+차시 )?\d{2} \/ \d{2}$/);
+          assert.equal(m.counter!.weight, '500', `${at}: 장 번호는 Pretendard Medium(500)`);
+          assert.ok(Math.abs(m.counter!.bottom - m.foot!.bottom) < 0.5, `${at}: 장 번호와 바닥글 줄의 아래 끝이 다릅니다`);
+          assert.ok(m.foot!.right < m.counter!.left - 24, `${at}: 바닥글 줄이 장 번호에 닿습니다`);
+        }
+        // 단계 머리말: 제 머리말이 없는 장만, 청록 굵게 28px 이상, 제목 위에서 제목과 겹치지 않는다. 제목은 머리말이 없는 장과 같은 높이(80)
+        assert.equal(m.phase?.text ?? undefined, want.phase, `${at}: 단계 머리말`);
+        if (!PHASE_LAYOUTS.includes(slide.layout)) assert.equal(m.phase, null, `${at}: 제 머리말이 있는 장에 단계 머리말이 있습니다`);
+        if (m.phase) {
+          phased++;
+          assert.ok(m.phase.size >= 28, `${at}: 단계 머리말 ${m.phase.size}px`);
+          assert.equal(m.phase.color, m.teal);
+          assert.ok(Number(m.phase.weight) >= 700);
+          assert.ok(m.phase.bottom <= m.title!.top + 0.5, `${at}: 단계 머리말이 제목과 겹칩니다`);
+        }
+        if (m.title) assert.ok(Math.abs(m.title.top - 80) < 0.5, `${at}: 제목이 ${m.title.top.toFixed(1)} 에서 시작합니다`);
+      }
+    }
+    assert.ok(phased >= 6, `단계 머리말이 있는 장 ${phased}`);
   } finally { await page.close(); await s.close(); }
 });
 

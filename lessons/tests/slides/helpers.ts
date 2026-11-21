@@ -46,7 +46,7 @@ export async function serve(dir: string): Promise<{ url: string; close: () => Pr
  *  - 글 상자가 넘치지 않는다 (scrollHeight·scrollWidth)
  *  - 글끼리 겹치지 않는다 (줄 상자를 서로 견준다)
  *  - 아이가 읽는 글은 무대 1920px 기준 44px 이상(장에 맞게 줄어드는 글은 data-fit 의 가장 작은 크기 이상), 제목은 72px 이상이다
- *  - 그 밖의 글도 28px 이상이다. 그림 출처와 장 번호만 뺀다 (docs/CONTRACT.md 8절)
+ *  - 그 밖의 글(단계 머리말 포함)도 28px 이상이다. 그림 출처, 장 번호, 바닥글 줄만 뺀다 (docs/CONTRACT.md 8절, R55)
  *  - SVG 그림 안의 글(<text>)도 그려진 크기로 셈해 28px 이상이다
  *  - 그림이 실렸고 object-fit 이 contain 이며, 그림 틀의 짧은 변이 200px 이상이다
  *  - 출처 표시가 그려진 사진에서 24px 안에 있다
@@ -82,8 +82,8 @@ export async function slideProblems(): Promise<string[]> {
     // 글자 크기
     const fs = Number.parseFloat(getComputedStyle(el).fontSize) / u;
     const label = t.trim().slice(0, 16);
-    if (el.closest('.sl-counter, .media figcaption, .sl-shared-credit')) continue;
-    const meta = el.closest('.sl-notice, .sl-cover-meta, .sl-source, .sl-correct, .sl-num, .sl-draft, .sl-missing');
+    if (el.closest('.sl-counter, .sl-foot, .media figcaption, .sl-shared-credit')) continue;
+    const meta = el.closest('.sl-phase, .sl-cover-meta, .sl-source, .sl-correct, .sl-num, .sl-missing');
     const fitted = el.closest('.sl-fit') ? el.closest<HTMLElement>('[data-fit]') : null;
     const floor = meta ? MIN : fitted ? Math.min(...fitted.dataset.fit!.split(' ').map(Number)) : 44;
     if (fs < floor - 0.5) out.push(`글자가 작음 (${fs.toFixed(1)}px): "${label}"`);

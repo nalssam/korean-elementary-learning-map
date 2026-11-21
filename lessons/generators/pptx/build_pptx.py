@@ -54,6 +54,9 @@ class Ctx:
         self.face = f['name']
         self.reg = Font(f['regular'])
         self.bold = Font(f['bold'])
+        # 장 번호는 Pretendard Medium (R55). 이름이 따로 있는 한 벌이라 굵게(b)로 고르지 않고 글꼴 이름으로 고른다
+        self.medium_face = f.get('mediumName')
+        self.medium = Font(f['medium']) if f.get('medium') else None
         self.copy = data['copy']
         self.type = data['type']
         # 장에 맞게 줄어드는 글의 크기 차례 (copy.ts 의 STAGE_FIT)와 그림 틀의 크기 (STAGE_PICTURE)
@@ -62,6 +65,8 @@ class Ctx:
         # 글 곁에 그림 하나를 두는 장의 짜임 (copy.ts 의 STAGE_SIDE, sideCandidates)과 2 × 2 단계 장의 머리 글 크기 (STAGE_STEPS)
         self.side = data.get('side')
         self.steps = data.get('steps')
+        # 단계 머리말이 있는 장의 머리 (copy.ts 의 STAGE_PHASE, R55)
+        self.phase = data.get('phase')
 
 
 # ───────────────────────── 글 재기 ─────────────────────────
@@ -131,12 +136,13 @@ def _flat(sh):
         sh._element.remove(st)
 
 
-def _font(ctx, run, size, bold, color):
+def _font(ctx, run, size, bold, color, face=None):
+    face = face or ctx.face
     f = run.font
     f.size = Pt(size / 2)
     f.bold = bold
     f.color.rgb = ctx.c[color]
-    f.name = ctx.face
+    f.name = face
     rpr = run._r.get_or_add_rPr()
     rpr.set('lang', LANG)
     rpr.set('altLang', ALT_LANG)
@@ -145,7 +151,7 @@ def _font(ctx, run, size, bold, color):
         if el is None:
             el = rpr.makeelement(qn(tag), {})
             rpr.append(el)
-        el.set('typeface', ctx.face)
+        el.set('typeface', face)
 
 
 def _end(p, size=None):
@@ -160,13 +166,14 @@ def _end(p, size=None):
         el.set('sz', str(int(round(size / 2 * 100))))
 
 
-def text(ctx, s, x, y, w, h, paras, size, color='navy', bold=False, lh=1.4, align='l', anchor='t', gap=0):
-    """글상자 하나. paras 는 글 하나 또는 문단 목록. 여백 0, 자동 맞춤 없음, 줄 간격은 고정값(size × lh)."""
+def text(ctx, s, x, y, w, h, paras, size, color='navy', bold=False, lh=1.4, align='l', anchor='t', gap=0, face=None, wrap=True):
+    """글상자 하나. paras 는 글 하나 또는 문단 목록. 여백 0, 자동 맞춤 없음, 줄 간격은 고정값(size × lh).
+    face 를 주면 그 글꼴 이름(예: 'Pretendard Medium')을 쓴다. wrap=False 는 줄을 바꾸지 않는 한 줄짜리 글(바닥글 줄, 장 번호)이다."""
     if isinstance(paras, str):
         paras = [paras]
     tb = s.shapes.add_textbox(E(x), E(y), E(w), E(h))
     tf = tb.text_frame
-    tf.word_wrap = True
+    tf.word_wrap = wrap
     tf.auto_size = None
     tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
     tf.vertical_anchor = {'t': MSO_ANCHOR.TOP, 'm': MSO_ANCHOR.MIDDLE, 'b': MSO_ANCHOR.BOTTOM}[anchor]
@@ -180,7 +187,7 @@ def text(ctx, s, x, y, w, h, paras, size, color='navy', bold=False, lh=1.4, alig
         p._p.get_or_add_pPr().set('latinLnBrk', '0')
         r = p.add_run()
         r.text = para
-        _font(ctx, r, size, bold, color)
+        _font(ctx, r, size, bold, color, face)
         _end(p, size)
     return tb
 
@@ -306,16 +313,37 @@ def title(ctx, s, t, y=PAD_T, size=72, mb=48, width=CW):
     return y + h + mb
 
 
+# 장 번호 상자의 폭. 가장 긴 장 번호("12차시 05 / 12")보다 넉넉하다
+COUNTER_W = 240
+
+
 def counter(ctx, s, label):
-    """오른쪽 아래 장 번호. 두 차시 묶음은 "3차시 1 / 4" 처럼 차시마다 센다 (counter.ts)."""
+    """오른쪽 아래 장 번호 (Pretendard Medium). "05 / 22", 두 차시 묶음은 "3차시 01 / 04" 처럼 차시마다 센다 (counter.ts)."""
     size = ctx.type['counter']
-    text(ctx, s, W - 48 - 400, H - 36 - size, 400, size, label, size, 'gray', lh=1, align='r')
+    if measure(ctx.medium, label, size) > COUNTER_W:
+        raise Overflow(f'장 번호가 깁니다: {label}')
+    text(ctx, s, W - 48 - COUNTER_W, H - 36 - size, COUNTER_W, size, label, size, 'gray', lh=1, align='r', face=ctx.medium_face, wrap=False)
 
 
-def draft_notice(ctx, s, notice):
-    """공개하지 않은 차시: 왼쪽 아래에 초안 표시 (웹 무대의 .sl-draft 와 같은 자리)"""
-    size = ctx.type['draft']
-    text(ctx, s, PAD_X, H - 34 - size, 1400, size, notice, size, 'gray', lh=1)
+def footer_line(ctx, s, line):
+    """모든 장의 왼쪽 아래 바닥글 줄 stageFooter() (R55, 웹 무대의 .sl-foot 과 같은 자리·크기). 장 번호와 한 줄에 선다."""
+    size = ctx.type['footer']
+    w = W - 48 - COUNTER_W - 24 - PAD_X
+    if measure(ctx.reg, line, size) > w * FIT:
+        raise Overflow(f'바닥글 줄이 한 줄에 들어가지 않습니다: {line}')
+    text(ctx, s, PAD_X, H - 36 - size, w, size, line, size, 'gray', lh=1, wrap=False)
+
+
+def head(ctx, s, sl):
+    """제 머리말이 없는 장의 제목 위에 흐름 단계 머리말 "01 도입" 을 찍고 제목이 시작할 y 를 돌려준다 (R55, 웹 무대의 .sl-phase).
+    머리말이 없는 장은 PAD_T (제목이 늘 서던 자리)"""
+    if not sl.get('phase'):
+        return PAD_T
+    P = ctx.phase
+    size = ctx.type['phase']
+    h = size * P['lineHeight']
+    text(ctx, s, PAD_X, P['top'], CW, h, sl['phase'], size, 'teal', True, P['lineHeight'])
+    return P['top'] + h + P['gap']
 
 
 def check(ctx, s, x, y, scale=1.0):
@@ -328,13 +356,12 @@ def lay_cover(ctx, s, sl, L):
     T = ctx.type
     foot_top = BOTTOM
     if sl['first']:
-        meta, notice = L['cover']['meta'], L['cover']['notice']
+        # 1번 장: 단원·차시·교과서 쪽. AI 사용 표시·초안 표시는 모든 장과 같이 바닥글 줄에 있다 (R55)
+        meta = L['cover']['meta']
         mh = text_h(ctx, meta, T['meta'], CW, 1.4)
-        nh = text_h(ctx, notice, T['meta'], CW, 1.4)
-        foot_top = BOTTOM - (28 + mh + 8 + nh)
+        foot_top = BOTTOM - (28 + mh)
         hline(ctx, s, PAD_X, foot_top, W - PAD_X, foot_top)
         text(ctx, s, PAD_X, foot_top + 28, CW, mh, meta, T['meta'], 'navy')
-        text(ctx, s, PAD_X, foot_top + 28 + mh + 8, CW, nh, notice, T['meta'], 'gray')
     kh = T['label'] * 1.3
     th = text_h(ctx, sl['title'], T['cover'], CW, 1.2, True)
     sh = text_h(ctx, sl['subtitle'], T['coverSub'], CW, 1.35) if sl.get('subtitle') else 0
@@ -441,7 +468,7 @@ def lay_question(ctx, s, sl, L):
 
 def lay_picture(ctx, s, sl, L):
     T = ctx.type
-    y = title(ctx, s, sl['title'], mb=32)
+    y = title(ctx, s, sl['title'], y=head(ctx, s, sl), mb=32)
     bottom = BOTTOM
     if sl.get('caption'):
         ch = text_h(ctx, sl['caption'], T['body'], CW, 1.3)
@@ -468,7 +495,7 @@ def numbered(ctx, s, items, x, y, w, size, lh, gap, bottom):
 
 def lay_points(ctx, s, sl, L):
     media = sl.get('media')
-    y = title(ctx, s, sl['title'])
+    y = title(ctx, s, sl['title'], y=head(ctx, s, sl))
     if media:
         # 제목 아래를 두 칸으로: 항목은 왼쪽, 그림은 오른쪽 (R12, 웹 무대의 .sl-side 와 같은 규칙)
         def measure(tw, size):
@@ -511,7 +538,7 @@ def card(ctx, s, x, y, w, side, size, h=None):
 
 
 def lay_compare(ctx, s, sl, L):
-    y = title(ctx, s, sl['title'])
+    y = title(ctx, s, sl['title'], y=head(ctx, s, sl))
     sides = (sl['left'], sl['right'])
     lab = 44 * 1.3
     shared = sl.get('media')
@@ -642,7 +669,7 @@ def shared_credit_h(ctx, credit):
 
 def lay_steps(ctx, s, sl, L):
     T = ctx.type
-    y = title(ctx, s, sl['title'])
+    y = title(ctx, s, sl['title'], y=head(ctx, s, sl))
     steps = sl['steps']
     pictured = [st['media'] for st in steps if st.get('media')]
     if pictured:
@@ -740,7 +767,7 @@ def lay_term(ctx, s, sl, L):
 def lay_passage(ctx, s, sl, L):
     T = ctx.type
     p = sl['passage']
-    y = title(ctx, s, p['title'], mb=36)
+    y = title(ctx, s, p['title'], y=head(ctx, s, sl), mb=36)
     hs = [text_h(ctx, t, T['body'], CW, 1.5) for t in p['text']]
     th = sum(hs) + 20 * (len(hs) - 1)
     text(ctx, s, PAD_X, y, CW, th, p['text'], T['body'], 'navy', lh=1.5, gap=20)
@@ -753,7 +780,7 @@ def lay_passage(ctx, s, sl, L):
 
 def lay_activity(ctx, s, sl, L):
     T = ctx.type
-    y = title(ctx, s, sl['title'])
+    y = title(ctx, s, sl['title'], y=head(ctx, s, sl))
     aside = sl.get('minutes') is not None or sl.get('materials')
     lw = CW - 64 - 540 if aside else CW
     ah = activity_aside_h(ctx, sl) if aside else 0
@@ -889,7 +916,8 @@ def credit_pages(ctx, cr):
     """출처 목록을 장으로 나눈다. 한 장을 그 장의 실제 자리만큼 채운 뒤에 다음 장을 연다 (docs/CONTRACT.md 8절).
     돌려주는 값: [(제목, 장의 글 높이, [(줄 목록, 높이), ...]), ...]"""
     size, url, lh, gap = CREDIT['size'], CREDIT['url'], CREDIT['lh'], CREDIT['gap']
-    fh = text_h(ctx, cr['footer'], 24, CW, 1.4)
+    # sheetFooter 줄 (초안은 바닥글 줄에 같은 글이 있어 없다: build.mjs)
+    fh = text_h(ctx, cr['footer'], 24, CW, 1.4) if cr.get('footer') else 0
     limit = BOTTOM - fh - 32
     items = [[it['text']] + [u for u in (it.get('sourceUrl'), it.get('licenceUrl')) if u] for it in cr['items']] or [[cr['empty']]]
     measured = [(it, sum(text_h(ctx, t, size if i == 0 else url, CW, lh) for i, t in enumerate(it))) for it in items]
@@ -928,7 +956,7 @@ def credit_slides(ctx, prs, L):
     cr = L['credits']
     size, url, lh, gap = CREDIT['size'], CREDIT['url'], CREDIT['lh'], CREDIT['gap']
     pages, fh = credit_pages(ctx, cr)
-    foot = cr['footer']
+    foot = cr.get('footer')
     for head, page in pages:
         s = new_slide(ctx, prs)
         y = title(ctx, s, head)
@@ -939,8 +967,12 @@ def credit_slides(ctx, prs, L):
                 text(ctx, s, PAD_X, y, CW, th, t, z, 'navy' if i == 0 else 'gray', lh=lh)
                 y += th
             y += gap
-        hline(ctx, s, PAD_X, BOTTOM - fh - 16, W - PAD_X, BOTTOM - fh - 16)
-        text(ctx, s, PAD_X, BOTTOM - fh, CW, fh, foot, 24, 'gray', lh=1.4)
+        if foot:
+            hline(ctx, s, PAD_X, BOTTOM - fh - 16, W - PAD_X, BOTTOM - fh - 16)
+            text(ctx, s, PAD_X, BOTTOM - fh, CW, fh, foot, 24, 'gray', lh=1.4)
+        # 출처 장도 바닥글 줄은 찍는다. 장 번호는 명세의 장에만 있다 (분모가 수업 화면의 장 수와 어긋나지 않게)
+        footer_line(ctx, s, L['stageFooter'])
+        notes(s, cr['notes'])
     return len(pages)
 
 
@@ -995,11 +1027,12 @@ def build(ctx, L):
         s = new_slide(ctx, prs)
         try:
             LAYOUTS[sl['layout']](ctx, s, sl, L)
+            # 모든 장의 바닥글 줄과, 표지가 아닌 장의 장 번호 (R55)
+            footer_line(ctx, s, L['stageFooter'])
+            if sl.get('counter'):
+                counter(ctx, s, sl['counter'])
         except Overflow as e:
             raise SystemExit(f'{L["id"]} 의 {sl["no"]}번 장({sl["layout"]})이 PPTX 한 장을 넘칩니다: {e}. 글을 줄입니다')
-        if L.get('draft') and sl['no'] != 1:
-            draft_notice(ctx, s, L['draft'])
-        counter(ctx, s, sl['counter'])
         notes(s, sl['notes'])
     try:
         credit_slides(ctx, prs, L)
@@ -1008,7 +1041,7 @@ def build(ctx, L):
     os.makedirs(os.path.dirname(L['pptx']), exist_ok=True)
     raw = L['pptx'] + '.raw'
     prs.save(raw)
-    embed_fonts(raw, L['pptx'], ctx.face, {'regular': ctx.reg, 'bold': ctx.bold})
+    embed_fonts(raw, L['pptx'], [(ctx.face, {'regular': ctx.reg, 'bold': ctx.bold}), (ctx.medium_face, {'regular': ctx.medium})])
     os.remove(raw)
 
 
