@@ -1,7 +1,7 @@
 // 사이트 화면이 같이 쓰는 셈. 차시표(allBundles)와 이번 빌드에 실리는 차시(visibleLessons)를 맞대어 준다.
 // 빌드할 때만 돈다 (lib/content.ts 는 파일을 읽으므로 브라우저에서 돌지 않는다).
 import {
-  allBundles, deckCards, isPublic, lessonRoute, lessonsLabel, loadRegistry, pagesLabel, printJobs, semesterLabel, visibleLessons,
+  allBundles, deckCards, lessonRoute, lessonsLabel, loadRegistry, pagesLabel, printJobs, semesterLabel, visibleLessons,
 } from '#lib/content.ts';
 import type { BundleRef, PrintJob } from '#lib/content.ts';
 import { ASSET_LABEL, DUPLEX_FLIP, PER_LABEL, printLine } from '#lib/site.ts';
@@ -22,27 +22,6 @@ export function allRows(): Row[] {
   const visible = new Map(visibleLessons().map((l) => [l.id, l]));
   return allBundles().map((ref) => ({ ref, lesson: visible.get(ref.id) }));
 }
-
-export interface Progress {
-  /** 차시표의 차시 수 */
-  total: number;
-  /** 공개된 차시 수 */
-  open: number;
-  /** 미리 보기에서만 보이는 초안의 차시 수 */
-  drafts: number;
-}
-
-/** "N/M 차시 공개"의 N 과 M. 묶음이 아니라 차시를 센다 (두 차시 묶음은 2). */
-export function progressOf(rows: Row[]): Progress {
-  const count = (list: Row[]) => list.reduce((n, r) => n + r.ref.lessons.length, 0);
-  return {
-    total: count(rows),
-    open: count(rows.filter((r) => r.lesson && isPublic(r.lesson))),
-    drafts: count(rows.filter((r) => r.lesson && !isPublic(r.lesson))),
-  };
-}
-
-export const progressLabel = (p: Progress) => `${p.open}/${p.total} 차시 공개`;
 
 /** 차시 번호와 쪽수가 따르는 교과서. 출판사마다 쪽수가 달라서 쪽수를 말하는 자리에 함께 밝힌다. */
 export function textbookLabel(): string {
@@ -68,7 +47,7 @@ export function finderData(semester?: string): FinderSemester[] {
     }));
 }
 
-// ───────────── 차시 안내 페이지 ─────────────
+// ───────────── 차시 자료실 ─────────────
 
 /** 흐름의 어느 단계에서든 쓴다고 적은 자료 */
 export function usedInFlow(lesson: Lesson): Set<AssetKind> {

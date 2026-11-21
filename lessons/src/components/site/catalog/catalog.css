@@ -15,12 +15,7 @@
 .cat-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: var(--s4); }
 .cat-cards > li { min-width: 0; }
 .cat-cards > li[hidden] { display: none; }
-/* 사이트의 바탕 링크 색(청록)이 카드의 단추 글자를 덮지 않게 한다. 여는 단추는 청록 바탕에 흰 글자다. */
-.cat-cards .rc a.rc-open, .cat-cards .rc a.rc-open:hover { color: var(--card); }
-.cat-cards .rc a.rc-btn { color: var(--navy); }
-.cat-cards .rc a.rc-btn:hover { color: var(--teal); }
-.cat-cards .rc .rc-lesson a { color: var(--gray); }
-.cat-cards .rc .rc-lesson a:hover { color: var(--navy); }
+/* 카드 단추의 글자색은 site.css 의 '자료 카드 격자' 규칙이 모든 사이트 페이지에서 맞춘다. */
 
 @media (max-width: 760px) {
   .cat-head { padding-top: 0; }
