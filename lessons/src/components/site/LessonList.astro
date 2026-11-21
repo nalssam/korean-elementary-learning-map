@@ -1,48 +1,40 @@
 ---
-// 한 단원의 차시표. 차시표(allBundles)의 묶음을 모두 그리고, 이번 빌드에 실리는 차시에만 링크를 건다.
-// 실리지 않는 묶음은 차시 번호와 쪽수만 보여 준다. 검색 색인에서는 뺀다 ('준비 중' 줄이 결과로 나오고, 차시 이름과 소개는 안내 페이지에서 찾힌다).
+// 교과서 목차(학기 페이지)의 묶음 표 (R44): 차시, 쪽수, 이름 또는 '준비 중', 준비된 자료의 작은 그림, 상태.
+// 차시표(allBundles)의 묶음을 모두 그리고, 이번 빌드에 실리는 차시에만 링크를 건다. 실리지 않는 묶음은 차시 번호와 쪽수만 보여 준다.
+// 넓은 화면에서는 줄마다 다섯 칸, 좁은 화면에서는 '차시 · 쪽수 / 상태' 아래에 이름과 자료 그림이 온다. 아직인 묶음은 한 줄로 접힌다.
+// 표의 머리 줄은 눈으로 보는 이름표라 화면 읽기 프로그램에는 숨긴다 (줄마다 차시·쪽수·이름이 이어 읽힌다).
+// 검색 색인에서는 뺀다 ('준비 중' 줄이 결과로 나오고, 차시 이름과 소개는 차시 자료실에서 찾힌다).
 // 차시표의 focus 는 검수를 거치지 않은 계획 글이라 찍지 않는다 (docs/CONTRACT.md 3절).
-import { isPublic, lessonRoute, lessonsLabel, pagesLabel, readyAssets } from '#lib/content.ts';
-import { ASSET_LABEL, ROLE_LABEL } from '#lib/site.ts';
+import { lessonRoute, lessonsLabel, pagesLabel } from '#lib/content.ts';
+import { ROLE_LABEL } from '#lib/site.ts';
 import { href } from '#src/lib/url.ts';
+import { rowState } from './book.ts';
 import type { Row } from './data.ts';
+import KindIcons from './KindIcons.astro';
+import StatusChip from './ui/StatusChip.astro';
 
-interface Props {
-  rows: Row[];
-  /** 단원 페이지에서는 차시마다 만들어 둔 자료의 이름도 보여 준다 */
-  detail?: boolean;
-}
-const { rows, detail = false } = Astro.props;
-// 모든 차시에 있는 셋 다음에, 그 차시에서 만든 선택 자료
-const assetsOf = (row: Row) => (row.lesson ? [ASSET_LABEL.slides, ASSET_LABEL.worksheet, ASSET_LABEL.quiz, ...readyAssets(row.lesson).map((k) => ASSET_LABEL[k])] : []);
+interface Props { rows: Row[] }
+const { rows } = Astro.props;
 ---
-<ul class="lessons" data-pagefind-ignore>
-  {rows.map((row) => {
-    const { ref, lesson } = row;
-    const role = ROLE_LABEL[ref.role];
-    return (
-      <li class:list={['lesson-row', !lesson && 'is-off']}>
-        <span class="lesson-no">{lessonsLabel(ref.lessons)}</span>
-        <span class="lesson-pages">{pagesLabel(ref.pages)}</span>
-        {lesson ? (
-          <div class="lesson-body">
-            <p class="lesson-head">
-              <a class="lesson-title" href={href(lessonRoute(lesson.id))}>{lesson.title}</a>
-              {role && <span class="chip">{role}</span>}
-              {!isPublic(lesson) && <span class="chip chip-plain">초안</span>}
-            </p>
-            <p class="lesson-tagline">{lesson.tagline}</p>
-            {detail && <p class="lesson-assets">{assetsOf(row).join(' · ')}</p>}
-          </div>
-        ) : (
-          <div class="lesson-body">
-            <p class="lesson-head">
-              <span class="lesson-off">준비 중</span>
-              {role && <span class="chip chip-plain">{role}</span>}
-            </p>
-          </div>
-        )}
-      </li>
-    );
-  })}
-</ul>
+<div class="bt" data-pagefind-ignore>
+  <p class="bt-head" aria-hidden="true"><span>차시</span><span>쪽수</span><span>차시 이름</span><span>자료</span><span>상태</span></p>
+  <ol class="bt-rows">
+    {rows.map((row) => {
+      const { ref, lesson } = row;
+      const role = ROLE_LABEL[ref.role];
+      const state = rowState(row);
+      return (
+        <li class:list={['bt-row', !lesson && 'is-off']}>
+          <span class="bt-no">{lessonsLabel(ref.lessons)}</span>
+          <span class="bt-pages">{pagesLabel(ref.pages)}</span>
+          <span class="bt-name">
+            {lesson ? <a href={href(lessonRoute(lesson.id))}>{lesson.title}</a> : <span class="bt-off">준비 중</span>}
+            {role && <span class="bt-role">{role}</span>}
+          </span>
+          {lesson && <KindIcons lesson={lesson} class="bt-kinds" />}
+          {state !== 'planned' && <span class="bt-state"><StatusChip state={state} /></span>}
+        </li>
+      );
+    })}
+  </ol>
+</div>

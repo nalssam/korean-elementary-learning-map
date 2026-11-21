@@ -67,10 +67,16 @@ test('OX 문항의 정답: lib 의 ○·× 옆에 맞다·아니다를 글로 �
   for (const a of answers) assert.ok(!/(^|[^A-Za-z])[OX]([^A-Za-z]|$)/.test(a.replace(/<[^>]+>/g, '')), `정답에 라틴 글자 O·X 가 있습니다: ${a}`);
 });
 
-test('흐름 밖의 웹 활동: QR 카드에 한 번, 제목 밖의 표시', () => {
-  assert.equal(html.match(/<h3 class="qr-title">웹 활동<\/h3>/g)?.length, 1);
-  assert.match(html, /<h3 class="qr-title">웹 활동<\/h3><p class="qr-tag"[^>]*><span class="chip chip-plain">더 해 볼 자료<\/span><\/p>/);
-  assert.ok(!html.includes('QR 코드 보기'));
+test('흐름 밖의 웹 활동: 자료 카드 하나와 \'더 해 볼 자료\'의 줄 하나 (R46)', () => {
+  // 자료 카드는 한 장이고, QR 은 그 카드의 작은 창에만 있다
+  assert.equal(html.match(/<article class="rc" data-kind="web_activity"/g)?.length, 1);
+  assert.equal(html.match(/<svg class="qr"[^>]*aria-label="웹 활동 QR 코드"/g)?.length, 1);
+  // 수업 흐름에 없다는 것은 '더 해 볼 자료'에 한 줄로 알린다
+  const more = html.slice(html.indexOf('id="more-title"'), html.indexOf('id="teacher-title"'));
+  assert.ok(more.includes('<span class="mat-kind">웹 활동</span>'), '더 해 볼 자료에 웹 활동 줄이 없습니다');
+  assert.ok(more.includes('href="/5-2/1/01/play/"'));
+  const prepare = html.slice(html.indexOf('id="prepare-title"'), html.indexOf('id="flow-title"'));
+  assert.ok(!prepare.includes('웹 활동'));
 });
 
 test('prepareNote: 이름이나 제목으로 시작하는 항목만 같은 것으로 본다', () => {
@@ -119,6 +125,6 @@ test('카드 인쇄 페이지의 양면 맞추기는 안내 페이지와 같은 
 });
 
 test('확인 퀴즈 칸: 수업 화면의 QR 버튼을 알리는 문장이 있다 (3차 검수 T3-site-03)', () => {
-  const sec = html.slice(html.indexOf('id="student-title"'), html.indexOf('class="qr-cards"'));
+  const sec = html.slice(html.indexOf('id="student-title"'), html.indexOf('id="quiz-key"'));
   assert.ok(sec.includes('수업 화면의 QR 버튼(q 키)을 눌러도 같은 QR 코드를 띄울 수 있습니다.'));
 });

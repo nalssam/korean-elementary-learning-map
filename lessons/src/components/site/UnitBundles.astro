@@ -1,0 +1,42 @@
+---
+// 단원 페이지의 묶음 목록 (R45). 차시표 차례 그대로, 실리는 묶음은 카드(차시·쪽수, 이름, 한 줄 소개, 준비된 자료, 상태)로,
+// 아직인 묶음은 조용한 한 줄(차시, 쪽수, '준비 중')로 그린다. 누를 수 없는 카드로 페이지를 채우지 않는다.
+// 검색 색인에서는 뺀다 (차시 이름과 소개는 차시 자료실에서 찾힌다). 차시표의 focus 는 찍지 않는다.
+import { lessonRoute, lessonsLabel, pagesLabel } from '#lib/content.ts';
+import { ROLE_LABEL } from '#lib/site.ts';
+import { href } from '#src/lib/url.ts';
+import { rowState } from './book.ts';
+import type { Row } from './data.ts';
+import KindIcons from './KindIcons.astro';
+import StatusChip from './ui/StatusChip.astro';
+
+interface Props { rows: Row[] }
+const { rows } = Astro.props;
+---
+<ol class="ub" data-pagefind-ignore>
+  {rows.map((row) => {
+    const { ref, lesson } = row;
+    const role = ROLE_LABEL[ref.role];
+    const where = [lessonsLabel(ref.lessons), pagesLabel(ref.pages), ...(role ? [role] : [])].join(' · ');
+    if (!lesson) {
+      return (
+        <li class="ub-off">
+          <span class="ub-where">{where}</span>
+          <span class="ub-later">준비 중</span>
+        </li>
+      );
+    }
+    const state = rowState(row);
+    return (
+      <li class="ub-card">
+        <p class="ub-top">
+          <span class="ub-where">{where}</span>
+          {state !== 'planned' && <StatusChip state={state} />}
+        </p>
+        <h3 class="ub-title"><a href={href(lessonRoute(lesson.id))}>{lesson.title}</a></h3>
+        <p class="ub-tagline">{lesson.tagline}</p>
+        <KindIcons lesson={lesson} labels class="ub-kinds" />
+      </li>
+    );
+  })}
+</ol>

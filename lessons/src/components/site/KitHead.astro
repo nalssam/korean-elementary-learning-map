@@ -1,11 +1,16 @@
 ---
-// 차시 안내 페이지의 머리: 차시·쪽수, 차시 이름과 소개, 검수 상태, 목표, 성취기준, 다룰 때 살필 것.
-// 차시 번호·쪽수·성취기준은 명세가 아니라 차시표에서 온다 (bundleOf, standardsOf).
-import { bundleOf, isPublic, lessonsLabel, pagesLabel, reviewedOn, scored, semesterLabel, standardsOf } from '#lib/content.ts';
+// 차시 자료실의 머리 (R46): 머리말(학기 · 단원 · 차시), 차시 이름과 소개, 교과서 쪽·수업 시간·상태, 접힌 성취기준, 다룰 때 살필 것.
+// 머리를 짧게 두어 자료 카드가 첫 화면에 들어오게 한다. 목표는 교사용 안내의 머리(KitGuideHead)에 있다.
+// 차시 번호·쪽수·성취기준은 명세가 아니라 차시표에서 온다 (bundleOf, standardsOf). 글은 명세의 것을 그대로 쓴다.
+import { bundleOf, courseLine, isPublic, lessonsLabel, pagesLabel, reviewedOn, scored, semesterLabel, standardsOf } from '#lib/content.ts';
 import { REVIEW_LABEL, ROLE_LABEL } from '#lib/site.ts';
 import type { Lesson } from '#schema/lesson.ts';
+import { lessonTime } from './book.ts';
 import { textbookLabel } from './data.ts';
+import Fold from './Fold.astro';
 import { koDate, standardCode } from './format.ts';
+import Kicker from './ui/Kicker.astro';
+import StatusChip from './ui/StatusChip.astro';
 
 interface Props { lesson: Lesson }
 const { lesson } = Astro.props;
@@ -15,37 +20,37 @@ const standards = standardsOf(lesson.id);
 // 묶음에 성취기준을 따로 적지 않았으면 단원의 성취기준이 그대로 나온다. 그때는 단원의 것이라고 밝힌다.
 const ownStandards = ref.bundle.standards.length > 0;
 const reviewed = reviewedOn(lesson);
-// 쪽수는 출판사마다 다르므로 어느 교과서의 쪽수인지 함께 적는다 (registry 의 textbook)
-const where = [lessonsLabel(ref.lessons), `${textbookLabel()} ${pagesLabel(ref.pages)}`, ...(role ? [role] : [])];
+const published = isPublic(lesson);
 const level = lesson.sensitivity.level;
 // 검색: 차시 이름과 소개·목표에 무게를 더 주고, 검수 전 초안이면 결과에 표시가 붙도록 draft 를 메타로 싣는다 (Search.astro).
-// 공개 빌드에는 초안이 실리지 않으므로 이 메타는 미리 보기에서만 쓰인다.
+// 공개 빌드에는 초안이 실리지 않으므로 이 메타는 미리 보기에서만 쓰인다. 결과의 자리 표시(where)는 학기·단원·차시·쪽수다.
 ---
-<header class="kit-head" data-pagefind-meta={isPublic(lesson) ? undefined : 'draft:검수 전 초안'}>
-  <p class="eyebrow" data-pagefind-meta={`where:${semesterLabel(ref.semester.id)} ${ref.unit.no}단원 ${lessonsLabel(ref.lessons)} · ${pagesLabel(ref.pages)}`}>{where.join(' · ')}</p>
+<header class="kit-head" data-pagefind-meta={published ? undefined : 'draft:검수 전 초안'}>
+  <div data-pagefind-meta={`where:${semesterLabel(ref.semester.id)} ${ref.unit.no}단원 ${lessonsLabel(ref.lessons)} · ${pagesLabel(ref.pages)}`}>
+    <Kicker>{courseLine(lesson.id, ' · ')}</Kicker>
+  </div>
   <h1 class="page-title" data-pagefind-weight="10">{lesson.title}</h1>
   <p class="lead" data-pagefind-weight="5">{lesson.tagline}</p>
-  <p class="kit-state" data-pagefind-ignore>
-    {reviewed
-      ? <span class="chip">{REVIEW_LABEL.owner} <time datetime={reviewed}>{koDate(reviewed)}</time></span>
-      : <span class="chip chip-plain">검수 전 초안</span>}
-    {lesson.corrections.length > 0 && <a href="#corrections">공개한 뒤 고친 내용 {lesson.corrections.length}건</a>}
-  </p>
+  <ul class="kit-meta" data-pagefind-ignore>
+    {/* 쪽수는 출판사마다 다르므로 어느 교과서의 쪽수인지 함께 적는다 (registry 의 textbook) */}
+    <li>{textbookLabel()} {pagesLabel(ref.pages)}</li>
+    <li>수업 {lessonTime(ref.lessons.length)}</li>
+    {role && <li>{role}</li>}
+    <li class="kit-meta-state">
+      {published ? <StatusChip state="published" /> : <StatusChip state="draft" />}
+      {reviewed && <span>{REVIEW_LABEL.owner} <time datetime={reviewed}>{koDate(reviewed)}</time></span>}
+    </li>
+    {lesson.corrections.length > 0 && <li><a href="#corrections">공개한 뒤 고친 내용 {lesson.corrections.length}건</a></li>}
+  </ul>
 
   <div class="kit-facts">
-    <section aria-labelledby="goal-title">
-      <h2 class="facts-title" id="goal-title">목표</h2>
-      <ul class="dots" data-pagefind-weight="5">{lesson.objectives.map((o) => <li>{o}</li>)}</ul>
-    </section>
-    <section aria-labelledby="standards-title">
-      <h2 class="facts-title" id="standards-title">{ownStandards ? '성취기준' : '단원의 성취기준'}</h2>
+    <Fold title={ownStandards ? '성취기준' : '단원의 성취기준'} count={`${standards.length}개`} id="standards">
       <dl class="standards">
         {standards.map((s) => <div><dt>{standardCode(s.code)}</dt><dd>{s.summary}</dd></div>)}
       </dl>
       <p class="fine" data-pagefind-ignore>코드 옆의 글은 줄여 쓴 요약이고, 교육부가 고시한 문장과 다릅니다.</p>
-    </section>
+    </Fold>
   </div>
-
   {level !== 'none' && (
     <aside class="kit-care" aria-labelledby="care-title">
       <h2 class="facts-title" id="care-title">다룰 때 살필 것</h2>

@@ -12,7 +12,7 @@ const { lesson } = Astro.props;
 const { prepare, extra } = printRows(lesson);
 const kitInFlow = lesson.assets.making_kit.state === 'ready' && usedInFlow(lesson).has('making_kit');
 ---
-<section class="sec" aria-labelledby="prepare-title">
+<section class="sec guide-sec" id="prepare" aria-labelledby="prepare-title">
   <h2 class="sec-title" id="prepare-title">준비물</h2>
   <ul class="mats">
     {prepare.map((row) => <PrintRowItem row={row} />)}

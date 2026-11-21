@@ -125,54 +125,214 @@ a.tile:hover { border-color: var(--teal); }
 .tile-off .tile-name, .tile-off .tile-count { color: var(--gray); }
 .tile-off .tile-count { margin-top: 0; font-weight: 400; }
 
-/* ───────────── 학기·단원 ───────────── */
-.page-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s4); margin-top: var(--s3); font-size: var(--fs-sm); color: var(--gray); }
-.page-meta span:first-child { font-weight: 700; color: var(--teal); }
-.unit { margin-top: var(--s7); }
-.unit-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s1) var(--s4); margin-bottom: var(--s3); }
-.unit-title { font-size: var(--fs-xl); font-weight: 800; letter-spacing: -0.01em; }
-.unit-no { color: var(--teal); }
-.unit-meta { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s4); font-size: var(--fs-sm); color: var(--gray); }
-.unit-meta a { font-weight: 600; }
-.unit-standards { max-width: 44rem; margin-top: var(--s5); }
+/* ───────────── 교과서 목차·단원·차시 자료실의 두 칸 짜임 (R44~R46) ─────────────
+   넓은 화면(1100px 이상)에서는 왼쪽에 교과서 목차가 따라오고, 좁은 화면에서는 본문 맨 위의 접힌 '목차' 상자가 된다 (BookFrame.astro).
+   목차는 두 자리에 다 그려 두고 여기에서 하나만 보여 준다. */
+.book-rail { display: none; }
+.book-main { min-width: 0; }
+@media (min-width: 1100px) {
+  .book { display: grid; grid-template-columns: 13.5rem minmax(0, 1fr); gap: var(--s6); align-items: start; }
+  /* 목차가 화면보다 길면 목차 안에서만 내려 읽는다 */
+  .book-rail { display: block; position: sticky; top: var(--s5); max-height: calc(100vh - 2 * var(--s5)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: var(--s1) var(--s3) var(--s4) 0; border-right: 1px solid var(--line); }
+  .toc-fold { display: none; }
+}
 
-.lessons { border-top: 1px solid var(--navy); }
-.lesson-row { display: grid; grid-template-columns: 5.5rem 6.5rem minmax(0, 1fr); gap: var(--s1) var(--s4); align-items: baseline; padding: var(--s4) var(--s2); border-bottom: 1px solid var(--line); }
-.lesson-row.is-off { padding-block: var(--s3); }
-.lesson-no { font-weight: 700; }
-.lesson-pages { font-size: var(--fs-sm); color: var(--gray); }
-.lesson-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s1) var(--s2); }
-.lesson-title { font-size: var(--fs-lg); font-weight: 700; text-decoration: none; }
-.lesson-title:hover { text-decoration: underline; }
-.lesson-tagline { max-width: var(--measure); margin-top: var(--s1); font-size: var(--fs-sm); color: var(--gray); }
-.lesson-assets { margin-top: var(--s2); font-size: var(--fs-xs); color: var(--gray); }
-.lesson-off { font-size: var(--fs-sm); color: var(--gray); }
-.is-off .lesson-no { font-weight: 400; color: var(--gray); }
+/* 교과서 목차 (BookToc.astro) */
+.toc { font-size: var(--fs-sm); line-height: 1.45; }
+.toc a { color: var(--navy); text-decoration: none; }
+.toc-book { display: grid; gap: 2px; margin-bottom: var(--s4); }
+.toc-book a { justify-self: start; font-size: var(--fs-md); font-weight: var(--fw-heading); }
+.toc-book a:hover { text-decoration: underline; text-decoration-color: var(--teal); }
+.toc-book a[aria-current='page'] { color: var(--teal); }
+.toc-textbook { font-size: var(--fs-xs); color: var(--gray); }
+.toc-units { display: grid; gap: var(--s3); }
+.toc-unit-link { display: grid; gap: 1px; padding-block: var(--s1); }
+.toc-unit-no { font-size: var(--fs-xs); font-weight: 700; color: var(--teal); }
+.toc-unit-title { font-weight: 700; text-wrap: pretty; }
+.toc-unit-link:hover .toc-unit-title { text-decoration: underline; text-decoration-color: var(--teal); }
+.toc-unit-link[aria-current='page'] .toc-unit-title { color: var(--teal); }
+.toc-bundles { display: grid; margin: var(--s1) 0 0; border-left: 1px solid var(--line); }
+/* 실리는 묶음은 차시 번호 아래에 이름을 둔다 (좁은 목차에서 이름이 두 줄로 쪼개지지 않게).
+   아직인 묶음은 차시 번호와 쪽수를 한 줄에, 쪽수는 같은 자리에서 시작한다 ("13~14차시"까지 들어가는 폭). */
+.toc-bundle > a { display: grid; margin-left: -1px; padding: var(--s1) 0 var(--s1) var(--s3); border-left: 2px solid transparent; }
+.toc-bundle > a .toc-no { font-size: var(--fs-xs); }
+.toc-off { display: grid; grid-template-columns: 5.4em minmax(0, 1fr); gap: var(--s2); margin-left: -1px; padding: var(--s1) 0 var(--s1) var(--s3); border-left: 2px solid transparent; }
+.toc-no { font-variant-numeric: tabular-nums; color: var(--gray); white-space: nowrap; }
+.toc-bundle > a:hover .toc-name { text-decoration: underline; text-decoration-color: var(--teal); }
+.toc-bundle > a[aria-current='page'] { border-left-color: var(--teal); font-weight: 700; }
+.toc-bundle > a[aria-current='page'] .toc-no { color: var(--teal); }
+.toc-off { color: var(--gray); }
+.toc-pages { font-size: var(--fs-xs); font-variant-numeric: tabular-nums; line-height: 1.8; }
+/* 지금 차시 아래의 길잡이 (차시 자료실). 지금 읽는 칸은 스크립트가 aria-current="location" 으로 알린다. */
+.toc-sections { display: grid; margin: 0 0 var(--s2) var(--s3); padding-left: var(--s3); border-left: 1px solid var(--line); }
+.toc-sections a { display: block; padding: 2px 0; font-size: var(--fs-xs); color: var(--gray); }
+.toc-sections a:hover { color: var(--navy); text-decoration: underline; }
+.toc-sections a[aria-current='location'] { font-weight: 700; color: var(--teal); }
 
-/* 앞뒤 링크 위에는 선을 긋지 않는다. 바로 위 목록(차시 목록·교사용 자료)이 이미 선으로 끝나서, 선을 하나 더 그으면 두 선 사이에 빈 띠가 생긴다 */
-.pager { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4); margin-top: var(--s7); }
-.pager-link { display: grid; gap: var(--s1); text-decoration: none; }
-.pager-next { text-align: right; }
-.pager-dir { font-size: var(--fs-xs); color: var(--gray); }
-.pager-name { font-weight: 700; }
-.pager-link:hover .pager-name { text-decoration: underline; }
+/* 좁은 화면의 '목차' 상자 */
+.toc-fold { margin-bottom: var(--s5); border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
+.toc-fold > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--s3); min-height: var(--tap); padding: var(--s2) var(--s4); cursor: pointer; list-style: none; }
+.toc-fold > summary::-webkit-details-marker { display: none; }
+.toc-fold > summary::after { content: ''; flex: none; width: 0.5em; height: 0.5em; margin-left: auto; border-right: 2px solid var(--teal); border-bottom: 2px solid var(--teal); transform: translateY(-2px) rotate(45deg); transition: transform 0.15s; }
+.toc-fold[open] > summary::after { transform: translateY(2px) rotate(-135deg); }
+.toc-fold-label { font-weight: 800; }
+.toc-fold-where { font-size: var(--fs-sm); color: var(--gray); }
+.toc-fold .toc { padding: var(--s4); border-top: 1px solid var(--line); }
+/* 좁은 화면에서 손가락으로 누르는 목차의 링크는 44px 이상 */
+.toc-fold .toc-unit-link, .toc-fold .toc-bundle > a, .toc-fold .toc-book a { min-height: var(--tap); align-content: center; }
+.toc-fold .toc-book a { display: inline-flex; align-items: center; }
 
-/* ───────────── 차시 안내 ───────────── */
-.kit-state { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s3); margin-top: var(--s4); font-size: var(--fs-sm); }
-.kit-facts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s5) var(--s7); margin-top: var(--s5); padding-top: var(--s5); border-top: 1px solid var(--line); }
-.standards { display: grid; gap: var(--s1); }
+/* ───────────── 교과서 목차·단원 페이지 ───────────── */
+.book-head .lead { margin-top: var(--s2); }
+.book-textbook { margin-top: var(--s2); font-size: var(--fs-sm); color: var(--gray); font-variant-numeric: tabular-nums; }
+.book-standards { margin-top: var(--s2); }
+
+/* N/M 차시 공개와 진행 막대 (ProgressBar.astro) */
+.book-progress { display: grid; gap: var(--s2); max-width: 26rem; margin-top: var(--s4); }
+.book-progress-text { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s2); font-size: var(--fs-sm); }
+.book-progress-count { font-weight: 700; color: var(--teal); font-variant-numeric: tabular-nums; }
+.book-progress-bar { display: flex; height: var(--s2); border-radius: var(--radius-pill); background: var(--line); overflow: hidden; }
+.book-progress-published { background: var(--teal); }
+/* 초안은 미리 보기 빌드에만 있다. 공개한 차시와 헷갈리지 않게 옅게 */
+.book-progress-draft { background: var(--teal); opacity: 0.4; }
+
+/* 교과서 목차의 단원 */
+.book-unit { margin-top: var(--s8); scroll-margin-top: var(--s5); }
+.book-unit-title { font-size: var(--fs-xl); font-weight: var(--fw-heading); letter-spacing: -0.01em; }
+.book-unit-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s1) var(--s4); margin-top: var(--s2); font-size: var(--fs-sm); color: var(--gray); font-variant-numeric: tabular-nums; }
+.book-unit-meta a { margin-left: auto; font-weight: 700; }
+
+/* 성취기준을 접은 상자: 머리와 단원 머리 안에서는 선 없이 작게 */
+.book-standards .fold, .kit-facts .fold { border: 0; }
+.book-standards .fold > summary, .kit-facts .fold > summary { padding: var(--s1) 0; font-size: var(--fs-sm); color: var(--navy); }
+.book-standards .fold-body, .kit-facts .fold-body { padding: var(--s1) 0 var(--s3) calc(0.5em + var(--s3) + var(--s1)); }
+.standards { display: grid; gap: var(--s1); font-size: var(--fs-sm); }
 .standards > div { display: grid; grid-template-columns: 6.2em minmax(0, 1fr); gap: var(--s2); }
 .standards dt { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .standards + .fine { margin-top: var(--s2); }
-.kit-care { margin-top: var(--s5); padding: var(--s4) var(--s5); border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+
+/* 묶음 표 (LessonList.astro): 차시 · 쪽수 · 이름 · 자료 · 상태. 머리 줄은 넓은 화면에만 */
+.bt { margin-top: var(--s4); }
+.bt-head, .bt-row { display: grid; grid-template-columns: 5.2rem 5.6rem minmax(0, 1fr) auto 4.2rem; grid-template-areas: 'no pages name kinds state'; align-items: center; gap: var(--s1) var(--s3); padding-inline: var(--s2); }
+.bt-head { padding-bottom: var(--s2); font-size: var(--fs-xs); font-weight: 700; color: var(--gray); }
+.bt-head span:nth-child(4) { grid-area: kinds; }
+.bt-head span:nth-child(5) { grid-area: state; }
+.bt-rows { border-top: 1px solid var(--navy); }
+.bt-row { min-height: 3.25rem; padding-block: var(--s2); border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.bt-no { grid-area: no; font-weight: 700; white-space: nowrap; }
+.bt-pages { grid-area: pages; font-size: var(--fs-sm); color: var(--gray); white-space: nowrap; }
+.bt-name { grid-area: name; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s1) var(--s2); min-width: 0; }
+.bt-name a { font-weight: 700; }
+.bt-off { font-size: var(--fs-sm); color: var(--gray); }
+.bt-role { padding: 0 var(--s2); border: 1px solid var(--line); border-radius: var(--radius-pill); font-size: var(--fs-xs); line-height: 1.6; color: var(--gray); white-space: nowrap; }
+.bt-kinds { grid-area: kinds; }
+.bt-state { grid-area: state; justify-self: end; }
+.is-off .bt-no { font-weight: 400; color: var(--gray); }
+.bt-row.is-off { min-height: 2.75rem; }
+
+/* 자료 그림 줄 (KindIcons.astro) */
+.book-kinds { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s2); color: var(--teal); }
+.book-kinds-icon { display: inline-flex; }
+.book-kinds-labelled { display: flex; gap: var(--s1) var(--s2); color: var(--navy); }
+.book-kinds-labelled li { display: inline-flex; align-items: center; gap: var(--s1); padding: 1px var(--s2); border-radius: var(--radius-pill); background: var(--paper); font-size: var(--fs-xs); font-weight: 600; line-height: 1.6; }
+.book-kinds-labelled .type-icon { color: var(--teal); }
+
+/* 단원 페이지의 묶음 목록 (UnitBundles.astro): 실리는 묶음은 카드, 아직인 묶음은 조용한 줄 */
+.ub { display: flex; flex-direction: column; }
+.ub-card { position: relative; display: grid; gap: var(--s2); padding: var(--s4) var(--s5) var(--s5); border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
+.ub-card:hover { border-color: var(--teal); }
+.ub-card:has(.ub-title a:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; }
+.ub-card + .ub-card, .ub-off + .ub-card { margin-top: var(--s3); }
+.ub-card + .ub-off { margin-top: var(--s3); border-top: 1px solid var(--line); }
+.ub-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s1) var(--s3); font-size: var(--fs-sm); color: var(--gray); font-variant-numeric: tabular-nums; }
+.ub-title { font-size: var(--fs-lg); font-weight: var(--fw-heading); letter-spacing: -0.01em; }
+.ub-title a { color: var(--navy); text-decoration: none; }
+.ub-title a:focus-visible { outline: none; }
+/* 카드 어디를 눌러도 차시 자료실로 간다 (안에 다른 링크가 없다) */
+.ub-title a::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
+.ub-card:hover .ub-title a { color: var(--teal); }
+.ub-tagline { max-width: var(--measure); font-size: var(--fs-sm); color: var(--gray); }
+.ub-kinds { margin-top: var(--s1); }
+.ub-off { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 var(--s3); padding: var(--s2); border-bottom: 1px solid var(--line); font-size: var(--fs-sm); color: var(--gray); font-variant-numeric: tabular-nums; }
+.ub-off:first-child { border-top: 1px solid var(--line); }
+.ub-later { font-size: var(--fs-xs); }
+
+/* 자료 카드 격자 (차시 자료실의 '자료', 단원 자료). 휴대폰에서는 한 줄에 하나 (ResourceCard 가 미리보기를 왼쪽에 작게 둔다). */
+.book-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: var(--s4); }
+.book-cards > li { min-width: 0; }
+.book-cards > li[hidden] { display: none; }
+/* 수업 화면 카드는 한 줄을 다 쓴다: 수업 중에 가장 먼저 누르는 '띄우기'가 맨 앞에서 가장 크다 */
+.book-cards-wide { grid-column: 1 / -1; }
+/* 자료 카드의 단추 색. 위 '바탕 모양'의 링크 색(:where(body) a, 무게 0,0,1)이 카드가 :where() 로 적은 색(무게 0)을 이겨
+   여는 단추의 글자가 바탕과 같은 청록이 된다. 카드가 놓이는 모든 사이트 페이지에서 카드의 색으로 되돌린다. */
+.rc a.rc-open, .rc a.rc-open:hover { color: var(--card); }
+.rc a.rc-btn { color: var(--navy); }
+.rc a.rc-btn:hover { color: var(--teal); }
+.rc .rc-lesson a { color: var(--gray); }
+.rc .rc-lesson a:hover { color: var(--navy); }
+@media (min-width: 600px) {
+  /* 미리보기는 왼쪽 절반, 오른쪽에는 이름과 단추를 위아래 가운데에 모은다 (남는 높이는 위아래 빈 줄이 나눠 가진다) */
+  .book-cards-wide .rc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: 1fr auto auto 1fr; }
+  .book-cards-wide .rc-frame { grid-row: 1 / 5; border-bottom: 0; border-right: 1px solid var(--line); }
+  .book-cards-wide .rc-body { grid-row: 2; padding: var(--s5) var(--s5) var(--s4); }
+  .book-cards-wide .rc-title { font-size: var(--fs-xl); }
+  .book-cards-wide .rc-actions { grid-row: 3; margin-top: 0; padding: 0 var(--s5) var(--s5); }
+  .book-cards-wide .rc-open { min-height: var(--s7); font-size: var(--fs-md); }
+}
+@media (max-width: 599.98px) {
+  .book-cards { grid-template-columns: minmax(0, 1fr); gap: var(--s3); }
+}
+
+/* 앞뒤 단원·차시 */
+.pager { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4); margin-top: var(--s7); }
+.pager-link { display: grid; align-content: start; gap: 2px; padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); color: var(--navy); text-decoration: none; }
+a.pager-link:hover { border-color: var(--teal); }
+a.pager-link:hover .pager-name { color: var(--teal); }
+.pager-next { text-align: right; }
+.pager-dir { font-size: var(--fs-xs); font-weight: 700; color: var(--teal); }
+.pager-name { font-weight: 700; font-variant-numeric: tabular-nums; }
+.pager-link.is-off { border-style: dashed; background: none; color: var(--gray); }
+.pager-link.is-off .pager-dir { color: var(--gray); }
+.pager-later { font-weight: 400; }
+
+/* ───────────── 차시 자료실 ───────────── */
+/* 머리 */
+.kit-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s3); margin-top: var(--s4); font-size: var(--fs-sm); color: var(--gray); font-variant-numeric: tabular-nums; }
+.kit-meta > li { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s2); }
+.kit-meta > li + li::before { content: ''; width: 3px; height: 3px; margin-right: var(--s1); border-radius: 50%; background: var(--gray); }
+.kit-facts { margin-top: var(--s3); }
+.kit-goals { margin-top: var(--s5); }
+.kit-goals .dots { max-width: var(--measure); }
+.kit-care { margin-top: var(--s4); padding: var(--s4) var(--s5); border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
 .kit-care p + p { margin-top: var(--s1); }
 
-.actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--s4); margin-top: var(--s6); }
-.action { display: grid; gap: var(--s2); justify-items: stretch; text-align: center; }
-.action-sub { justify-self: center; font-size: var(--fs-sm); }
+/* 자료 */
+.kit-materials { scroll-margin-top: var(--s5); }
+.kit-materials-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s3) var(--s4); margin-bottom: var(--s4); }
+.kit-materials-head .sec-title { margin: 0; }
+.kit-tabs { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.kit-tabs[hidden] { display: none; }
+.kit-tab { display: inline-flex; align-items: center; gap: var(--s1); min-height: 2.25rem; padding: 0 var(--s3); border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--card); color: var(--navy); font: inherit; font-size: var(--fs-sm); font-weight: 700; line-height: 1.2; cursor: pointer; }
+.kit-tab:hover { border-color: var(--teal); }
+.kit-tab-n { font-weight: 600; color: var(--gray); font-variant-numeric: tabular-nums; }
+.kit-tab[aria-pressed='true'] { border-color: var(--navy); background: var(--navy); color: var(--card); }
+.kit-tab[aria-pressed='true'] .kit-tab-n { color: var(--card); }
+
+/* 교사용 안내 */
+.guide { margin-top: var(--s8); padding-top: var(--s6); border-top: 1px solid var(--line); }
+.guide-head { display: grid; gap: var(--s1); }
+.guide-intro { display: grid; gap: var(--s1); }
+.guide-intro .kicker { margin: 0; }
+.guide-note { max-width: var(--measure); font-size: var(--fs-sm); color: var(--gray); }
+.guide-nav ul { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s3); }
+.guide-nav a { display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 var(--s3); border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--card); color: var(--navy); font-size: var(--fs-sm); font-weight: 600; text-decoration: none; }
+.guide-nav a:hover { border-color: var(--teal); color: var(--teal); }
+@media (min-width: 1100px) { .guide-nav { display: none; } }
+.guide-head + .guide-sec { margin-top: var(--s5); }
+.guide-sec, .guide .fold { scroll-margin-top: var(--s5); }
 
 .mats { border-top: 1px solid var(--navy); }
-.mat { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--s2) var(--s5); padding: var(--s4) var(--s2); border-bottom: 1px solid var(--line); }
+.mat { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--s2) var(--s5); padding: var(--s4) var(--s2); border-bottom: 1px solid var(--line); scroll-margin-top: var(--s5); }
 .mat-main { flex: 1 1 24rem; min-width: 0; display: grid; gap: var(--s1); }
 .mat-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s1) var(--s2); }
 .mat-kind { font-weight: 800; }
@@ -201,8 +361,15 @@ a.tile:hover { border-color: var(--teal); }
 .step { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: var(--s2) var(--s4); padding: var(--s5) var(--s2); border-bottom: 1px solid var(--line); }
 .step-time { display: grid; align-content: start; gap: 0; }
 .step-phase { font-size: var(--fs-sm); font-weight: 700; color: var(--teal); }
+.step-phase-no { margin-right: 0.35em; font-variant-numeric: tabular-nums; }
 .step-min { font-size: var(--fs-xl); font-weight: 800; line-height: var(--lh-tight); font-variant-numeric: tabular-nums; }
-.step-body.has-ask { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: var(--s4) var(--s6); }
+/* '물어볼 것'은 단계의 칸이 넉넉할 때만 옆에 두고, 좁으면 할 일 아래에 둔다.
+   목차가 곁에 있는 넓은 화면에서는 본문이 760px 남짓이라 옆에 두면 두 칸 모두 한 줄에 스무 자 남짓으로 좁아진다. */
+.step { container-type: inline-size; }
+.step-body.has-ask { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); }
+@container (min-width: 50rem) {
+  .step-body.has-ask { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: var(--s4) var(--s6); }
+}
 .step-main { display: grid; align-content: start; gap: var(--s3); max-width: var(--measure); }
 .step-title { font-size: var(--fs-lg); font-weight: 700; }
 .step-do { display: grid; gap: var(--s1); padding-left: 1.4em; list-style: decimal; }
@@ -219,27 +386,15 @@ a.tile:hover { border-color: var(--teal); }
 .break { display: flex; align-items: center; gap: var(--s4); margin: var(--s6) 0; font-size: var(--fs-sm); font-weight: 600; color: var(--gray); }
 .break::before, .break::after { content: ''; flex: 1; border-top: 1px dashed var(--gray); }
 
-/* 확인 퀴즈·웹 활동 */
-.qr-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--s4); }
-.qr-card { display: flex; align-items: flex-start; gap: var(--s4); padding: var(--s4); border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
-.qr { flex: none; width: 9rem; height: 9rem; }
-.qr-ground { fill: var(--card); }
-.qr-ink { fill: var(--navy); }
-.qr-text { display: grid; gap: var(--s1); min-width: 0; }
-.qr-title { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s2); font-size: var(--fs-lg); font-weight: 800; }
-.qr-url { font-size: var(--fs-xs); color: var(--gray); }
-.qr-open { margin-top: var(--s2); font-weight: 700; }
-
 /* 접힌 상자 */
 .folds { border-top: 1px solid var(--navy); }
-.qr-cards + .folds { margin-top: var(--s4); border-top-color: var(--line); }
 .fold { border-bottom: 1px solid var(--line); }
 .fold > summary { display: flex; align-items: center; gap: var(--s3); padding: var(--s4) var(--s2); font-weight: 700; cursor: pointer; list-style: none; }
 .fold > summary::-webkit-details-marker { display: none; }
 .fold > summary::before { content: ''; flex: none; width: 0.5em; height: 0.5em; margin-right: var(--s1); border-right: 2px solid var(--teal); border-bottom: 2px solid var(--teal); transform: rotate(-45deg); transition: transform 0.15s; }
 .fold[open] > summary::before { transform: rotate(45deg) translate(-2px, -2px); }
 .fold > summary:hover .fold-title { text-decoration: underline; text-decoration-color: var(--teal); }
-.fold-count { font-size: var(--fs-sm); font-weight: 400; color: var(--gray); }
+.fold-count { font-size: var(--fs-sm); font-weight: 400; color: var(--gray); font-variant-numeric: tabular-nums; }
 .fold-body { display: grid; gap: var(--s3); padding: 0 var(--s2) var(--s5) calc(var(--s2) + 0.5em + var(--s3) + var(--s1)); }
 .fold-sub { font-size: var(--fs-sm); font-weight: 700; color: var(--teal); }
 .pairs { display: grid; gap: var(--s3); }
@@ -263,8 +418,41 @@ ol.sources { padding-left: 1.6em; list-style: decimal; }
 .quiz-mark { font-size: var(--fs-lg); font-weight: 700; line-height: 1; }
 .quiz-why { font-size: var(--fs-sm); color: var(--gray); }
 .kit-report { margin-top: var(--s5); font-size: var(--fs-sm); color: var(--gray); }
-/* 앞뒤 차시가 없어 pager 가 빠지면 제보 줄은 여백만으로 교사용 자료와 떨어진다. 교사용 자료가 선으로 끝나므로 선을 더 긋지 않는다 */
+/* 앞뒤 차시가 없어 pager 가 빠지면 제보 줄은 여백만으로 교사용 안내와 떨어진다. 교사용 안내가 선으로 끝나므로 선을 더 긋지 않는다 */
 .kit + .kit-report { margin-top: var(--s7); }
+
+/* 휴대폰과 태블릿 */
+@media (max-width: 760px), (pointer: coarse) {
+  .kit-tab, .guide-nav a { min-height: var(--tap); }
+  .book-unit-meta a, .toc-sections a { display: inline-flex; align-items: center; min-height: var(--tap); }
+}
+@media (max-width: 760px) {
+  .book-unit { margin-top: var(--s7); }
+  .book-unit-title { font-size: var(--fs-lg); }
+  .bt-head { display: none; }
+  /* 실리는 묶음: 차시·쪽수와 상태가 한 줄, 그 아래 이름, 그 아래 자료 그림. 아직인 묶음: 한 줄 */
+  .bt-row { grid-template-columns: 5.4rem auto minmax(0, 1fr) auto; grid-template-areas: 'no pages . state' 'name name name name' 'kinds kinds kinds kinds'; column-gap: var(--s2); padding-inline: 0; }
+  .bt-row.is-off { grid-template-areas: 'no pages name name'; }
+  .bt-row.is-off .bt-name { justify-content: flex-end; }
+  .bt-name a { display: inline-flex; align-items: center; min-height: var(--tap); }
+  .ub-card { padding: var(--s3) var(--s4) var(--s4); }
+  .ub-off { padding-inline: 0; }
+  .kit-materials-head { align-items: flex-start; flex-direction: column; }
+  .guide { margin-top: var(--s7); padding-top: var(--s5); }
+}
+@media (max-width: 479px) {
+  .kit-meta > li + li::before { display: none; }
+  .kit-meta { column-gap: var(--s3); }
+}
+
+/* 인쇄: 차시 자료실은 수업 계획서 한 벌로 뽑힌다 (아래 '인쇄'의 공통 규칙과 함께). 목차·자료 카드·길잡이는 종이에서 쓸 데가 없어 뺀다. */
+@media print {
+  .book { display: block; }
+  .book-rail, .toc-fold, .kit-materials, .guide-intro, .guide-nav { display: none; }
+  .guide { margin-top: var(--s5); padding-top: 0; border-top: 0; }
+  .kit-goals { margin-top: 0; }
+  .kit-facts .fold-body, .book-standards .fold-body { padding-left: 0; }
+}
 
 /* ───────────── 긴 글 (소개·이용 조건·오류 제보) ───────────── */
 .prose { max-width: 44rem; }

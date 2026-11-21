@@ -144,15 +144,6 @@ export function factRefs(lesson: Lesson): string[] {
   return [...lesson.facts.map((f) => f.id), ...new Set(borrowed)];
 }
 
-/** 차시표에서 이 묶음의 앞뒤에 놓인, 이번 빌드에 실리는 차시 (같은 학기 안에서) */
-export function neighbours(id: string): { prev?: Row; next?: Row } {
-  const rows = allRows();
-  const i = rows.findIndex((r) => r.ref.id === id);
-  if (i < 0) return {};
-  const same = (r: Row | undefined) => (r && r.lesson && r.ref.semester.id === rows[i].ref.semester.id ? r : undefined);
-  return { prev: same(rows[i - 1]), next: same(rows[i + 1]) };
-}
-
 /**
  * 한 사실 아래의 출처를 이름·제목·주소가 같은 것끼리 한 줄로 묶는다 (docs/CONTRACT.md 6절).
  * 같은 문서의 다른 구절을 따로 적은 출처가 화면에 두 번 서지 않게 한다. 확인한 날은 가장 늦은 날을 남긴다. 차례는 처음 나온 차례다.

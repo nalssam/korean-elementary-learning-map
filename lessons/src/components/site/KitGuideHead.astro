@@ -1,0 +1,56 @@
+---
+// 교사용 안내의 머리 (R46). '자료' 다음에 오는 안내(목표, 준비물부터 그림 출처까지)가 여기서 시작한다.
+// 차시의 목표는 여기에 둔다: 머리를 짧게 두어 자료 카드가 첫 화면에 들어오게 하고, 목표는 준비물·수업 흐름과 함께 수업 전에 읽는다.
+// 길잡이: 넓은 화면(1100px 이상)에서는 왼쪽 목차의 지금 차시 아래에 달려 따라오고(BookToc 의 sections),
+// 좁은 화면에서는 여기에 한 번 놓인다 (따라오지 않는다). 접힌 상자를 가리키는 링크를 누르면 그 상자를 편다.
+import type { Lesson } from '#schema/lesson.ts';
+import type { GuideSection } from './book.ts';
+import Kicker from './ui/Kicker.astro';
+
+interface Props { lesson: Lesson; sections: GuideSection[] }
+const { lesson, sections } = Astro.props;
+---
+<div class="guide-head">
+  <div class="guide-intro" data-pagefind-ignore>
+    <Kicker>교사용 안내</Kicker>
+    <p class="guide-note">정답과 풀이는 접어 두어 이 페이지를 교실 화면에 띄워도 보이지 않습니다.</p>
+  </div>
+  <section class="kit-goals" aria-labelledby="goal-title">
+    <h2 class="facts-title" id="goal-title">목표</h2>
+    <ul class="dots" data-pagefind-weight="5">{lesson.objectives.map((o) => <li>{o}</li>)}</ul>
+  </section>
+  <nav class="guide-nav" aria-label="교사용 안내" data-pagefind-ignore>
+    <ul>{sections.map((s) => <li><a href={`#${s.id}`} data-guide-link>{s.label}</a></li>)}</ul>
+  </nav>
+</div>
+
+<script>
+  // 길잡이(여기와 왼쪽 목차)의 링크가 접힌 상자(<details>)를 가리키면 누를 때 펴 준다. 스크립트가 없으면 상자의 제목으로 가고, 눌러서 편다.
+  // 넓은 화면에서는 지금 읽는 칸의 링크에 표시(aria-current="location")를 붙인다.
+  const links = [...document.querySelectorAll<HTMLAnchorElement>('a[data-guide-link]')];
+  const target = (a: HTMLAnchorElement) => document.getElementById(decodeURIComponent(a.hash.slice(1)));
+  for (const a of links) {
+    a.addEventListener('click', () => {
+      const el = target(a);
+      if (el instanceof HTMLDetailsElement) el.open = true;
+    });
+  }
+  const rail = links.filter((a) => a.closest('.toc-in-rail'));
+  const spots = rail.map((a) => ({ a, el: target(a) })).filter((s): s is { a: HTMLAnchorElement; el: HTMLElement } => !!s.el);
+  if (spots.length > 0) {
+    // 화면 위쪽 3분의 1 안으로 들어온 칸 가운데 가장 아래 것을 지금 칸으로 본다
+    let queued = false;
+    const mark = () => {
+      queued = false;
+      const line = innerHeight / 3;
+      let here: HTMLAnchorElement | undefined;
+      for (const s of spots) if (s.el.getBoundingClientRect().top <= line) here = s.a;
+      for (const s of spots) {
+        if (s.a === here) s.a.setAttribute('aria-current', 'location');
+        else s.a.removeAttribute('aria-current');
+      }
+    };
+    addEventListener('scroll', () => { if (!queued) { queued = true; requestAnimationFrame(mark); } }, { passive: true });
+    mark();
+  }
+</script>
